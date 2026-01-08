@@ -22,6 +22,7 @@ export const budgetItems = sqliteTable('budget_items', {
   categoryId: integer('category_id').notNull().references(() => budgetCategories.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   planned: real('planned').notNull().default(0),
+  order: integer('order').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
 

@@ -11,12 +11,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
+  // Get the max order for this category
+  const existingItems = await db.query.budgetItems.findMany({
+    where: eq(budgetItems.categoryId, parseInt(categoryId)),
+  });
+  const maxOrder = existingItems.length > 0
+    ? Math.max(...existingItems.map(item => item.order || 0))
+    : -1;
+
   const [item] = await db
     .insert(budgetItems)
     .values({
       categoryId: parseInt(categoryId),
       name,
       planned: planned || 0,
+      order: maxOrder + 1,
     })
     .returning();
 

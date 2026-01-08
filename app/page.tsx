@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import BudgetHeader from '@/components/BudgetHeader';
-import BufferSection from '@/components/BufferSection';
-import BudgetSection from '@/components/BudgetSection';
-import BudgetSummary from '@/components/BudgetSummary';
-import { Budget } from '@/types/budget';
-import { transformDbBudgetToAppBudget } from '@/lib/budgetHelpers';
+import { useState, useEffect } from "react";
+import BudgetHeader from "@/components/BudgetHeader";
+import BufferSection from "@/components/BufferSection";
+import BudgetSection from "@/components/BudgetSection";
+import BudgetSummary from "@/components/BudgetSummary";
+import { Budget } from "@/types/budget";
+import { transformDbBudgetToAppBudget } from "@/lib/budgetHelpers";
 
 export default function Home() {
   const currentDate = new Date();
@@ -25,7 +25,7 @@ export default function Home() {
       const transformedBudget = transformDbBudgetToAppBudget(data);
       setBudget(transformedBudget);
     } catch (error) {
-      console.error('Error fetching budget:', error);
+      console.error("Error fetching budget:", error);
     } finally {
       if (showLoading) {
         setLoading(false);
@@ -55,64 +55,70 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <BudgetHeader
-          month={budget.month}
-          year={budget.year}
-          onMonthChange={handleMonthChange}
-        />
-
-        <div className="mt-8 space-y-6">
-          <BufferSection
-            budgetId={budget.id}
-            buffer={budget.buffer}
-            onRefresh={refreshBudget}
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
+      {/* Main content area */}
+      <div className="flex-1 overflow-y-auto hide-scrollbar">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <BudgetHeader
+            month={budget.month}
+            year={budget.year}
+            onMonthChange={handleMonthChange}
           />
 
-          <BudgetSection
-            category={budget.categories.income}
-            onRefresh={refreshBudget}
-            isIncome={true}
-          />
+          <div className="mt-8 space-y-6 pb-8">
+            <BufferSection
+              budgetId={budget.id}
+              buffer={budget.buffer}
+              onRefresh={refreshBudget}
+            />
 
-          <BudgetSection
-            category={budget.categories.giving}
-            onRefresh={refreshBudget}
-          />
+            <BudgetSection
+              category={budget.categories.income}
+              onRefresh={refreshBudget}
+              isIncome={true}
+            />
 
-          <BudgetSection
-            category={budget.categories.household}
-            onRefresh={refreshBudget}
-          />
+            <BudgetSection
+              category={budget.categories.giving}
+              onRefresh={refreshBudget}
+            />
 
-          <BudgetSection
-            category={budget.categories.transportation}
-            onRefresh={refreshBudget}
-          />
+            <BudgetSection
+              category={budget.categories.household}
+              onRefresh={refreshBudget}
+            />
 
-          <BudgetSection
-            category={budget.categories.food}
-            onRefresh={refreshBudget}
-          />
+            <BudgetSection
+              category={budget.categories.transportation}
+              onRefresh={refreshBudget}
+            />
 
-          <BudgetSection
-            category={budget.categories.personal}
-            onRefresh={refreshBudget}
-          />
+            <BudgetSection
+              category={budget.categories.food}
+              onRefresh={refreshBudget}
+            />
 
-          <BudgetSection
-            category={budget.categories.insurance}
-            onRefresh={refreshBudget}
-          />
+            <BudgetSection
+              category={budget.categories.personal}
+              onRefresh={refreshBudget}
+            />
 
-          <BudgetSection
-            category={budget.categories.saving}
-            onRefresh={refreshBudget}
-          />
+            <BudgetSection
+              category={budget.categories.insurance}
+              onRefresh={refreshBudget}
+            />
 
-          <BudgetSummary budget={budget} />
+            <BudgetSection
+              category={budget.categories.saving}
+              onRefresh={refreshBudget}
+            />
+          </div>
         </div>
+      </div>
+
+      {/* Right sidebar for summary - fixed position */}
+      <div className="w-96 bg-gray-50 p-6 overflow-y-auto hide-scrollbar">
+        <BudgetSummary budget={budget} />
       </div>
     </div>
   );

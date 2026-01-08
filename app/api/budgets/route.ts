@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { budgets, budgetCategories } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { budgets, budgetCategories, budgetItems } from '@/db/schema';
+import { eq, and, asc } from 'drizzle-orm';
 
 const CATEGORY_TYPES = [
   { type: 'income', name: 'Income' },
@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
       categories: {
         with: {
           items: {
+            orderBy: [asc(budgetItems.order)],
             with: {
               transactions: true,
             },
@@ -55,6 +56,7 @@ export async function GET(request: NextRequest) {
         categories: {
           with: {
             items: {
+              orderBy: [asc(budgetItems.order)],
               with: {
                 transactions: true,
               },
