@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database
+budget.db
+budget.db-shm
+budget.db-wal
+drizzle/

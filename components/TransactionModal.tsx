@@ -74,6 +74,7 @@ export default function TransactionModal({
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onFocus={(e) => e.target.select()}
               placeholder="e.g., Shell Gas Station"
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
@@ -91,9 +92,10 @@ export default function TransactionModal({
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 placeholder="0.00"
                 step="0.01"
-                className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 required
               />
             </div>

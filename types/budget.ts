@@ -16,6 +16,7 @@ export interface BudgetItem {
 
 export interface BudgetCategory {
   id: string;
+  dbId?: number | null;
   name: string;
   items: BudgetItem[];
 }
@@ -31,8 +32,10 @@ export type CategoryType =
   | 'saving';
 
 export interface Budget {
+  id?: number;
   month: number;
   year: number;
+  buffer: number;
   categories: {
     income: BudgetCategory;
     giving: BudgetCategory;

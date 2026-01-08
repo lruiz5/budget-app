@@ -1,140 +1,127 @@
 'use client';
 
 import { useState } from 'react';
-import { Budget, BudgetCategory, BudgetItem, Transaction } from '@/types/budget';
+import { BudgetCategory, Transaction } from '@/types/budget';
 import TransactionModal from './TransactionModal';
 
 interface BudgetSectionProps {
   category: BudgetCategory;
-  setBudget: React.Dispatch<React.SetStateAction<Budget>>;
-  budget: Budget;
+  onRefresh: () => void;
   isIncome?: boolean;
 }
 
-export default function BudgetSection({ category, setBudget, budget, isIncome = false }: BudgetSectionProps) {
+export default function BudgetSection({ category, onRefresh, isIncome = false }: BudgetSectionProps) {
   const [newItemName, setNewItemName] = useState('');
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<BudgetItem | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemName, setSelectedItemName] = useState<string>('');
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [editingValues, setEditingValues] = useState<Record<string, number>>({});
+  const [editingNames, setEditingNames] = useState<Record<string, string>>({});
 
-  const addItem = () => {
+  const addItem = async () => {
     if (!newItemName.trim()) return;
+    if (!category.dbId) {
+      console.error('Category database ID not found');
+      return;
+    }
 
-    const newItem: BudgetItem = {
-      id: `${category.id}-${Date.now()}`,
-      name: newItemName,
-      planned: 0,
-      actual: 0,
-      transactions: [],
-    };
+    try {
+      const response = await fetch('/api/budget-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: category.dbId,
+          name: newItemName,
+          planned: 0,
+        }),
+      });
 
-    setBudget({
-      ...budget,
-      categories: {
-        ...budget.categories,
-        [category.id]: {
-          ...category,
-          items: [...category.items, newItem],
-        },
-      },
-    });
-
-    setNewItemName('');
-    setIsAddingItem(false);
-  };
-
-  const updateItemPlanned = (itemId: string, value: number) => {
-    const updatedItems = category.items.map(item =>
-      item.id === itemId ? { ...item, planned: value } : item
-    );
-
-    setBudget({
-      ...budget,
-      categories: {
-        ...budget.categories,
-        [category.id]: {
-          ...category,
-          items: updatedItems,
-        },
-      },
-    });
-  };
-
-  const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: `trans-${Date.now()}`,
-    };
-
-    const updatedItems = category.items.map(item => {
-      if (item.id === transaction.budgetItemId) {
-        const updatedTransactions = [...item.transactions, newTransaction];
-        const newActual = updatedTransactions.reduce((sum, t) => sum + t.amount, 0);
-        return {
-          ...item,
-          transactions: updatedTransactions,
-          actual: newActual,
-        };
+      if (response.ok) {
+        setNewItemName('');
+        setIsAddingItem(false);
+        onRefresh();
       }
-      return item;
-    });
-
-    setBudget({
-      ...budget,
-      categories: {
-        ...budget.categories,
-        [category.id]: {
-          ...category,
-          items: updatedItems,
-        },
-      },
-    });
+    } catch (error) {
+      console.error('Error adding item:', error);
+    }
   };
 
-  const deleteTransaction = (itemId: string, transactionId: string) => {
-    const updatedItems = category.items.map(item => {
-      if (item.id === itemId) {
-        const updatedTransactions = item.transactions.filter(t => t.id !== transactionId);
-        const newActual = updatedTransactions.reduce((sum, t) => sum + t.amount, 0);
-        return {
-          ...item,
-          transactions: updatedTransactions,
-          actual: newActual,
-        };
+  const updateItemPlanned = async (itemId: string, value: number) => {
+    try {
+      await fetch('/api/budget-items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: itemId,
+          planned: value,
+        }),
+      });
+      onRefresh();
+    } catch (error) {
+      console.error('Error updating item:', error);
+    }
+  };
+
+  const updateItemName = async (itemId: string, name: string) => {
+    if (!name.trim()) return;
+    try {
+      await fetch('/api/budget-items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: itemId,
+          name: name.trim(),
+        }),
+      });
+      onRefresh();
+    } catch (error) {
+      console.error('Error updating item name:', error);
+    }
+  };
+
+  const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+    try {
+      const response = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transaction),
+      });
+
+      if (response.ok) {
+        onRefresh();
       }
-      return item;
-    });
-
-    setBudget({
-      ...budget,
-      categories: {
-        ...budget.categories,
-        [category.id]: {
-          ...category,
-          items: updatedItems,
-        },
-      },
-    });
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+    }
   };
 
-  const deleteItem = (itemId: string) => {
-    const updatedItems = category.items.filter(item => item.id !== itemId);
-
-    setBudget({
-      ...budget,
-      categories: {
-        ...budget.categories,
-        [category.id]: {
-          ...category,
-          items: updatedItems,
-        },
-      },
-    });
+  const deleteTransaction = async (transactionId: string) => {
+    try {
+      await fetch(`/api/transactions?id=${transactionId}`, {
+        method: 'DELETE',
+      });
+      onRefresh();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+    }
   };
 
-  const openTransactionModal = (item: BudgetItem) => {
-    setSelectedItem(item);
+  const deleteItem = async (itemId: string) => {
+    try {
+      await fetch(`/api/budget-items?id=${itemId}`, {
+        method: 'DELETE',
+      });
+      onRefresh();
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
+  };
+
+  const openTransactionModal = (itemId: string, itemName: string) => {
+    setSelectedItemId(itemId);
+    setSelectedItemName(itemName);
     setIsTransactionModalOpen(true);
   };
 
@@ -195,7 +182,28 @@ export default function BudgetSection({ category, setBudget, budget, isIncome = 
                             {isExpanded ? '▼' : '▶'}
                           </button>
                         )}
-                        <span className="font-medium text-gray-900">{item.name}</span>
+                        <input
+                          type="text"
+                          value={editingNames[item.id] !== undefined ? editingNames[item.id] : item.name}
+                          onChange={(e) => {
+                            setEditingNames({ ...editingNames, [item.id]: e.target.value });
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          onBlur={() => {
+                            if (editingNames[item.id] !== undefined) {
+                              updateItemName(item.id, editingNames[item.id]);
+                              const newNames = { ...editingNames };
+                              delete newNames[item.id];
+                              setEditingNames(newNames);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur();
+                            }
+                          }}
+                          className="flex-1 font-medium text-gray-900 px-2 py-1 border border-transparent hover:border-gray-300 focus:border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
                         {item.transactions.length > 0 && (
                           <span className="text-xs text-gray-500">
                             ({item.transactions.length})
@@ -205,9 +213,26 @@ export default function BudgetSection({ category, setBudget, budget, isIncome = 
                       <div className="col-span-2">
                         <input
                           type="number"
-                          value={item.planned || ''}
-                          onChange={(e) => updateItemPlanned(item.id, parseFloat(e.target.value) || 0)}
-                          className="w-full text-right px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={editingValues[item.id] !== undefined ? editingValues[item.id] : item.planned || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setEditingValues({ ...editingValues, [item.id]: parseFloat(value) || 0 });
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          onBlur={() => {
+                            if (editingValues[item.id] !== undefined) {
+                              updateItemPlanned(item.id, editingValues[item.id]);
+                              const newValues = { ...editingValues };
+                              delete newValues[item.id];
+                              setEditingValues(newValues);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur();
+                            }
+                          }}
+                          className="w-full text-right px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           step="0.01"
                         />
                       </div>
@@ -223,7 +248,7 @@ export default function BudgetSection({ category, setBudget, budget, isIncome = 
                       </div>
                       <div className="col-span-1 flex items-center justify-end gap-1">
                         <button
-                          onClick={() => openTransactionModal(item)}
+                          onClick={() => openTransactionModal(item.id, item.name)}
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                           title="Add transaction"
                         >
@@ -259,7 +284,7 @@ export default function BudgetSection({ category, setBudget, budget, isIncome = 
                                   ${transaction.amount.toFixed(2)}
                                 </span>
                                 <button
-                                  onClick={() => deleteTransaction(item.id, transaction.id)}
+                                  onClick={() => deleteTransaction(transaction.id)}
                                   className="text-red-600 hover:text-red-800 text-xs"
                                 >
                                   ×
@@ -282,7 +307,8 @@ export default function BudgetSection({ category, setBudget, budget, isIncome = 
                 type="text"
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addItem()}
+                onKeyDown={(e) => e.key === 'Enter' && addItem()}
+                onFocus={(e) => e.target.select()}
                 placeholder="Item name"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
@@ -316,16 +342,17 @@ export default function BudgetSection({ category, setBudget, budget, isIncome = 
         </div>
       </div>
 
-      {selectedItem && (
+      {selectedItemId && (
         <TransactionModal
           isOpen={isTransactionModalOpen}
           onClose={() => {
             setIsTransactionModalOpen(false);
-            setSelectedItem(null);
+            setSelectedItemId(null);
+            setSelectedItemName('');
           }}
           onAddTransaction={addTransaction}
-          budgetItemId={selectedItem.id}
-          budgetItemName={selectedItem.name}
+          budgetItemId={selectedItemId}
+          budgetItemName={selectedItemName}
         />
       )}
     </>

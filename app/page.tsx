@@ -1,31 +1,58 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BudgetHeader from '@/components/BudgetHeader';
+import BufferSection from '@/components/BufferSection';
 import BudgetSection from '@/components/BudgetSection';
 import BudgetSummary from '@/components/BudgetSummary';
 import { Budget } from '@/types/budget';
+import { transformDbBudgetToAppBudget } from '@/lib/budgetHelpers';
 
 export default function Home() {
   const currentDate = new Date();
-  const [budget, setBudget] = useState<Budget>({
-    month: currentDate.getMonth(),
-    year: currentDate.getFullYear(),
-    categories: {
-      income: { id: 'income', name: 'Income', items: [] },
-      giving: { id: 'giving', name: 'Giving', items: [] },
-      household: { id: 'household', name: 'Household', items: [] },
-      transportation: { id: 'transportation', name: 'Transportation', items: [] },
-      food: { id: 'food', name: 'Food', items: [] },
-      personal: { id: 'personal', name: 'Personal', items: [] },
-      insurance: { id: 'insurance', name: 'Insurance', items: [] },
-      saving: { id: 'saving', name: 'Saving', items: [] },
-    },
-  });
+  const [month, setMonth] = useState(currentDate.getMonth());
+  const [year, setYear] = useState(currentDate.getFullYear());
+  const [budget, setBudget] = useState<Budget | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleMonthChange = (month: number, year: number) => {
-    setBudget({ ...budget, month, year });
+  const fetchBudget = async (m: number, y: number, showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
+    try {
+      const response = await fetch(`/api/budgets?month=${m}&year=${y}`);
+      const data = await response.json();
+      const transformedBudget = transformDbBudgetToAppBudget(data);
+      setBudget(transformedBudget);
+    } catch (error) {
+      console.error('Error fetching budget:', error);
+    } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
   };
+
+  useEffect(() => {
+    fetchBudget(month, year);
+  }, [month, year]);
+
+  const handleMonthChange = (newMonth: number, newYear: number) => {
+    setMonth(newMonth);
+    setYear(newYear);
+  };
+
+  const refreshBudget = () => {
+    fetchBudget(month, year, false);
+  };
+
+  if (loading || !budget) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-xl text-gray-600">Loading budget...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -37,53 +64,51 @@ export default function Home() {
         />
 
         <div className="mt-8 space-y-6">
+          <BufferSection
+            budgetId={budget.id}
+            buffer={budget.buffer}
+            onRefresh={refreshBudget}
+          />
+
           <BudgetSection
             category={budget.categories.income}
-            setBudget={setBudget}
-            budget={budget}
+            onRefresh={refreshBudget}
             isIncome={true}
           />
 
           <BudgetSection
             category={budget.categories.giving}
-            setBudget={setBudget}
-            budget={budget}
+            onRefresh={refreshBudget}
           />
 
           <BudgetSection
             category={budget.categories.household}
-            setBudget={setBudget}
-            budget={budget}
+            onRefresh={refreshBudget}
           />
 
           <BudgetSection
             category={budget.categories.transportation}
-            setBudget={setBudget}
-            budget={budget}
+            onRefresh={refreshBudget}
           />
 
           <BudgetSection
             category={budget.categories.food}
-            setBudget={setBudget}
-            budget={budget}
+            onRefresh={refreshBudget}
           />
 
           <BudgetSection
             category={budget.categories.personal}
-            setBudget={setBudget}
-            budget={budget}
+            onRefresh={refreshBudget}
           />
 
           <BudgetSection
             category={budget.categories.insurance}
-            setBudget={setBudget}
-            budget={budget}
+            onRefresh={refreshBudget}
           />
 
           <BudgetSection
             category={budget.categories.saving}
-            setBudget={setBudget}
-            budget={budget}
+            onRefresh={refreshBudget}
           />
 
           <BudgetSummary budget={budget} />

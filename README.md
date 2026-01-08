@@ -4,7 +4,7 @@ A modern budget tracking application built with Next.js, TypeScript, and Tailwin
 
 ## Project Status
 
-**Current Version:** v0.2.0 - Transaction Tracking
+**Current Version:** v0.4.0 - Starting Balance (Buffer) Feature
 **Last Updated:** 2026-01-07
 
 ### Tech Stack
@@ -12,10 +12,13 @@ A modern budget tracking application built with Next.js, TypeScript, and Tailwin
 - TypeScript
 - Tailwind CSS
 - ESLint
-- React Hooks (useState for state management)
+- Drizzle ORM
+- SQLite (better-sqlite3)
+- React Hooks (useState, useEffect)
 
 ### Features
 - **Zero-Based Budgeting System** - Every dollar of income is assigned to a category
+- **Starting Balance (Buffer)** - Track money carried over from previous month (separate from income)
 - **Month/Year Navigation** - Navigate between different budget periods
 - **Budget Categories**:
   - Income (separate tracking)
@@ -39,18 +42,36 @@ A modern budget tracking application built with Next.js, TypeScript, and Tailwin
   - Delete individual transactions
   - Transaction count badge shows number of transactions per item
 - **Real-time Budget Summary**:
-  - Total income vs total expenses
+  - Buffer + Income vs Total Expenses
   - Remaining amount to budget
   - Budget balance status indicator
   - Separate planned and actual tracking
 - **Responsive Design** - Works on desktop and mobile devices
+- **Data Persistence** - All budget data stored in local SQLite database
+- **Multi-Month Support** - Create and manage budgets for different months/years
+
+### Database
+The app uses SQLite for local data storage with Drizzle ORM for type-safe database operations.
+
+**Database Commands:**
+- `npm run db:push` - Push schema changes to database
+- `npm run db:studio` - Open Drizzle Studio to view/edit data
+- `npm run db:generate` - Generate migration files
+- `npm run db:migrate` - Run migrations
+
+**Database Schema:**
+- **budgets** - Monthly budget containers
+- **budget_categories** - Categories within each budget (Income, Giving, etc.)
+- **budget_items** - Individual line items (e.g., "Gas", "Groceries")
+- **transactions** - Individual transactions for each budget item
 
 ### How to Use
-1. **Set up your budget**: Add budget items to each category and set planned amounts
-2. **Add transactions**: Click the "+$" button next to any budget item to record a transaction
-3. **Track spending**: The actual amount updates automatically as you add transactions
-4. **View details**: Click the arrow (▶) next to items with transactions to see the full list
-5. **Stay balanced**: Keep your budget balanced by ensuring all income is allocated
+1. **Set starting balance**: Enter the buffer amount (money carried over from previous month) at the top
+2. **Set up your budget**: Add budget items to each category and set planned amounts
+3. **Add transactions**: Click the "+$" button next to any budget item to record a transaction
+4. **Track spending**: The actual amount updates automatically as you add transactions
+5. **View details**: Click the arrow (▶) next to items with transactions to see the full list
+6. **Stay balanced**: Keep your budget balanced by ensuring Buffer + Income = Total Expenses
 
 ## Getting Started
 

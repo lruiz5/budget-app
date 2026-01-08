@@ -5,6 +5,8 @@ interface BudgetSummaryProps {
 }
 
 export default function BudgetSummary({ budget }: BudgetSummaryProps) {
+  const buffer = budget.buffer || 0;
+
   const totalIncome = budget.categories.income.items.reduce(
     (sum, item) => sum + item.planned,
     0
@@ -16,7 +18,8 @@ export default function BudgetSummary({ budget }: BudgetSummaryProps) {
       return sum + category.items.reduce((catSum, item) => catSum + item.planned, 0);
     }, 0);
 
-  const remainingToBudget = totalIncome - totalExpenses;
+  const totalAvailable = buffer + totalIncome;
+  const remainingToBudget = totalAvailable - totalExpenses;
   const isBalanced = Math.abs(remainingToBudget) < 0.01;
 
   const totalActualIncome = budget.categories.income.items.reduce(
@@ -30,7 +33,8 @@ export default function BudgetSummary({ budget }: BudgetSummaryProps) {
       return sum + category.items.reduce((catSum, item) => catSum + item.actual, 0);
     }, 0);
 
-  const actualRemaining = totalActualIncome - totalActualExpenses;
+  const totalActualAvailable = buffer + totalActualIncome;
+  const actualRemaining = totalActualAvailable - totalActualExpenses;
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 sticky bottom-4">
@@ -40,6 +44,12 @@ export default function BudgetSummary({ budget }: BudgetSummaryProps) {
         <div>
           <h3 className="text-lg font-semibold text-gray-700 mb-4">Planned</h3>
           <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Buffer:</span>
+              <span className="text-xl font-semibold text-purple-600">
+                ${buffer.toFixed(2)}
+              </span>
+            </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Total Income:</span>
               <span className="text-xl font-semibold text-green-600">
@@ -89,6 +99,12 @@ export default function BudgetSummary({ budget }: BudgetSummaryProps) {
         <div>
           <h3 className="text-lg font-semibold text-gray-700 mb-4">Actual</h3>
           <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Buffer:</span>
+              <span className="text-xl font-semibold text-purple-600">
+                ${buffer.toFixed(2)}
+              </span>
+            </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Total Income:</span>
               <span className="text-xl font-semibold text-green-600">
