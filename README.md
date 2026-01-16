@@ -1,11 +1,11 @@
 # Budget App
 
-A modern budget tracking application built with Next.js, TypeScript, and Tailwind CSS.
+A modern zero-based budget tracking application built with Next.js, TypeScript, and Tailwind CSS. Features bank account integration via Teller for automatic transaction imports.
 
 ## Project Status
 
-**Current Version:** v0.4.0 - Starting Balance (Buffer) Feature
-**Last Updated:** 2026-01-07
+**Current Version:** v0.6.0 - Split Transactions & UI Improvements
+**Last Updated:** 2026-01-16
 
 ### Tech Stack
 - Next.js 16.x (App Router)
@@ -14,43 +14,62 @@ A modern budget tracking application built with Next.js, TypeScript, and Tailwin
 - ESLint
 - Drizzle ORM
 - SQLite (better-sqlite3)
-- React Hooks (useState, useEffect)
+- Teller API (bank integration)
+- React Hooks (useState, useEffect, useCallback)
 
 ### Features
-- **Zero-Based Budgeting System** - Every dollar of income is assigned to a category
-- **Starting Balance (Buffer)** - Track money carried over from previous month (separate from income)
-- **Month/Year Navigation** - Navigate between different budget periods
-- **Budget Categories**:
-  - Income (separate tracking)
-  - Giving
-  - Household
-  - Transportation
-  - Food
-  - Personal
-  - Insurance
-  - Saving
-- **Budget Item Management**:
-  - Add/remove items within each category
-  - Set planned amounts for each budget item
-  - Actual amounts calculated automatically from transactions
-  - View difference between planned and actual
-- **Transaction Tracking**:
-  - Add individual transactions to budget items (click the "+$" button)
-  - Each transaction includes date, description, and amount
-  - Actual spending automatically calculated from all transactions
-  - Expandable transaction list for each budget item (click ▶ arrow)
-  - Delete individual transactions
-  - Transaction count badge shows number of transactions per item
-- **Real-time Budget Summary**:
-  - Buffer + Income vs Total Expenses
-  - Remaining amount to budget
-  - Budget balance status indicator
-  - Separate planned and actual tracking
-- **Responsive Design** - Works on desktop and mobile devices
-- **Data Persistence** - All budget data stored in local SQLite database
-- **Multi-Month Support** - Create and manage budgets for different months/years
+
+#### Zero-Based Budgeting
+- Every dollar of income is assigned to a category
+- Starting balance (buffer) tracks money carried over from previous month
+- Real-time budget summary showing planned vs actual spending
+- Progress bars on budget items showing spend percentage
+
+#### Budget Categories
+- Income (separate tracking)
+- Giving
+- Household
+- Transportation
+- Food
+- Personal
+- Insurance
+- Saving
+
+#### Budget Item Management
+- Add/remove items within each category
+- Drag-and-drop reordering of budget items
+- Set planned amounts for each budget item
+- Actual amounts calculated automatically from transactions
+- Expandable transaction list for each budget item
+
+#### Bank Integration (Teller)
+- Connect bank accounts via Teller Connect
+- Automatic transaction import from linked accounts
+- Support for multiple bank accounts
+- Pending and posted transaction status tracking
+- Automatic updates when pending transactions post
+
+#### Transaction Management
+- **New Transactions Tab**: View and categorize imported bank transactions
+- **Tracked Transactions Tab**: View all categorized transactions
+- **Deleted Transactions Tab**: View and restore soft-deleted transactions
+- Assign transactions to budget items
+- Edit transaction details (date, description, amount, merchant)
+- Manual transaction entry with floating add button
+
+#### Split Transactions
+- Split a single transaction across multiple budget categories
+- Example: Split a $45.50 Target charge into Household ($5.50), Pet Care ($25.00), and Grocery ($15.00)
+- Visual balance indicator ensures splits equal the original amount
+- Optional description for each split portion
+
+#### Data Persistence
+- All budget data stored in local SQLite database
+- Multi-month support - create and manage budgets for different months/years
+- Soft delete for transactions (recoverable)
 
 ### Database
+
 The app uses SQLite for local data storage with Drizzle ORM for type-safe database operations.
 
 **Database Commands:**
@@ -60,18 +79,32 @@ The app uses SQLite for local data storage with Drizzle ORM for type-safe databa
 - `npm run db:migrate` - Run migrations
 
 **Database Schema:**
-- **budgets** - Monthly budget containers
+- **budgets** - Monthly budget containers (month, year, buffer amount)
 - **budget_categories** - Categories within each budget (Income, Giving, etc.)
 - **budget_items** - Individual line items (e.g., "Gas", "Groceries")
-- **transactions** - Individual transactions for each budget item
+- **transactions** - Individual transactions linked to budget items
+- **split_transactions** - Child allocations when a transaction is split across categories
+- **linked_accounts** - Connected bank accounts from Teller
 
 ### How to Use
-1. **Set starting balance**: Enter the buffer amount (money carried over from previous month) at the top
-2. **Set up your budget**: Add budget items to each category and set planned amounts
-3. **Add transactions**: Click the "+$" button next to any budget item to record a transaction
-4. **Track spending**: The actual amount updates automatically as you add transactions
-5. **View details**: Click the arrow (▶) next to items with transactions to see the full list
-6. **Stay balanced**: Keep your budget balanced by ensuring Buffer + Income = Total Expenses
+
+1. **Connect your bank** (optional): Go to Settings and connect your bank account via Teller
+2. **Set starting balance**: Enter the buffer amount (money carried over from previous month)
+3. **Set up your budget**: Add budget items to each category and set planned amounts
+4. **Import transactions**: Click "Sync" in the Transactions tab to import from your bank
+5. **Categorize transactions**: Assign imported transactions to budget items, or split them across multiple categories
+6. **Track spending**: The actual amount updates automatically as you categorize transactions
+7. **Stay balanced**: Keep your budget balanced by ensuring Buffer + Income = Total Expenses
+
+### Environment Variables
+
+For bank integration, you'll need Teller API credentials:
+
+```env
+TELLER_APPLICATION_ID=your_application_id
+TELLER_ENVIRONMENT=sandbox  # or development, production
+TELLER_SIGNING_SECRET=your_signing_secret
+```
 
 ## Getting Started
 
@@ -83,21 +116,41 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+budget-app/
+├── app/
+│   ├── api/
+│   │   ├── budgets/          # Budget CRUD operations
+│   │   ├── budget-items/     # Budget item management
+│   │   ├── transactions/     # Transaction CRUD & split operations
+│   │   └── teller/           # Bank sync & account management
+│   ├── settings/             # Settings page
+│   └── page.tsx              # Main budget page
+├── components/
+│   ├── AddTransactionModal.tsx
+│   ├── BudgetHeader.tsx
+│   ├── BudgetSection.tsx
+│   ├── BudgetSummary.tsx
+│   ├── BufferSection.tsx
+│   ├── SplitTransactionModal.tsx
+│   └── TransactionModal.tsx
+├── db/
+│   ├── index.ts              # Database connection
+│   └── schema.ts             # Drizzle schema definitions
+├── lib/
+│   ├── budgetHelpers.ts      # Data transformation utilities
+│   └── teller.ts             # Teller API client
+└── types/
+    └── budget.ts             # TypeScript type definitions
+```
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+To learn more about the technologies used:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Drizzle ORM](https://orm.drizzle.team/)
+- [Teller API](https://teller.io/docs)
+- [Tailwind CSS](https://tailwindcss.com/docs)
