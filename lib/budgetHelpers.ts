@@ -25,9 +25,27 @@ export function transformDbBudgetToAppBudget(dbBudget: any): Budget {
             const activeTransactions = item.transactions.filter((t: any) => !t.deletedAt);
 
             // Calculate actual from direct transactions
-            const directActual = activeTransactions.reduce((sum: number, t: any) => sum + t.amount, 0);
+            // Amounts are stored as positive in DB. The 'type' field indicates income vs expense.
+            const directActual = activeTransactions.reduce((sum: number, t: any) => {
+              // Income category: income adds, expense subtracts
+              if (categoryType === 'income') {
+                if (t.type === 'income') {
+                  return sum + t.amount; // Add income to total earned
+                } else {
+                  return sum - t.amount; // Subtract expense from total earned
+                }
+              } else {
+                // Expense categories: expenses add to spent, income (refunds) reduces spent
+                if (t.type === 'expense') {
+                  return sum + t.amount; // Add expense to total spent
+                } else {
+                  return sum - t.amount; // Subtract income (refund) from total spent
+                }
+              }
+            }, 0);
 
             // Add split transaction amounts allocated to this budget item
+            // Split amounts are always positive (portions of the parent transaction)
             const splitActual = (item.splitTransactions || []).reduce((sum: number, s: any) => sum + s.amount, 0);
 
             return {

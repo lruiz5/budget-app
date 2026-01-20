@@ -269,6 +269,21 @@ function SortableItem({
   );
 }
 
+// Map category names to emojis
+const getCategoryEmoji = (categoryName: string): string => {
+  const emojiMap: Record<string, string> = {
+    'Income': '💰',
+    'Giving': '🤲',
+    'Household': '🏠',
+    'Transportation': '🚗',
+    'Food': '🍽️',
+    'Personal': '👤',
+    'Insurance': '🛡️',
+    'Saving': '💵',
+  };
+  return emojiMap[categoryName] || '📋';
+};
+
 export default function BudgetSection({
   category,
   onRefresh,
@@ -351,14 +366,19 @@ export default function BudgetSection({
     }
   };
 
-  const deleteTransaction = async (transactionId: string) => {
+  const uncategorizeTransaction = async (transactionId: string) => {
     try {
-      await fetch(`/api/transactions?id=${transactionId}`, {
-        method: "DELETE",
+      await fetch("/api/transactions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: transactionId,
+          budgetItemId: null,
+        }),
       });
       onRefresh();
     } catch (error) {
-      console.error("Error deleting transaction:", error);
+      console.error("Error uncategorizing transaction:", error);
     }
   };
 
@@ -426,17 +446,19 @@ export default function BudgetSection({
     0
   );
 
-  const bgColor = isIncome ? "bg-green-50" : "bg-white";
-  const headerColor = isIncome ? "bg-green-600" : "bg-blue-600";
+  const categoryEmoji = getCategoryEmoji(category.name);
 
   return (
     <>
-      <div className={`${bgColor} rounded-lg shadow-sm overflow-hidden`}>
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div
-          className={`${headerColor} px-6 py-4 flex items-center justify-between`}
+          className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between"
         >
-          <h2 className="text-xl font-semibold text-white">{category.name}</h2>
-          <div className="flex gap-8 text-white">
+          <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+            <span>{categoryEmoji}</span>
+            <span>{category.name}</span>
+          </h2>
+          <div className="flex gap-8 text-gray-700">
             <div className="text-right">
               <div className="text-sm opacity-90">Planned</div>
               <div className="text-lg font-semibold">
@@ -489,7 +511,7 @@ export default function BudgetSection({
                       onUpdateName={updateItemName}
                       onUpdatePlanned={updateItemPlanned}
                       onDelete={deleteItem}
-                      onDeleteTransaction={deleteTransaction}
+                      onDeleteTransaction={uncategorizeTransaction}
                       onTransactionClick={onTransactionClick}
                       setEditingNames={setEditingNames}
                       setEditingValues={setEditingValues}
