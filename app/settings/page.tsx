@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import Script from 'next/script';
-import { FaArrowLeft, FaUniversity, FaTrash, FaSync } from 'react-icons/fa';
+import { FaUniversity, FaTrash, FaSync } from 'react-icons/fa';
+import DashboardLayout from '@/components/DashboardLayout';
 
 interface LinkedAccount {
   id: number;
@@ -145,26 +145,15 @@ export default function SettingsPage() {
   };
 
   return (
-    <>
+    <DashboardLayout>
       <Script
         src="https://cdn.teller.io/connect/connect.js"
         onLoad={() => setTellerReady(true)}
       />
 
-      <div className="min-h-screen bg-gray-100 p-8">
+      <div className="h-full overflow-y-auto bg-gray-100 p-8">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-            >
-              <FaArrowLeft />
-              Back to Budget
-            </Link>
-          </div>
-
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Settings</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Accounts</h1>
 
           {/* Bank Connections Section */}
           <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -269,6 +258,6 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-    </>
+    </DashboardLayout>
   );
 }

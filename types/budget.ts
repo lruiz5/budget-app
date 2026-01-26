@@ -19,6 +19,11 @@ export interface SplitTransaction {
   parentTransactionId: string;
   amount: number;
   description?: string | null;
+  // Parent transaction info for display
+  parentDate?: string;
+  parentMerchant?: string | null;
+  parentDescription?: string;
+  parentType?: 'income' | 'expense';
 }
 
 export interface BudgetItem {

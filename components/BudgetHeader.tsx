@@ -1,9 +1,7 @@
-import Link from "next/link";
-import { FaCog } from "react-icons/fa";
-
 interface BudgetHeaderProps {
   month: number;
   year: number;
+  remainingToBudget?: number;
   onMonthChange: (month: number, year: number) => void;
 }
 
@@ -25,6 +23,7 @@ const months = [
 export default function BudgetHeader({
   month,
   year,
+  remainingToBudget = 0,
   onMonthChange,
 }: BudgetHeaderProps) {
   const handlePrevMonth = () => {
@@ -43,36 +42,35 @@ export default function BudgetHeader({
     }
   };
 
+  const isBalanced = Math.abs(remainingToBudget) < 0.01;
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Zero-Based Budget</h1>
-        <div className="flex items-center gap-6">
-          <Link
-            href="/settings"
-            className="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors"
-            title="Settings"
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {months[month]} {year}
+          </h1>
+          <p className="text-sm mt-1 text-gray-600">
+            {isBalanced
+              ? 'Budget is balanced'
+              : `$${Math.abs(remainingToBudget).toFixed(2)} ${remainingToBudget > 0 ? 'left to budget' : 'over budget'}`
+            }
+          </p>
+        </div>
+        <div className="flex items-center">
+          <button
+            onClick={handlePrevMonth}
+            className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-l-md border border-gray-200 transition-colors"
           >
-            <FaCog />
-            <span className="text-sm">Settings</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handlePrevMonth}
-              className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-            >
-              ←
-            </button>
-            <div className="text-xl font-semibold text-gray-900 min-w-50 text-center">
-              {months[month]} {year}
-            </div>
-            <button
-              onClick={handleNextMonth}
-              className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-            >
-              →
-            </button>
-          </div>
+            &lt;
+          </button>
+          <button
+            onClick={handleNextMonth}
+            className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-r-md border border-l-0 border-gray-200 transition-colors"
+          >
+            &gt;
+          </button>
         </div>
       </div>
     </div>

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { linkedAccounts, transactions } from '@/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { linkedAccounts, transactions, splitTransactions } from '@/db/schema';
+import { eq, and, isNull, notInArray } from 'drizzle-orm';
 import { createTellerClient, TellerTransaction } from '@/lib/teller';
-import { sql } from 'drizzle-orm';
 
 // POST - Sync transactions from linked accounts
 export async function POST(request: NextRequest) {
@@ -130,14 +129,25 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month');
     const year = searchParams.get('year');
 
-    // Get transactions that have no budgetItemId (uncategorized) and are not deleted
-    const uncategorizedTransactions = await db
+    // Get IDs of transactions that have been split (these should not appear as uncategorized)
+    const splitParentIds = await db
+      .selectDistinct({ parentId: splitTransactions.parentTransactionId })
+      .from(splitTransactions);
+    const splitParentIdList = splitParentIds.map(s => s.parentId);
+
+    // Get transactions that have no budgetItemId (uncategorized), are not deleted, and are not split
+    let query = db
       .select()
       .from(transactions)
       .where(and(
         isNull(transactions.budgetItemId),
-        isNull(transactions.deletedAt)
+        isNull(transactions.deletedAt),
+        splitParentIdList.length > 0
+          ? notInArray(transactions.id, splitParentIdList)
+          : undefined
       ));
+
+    const uncategorizedTransactions = await query;
 
     // Filter by month/year if provided
     let filtered = uncategorizedTransactions;

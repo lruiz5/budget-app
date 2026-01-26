@@ -32,7 +32,11 @@ export async function GET(request: NextRequest) {
             orderBy: [asc(budgetItems.order)],
             with: {
               transactions: true,
-              splitTransactions: true,
+              splitTransactions: {
+                with: {
+                  parentTransaction: true,
+                },
+              },
             },
           },
         },
@@ -60,7 +64,11 @@ export async function GET(request: NextRequest) {
               orderBy: [asc(budgetItems.order)],
               with: {
                 transactions: true,
-                splitTransactions: true,
+                splitTransactions: {
+                  with: {
+                    parentTransaction: true,
+                  },
+                },
               },
             },
           },

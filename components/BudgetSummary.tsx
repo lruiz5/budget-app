@@ -83,12 +83,24 @@ export default function BudgetSummary({ budget, onRefresh, onTransactionClick }:
   const totalActualAvailable = buffer + totalActualIncome;
   const actualRemaining = totalActualAvailable - totalActualExpenses;
 
-  // Collect all transactions from all categories
-  const allTransactions: Transaction[] = [];
+  // Collect all transactions from all categories (including splits)
+  const allTransactions: (Transaction | { isSplit: true; id: string; date: string; description: string; amount: number; type: 'income' | 'expense'; merchant?: string | null })[] = [];
   Object.entries(budget.categories).forEach(([, category]) => {
     category.items.forEach((item) => {
       item.transactions.forEach((transaction) => {
         allTransactions.push(transaction);
+      });
+      // Include split transactions
+      item.splitTransactions?.forEach((split) => {
+        allTransactions.push({
+          isSplit: true,
+          id: `split-${split.id}`,
+          date: split.parentDate || '',
+          description: split.description || split.parentDescription || 'Split transaction',
+          amount: split.amount,
+          type: split.parentType || 'expense',
+          merchant: split.parentMerchant,
+        });
       });
     });
   });
@@ -692,29 +704,37 @@ export default function BudgetSummary({ budget, onRefresh, onTransactionClick }:
                       No tracked transactions yet.
                     </p>
                   )}
-                  {allTransactions.map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      onClick={() => openEditModal(transaction)}
-                      className="border-b border-gray-100 pb-3 last:border-0 cursor-pointer hover:bg-gray-50 rounded px-2 -mx-2 py-2 transition-colors"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">
-                              {formatDate(transaction.date)}
-                            </span>
+                  {allTransactions.map((transaction) => {
+                    const isSplit = 'isSplit' in transaction && transaction.isSplit;
+                    return (
+                      <div
+                        key={transaction.id}
+                        onClick={() => !isSplit && openEditModal(transaction as Transaction)}
+                        className={`border-b border-gray-100 pb-3 last:border-0 rounded px-2 -mx-2 py-2 transition-colors ${
+                          isSplit ? 'bg-purple-50' : 'cursor-pointer hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-500">
+                                {transaction.date ? formatDate(transaction.date) : '—'}
+                              </span>
+                              {isSplit && (
+                                <span className="text-xs text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded">split</span>
+                              )}
+                            </div>
+                            <p className="text-base text-gray-900 truncate mt-1">
+                              {transaction.merchant || transaction.description}
+                            </p>
                           </div>
-                          <p className="text-base text-gray-900 truncate mt-1">
-                            {transaction.merchant || transaction.description}
-                          </p>
+                          <span className="text-base font-medium text-gray-900 ml-3">
+                            ${Math.abs(transaction.amount).toFixed(2)}
+                          </span>
                         </div>
-                        <span className="text-base font-medium text-gray-900 ml-3">
-                          ${Math.abs(transaction.amount).toFixed(2)}
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 

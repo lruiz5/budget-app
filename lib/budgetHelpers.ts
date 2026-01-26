@@ -63,12 +63,16 @@ export function transformDbBudgetToAppBudget(dbBudget: any): Budget {
                 type: t.type,
                 merchant: t.merchant,
               })),
-              // Include split transactions for display
+              // Include split transactions for display with parent info
               splitTransactions: (item.splitTransactions || []).map((s: any) => ({
                 id: s.id.toString(),
                 parentTransactionId: s.parentTransactionId.toString(),
                 amount: s.amount,
                 description: s.description,
+                parentDate: s.parentTransaction?.date,
+                parentMerchant: s.parentTransaction?.merchant,
+                parentDescription: s.parentTransaction?.description,
+                parentType: s.parentTransaction?.type,
               })),
             };
           }),

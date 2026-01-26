@@ -120,7 +120,7 @@ function SortableItem({
           >
             ⋮⋮
           </button>
-          {item.transactions.length > 0 && (
+          {(item.transactions.length > 0 || (item.splitTransactions?.length || 0) > 0) && (
             <button
               onClick={() => onToggleExpanded(item.id)}
               className="text-gray-500 hover:text-gray-700"
@@ -157,9 +157,9 @@ function SortableItem({
             }}
             className="flex-1 font-medium text-gray-900 px-2 py-1 border border-transparent hover:bg-gray-50 focus:border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          {item.transactions.length > 0 && (
+          {(item.transactions.length > 0 || (item.splitTransactions?.length || 0) > 0) && (
             <span className="text-xs text-gray-500">
-              ({item.transactions.length})
+              ({item.transactions.length + (item.splitTransactions?.length || 0)})
             </span>
           )}
         </div>
@@ -226,13 +226,15 @@ function SortableItem({
         />
       </div>
 
-      {isExpanded && item.transactions.length > 0 && (
+      {isExpanded && (item.transactions.length > 0 || (item.splitTransactions?.length || 0) > 0) && (
         <div className="ml-8 mb-3 bg-gray-50 rounded p-3">
           <div className="text-xs font-semibold text-gray-600 mb-2">
             Transactions
           </div>
           <div className="space-y-1">
-            {item.transactions.map((transaction) => (
+            {[...item.transactions]
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map((transaction) => (
               <div
                 key={transaction.id}
                 onClick={() => onTransactionClick?.(transaction)}
@@ -259,6 +261,30 @@ function SortableItem({
                   >
                     ×
                   </button>
+                </div>
+              </div>
+            ))}
+            {/* Split transactions */}
+            {[...(item.splitTransactions || [])]
+              .sort((a, b) => new Date(b.parentDate || '').getTime() - new Date(a.parentDate || '').getTime())
+              .map((split) => (
+              <div
+                key={`split-${split.id}`}
+                className="flex items-center justify-between text-sm py-1 px-2 bg-purple-50 rounded"
+              >
+                <div className="flex-1">
+                  <span className="text-gray-600">
+                    {split.parentDate ? new Date(split.parentDate).toLocaleDateString() : '—'}
+                  </span>
+                  <span className="ml-3 text-gray-900">
+                    {split.description || split.parentMerchant || split.parentDescription || 'Split'}
+                  </span>
+                  <span className="ml-2 text-xs text-purple-600">(split)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-gray-900">
+                    ${split.amount.toFixed(2)}
+                  </span>
                 </div>
               </div>
             ))}
@@ -447,6 +473,7 @@ export default function BudgetSection({
   );
 
   const categoryEmoji = getCategoryEmoji(category.name);
+  const isFulfilled = totalPlanned > 0 && Math.abs(totalPlanned - totalActual) < 0.01;
 
   return (
     <>
@@ -457,6 +484,9 @@ export default function BudgetSection({
           <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
             <span>{categoryEmoji}</span>
             <span>{category.name}</span>
+            {isFulfilled && (
+              <span className="text-green-500 text-base" title="Category fulfilled">✓</span>
+            )}
           </h2>
           <div className="flex gap-8 text-gray-700">
             <div className="text-right">
