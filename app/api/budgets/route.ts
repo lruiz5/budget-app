@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { budgets, budgetCategories, budgetItems } from '@/db/schema';
+import { budgets, budgetCategories, budgetItems, recurringPayments } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
+
+// Helper to calculate monthly contribution based on frequency
+function getMonthlyContribution(amount: number, frequency: string): number {
+  switch (frequency) {
+    case 'monthly': return amount;
+    case 'quarterly': return amount / 3;
+    case 'semi-annually': return amount / 6;
+    case 'annually': return amount / 12;
+    default: return amount;
+  }
+}
 
 const CATEGORY_TYPES = [
   { type: 'income', name: 'Income' },
@@ -75,6 +86,67 @@ export async function GET(request: NextRequest) {
         },
       },
     });
+  }
+
+  // Sync recurring payments to budget items
+  if (budget) {
+    const activeRecurring = await db.query.recurringPayments.findMany({
+      where: eq(recurringPayments.isActive, true),
+    });
+
+    let itemsCreated = false;
+
+    for (const recurring of activeRecurring) {
+      if (!recurring.categoryType) continue;
+
+      // Find the matching category in this budget
+      const category = budget.categories.find(c => c.categoryType === recurring.categoryType);
+      if (!category) continue;
+
+      // Check if a budget item for this recurring payment already exists
+      const existingItem = category.items.find(item => item.recurringPaymentId === recurring.id);
+      if (existingItem) continue;
+
+      // Create the budget item
+      const monthlyContribution = getMonthlyContribution(recurring.amount, recurring.frequency);
+      const maxOrder = category.items.length > 0
+        ? Math.max(...category.items.map(item => item.order || 0))
+        : -1;
+
+      await db.insert(budgetItems).values({
+        categoryId: category.id,
+        name: recurring.name,
+        planned: monthlyContribution,
+        order: maxOrder + 1,
+        recurringPaymentId: recurring.id,
+      });
+
+      itemsCreated = true;
+    }
+
+    // Re-fetch budget if items were created
+    if (itemsCreated) {
+      budget = await db.query.budgets.findFirst({
+        where: eq(budgets.id, budget.id),
+        with: {
+          categories: {
+            with: {
+              items: {
+                orderBy: [asc(budgetItems.order)],
+                with: {
+                  transactions: true,
+                  splitTransactions: {
+                    with: {
+                      parentTransaction: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
   }
 
   return NextResponse.json(budget);

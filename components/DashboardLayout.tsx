@@ -5,13 +5,12 @@ import Sidebar from './Sidebar';
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  onOpenMonthlyReport?: () => void;
 }
 
-export default function DashboardLayout({ children, onOpenMonthlyReport }: DashboardLayoutProps) {
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50">
-      <Sidebar onOpenMonthlyReport={onOpenMonthlyReport} />
+      <Sidebar />
       <main className="flex-1 overflow-hidden">
         {children}
       </main>

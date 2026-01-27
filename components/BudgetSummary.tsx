@@ -7,10 +7,17 @@ import { HiOutlineScissors } from "react-icons/hi2";
 import AddTransactionModal, { TransactionToEdit } from "./AddTransactionModal";
 import SplitTransactionModal from "./SplitTransactionModal";
 
+interface SelectedBudgetItem {
+  item: BudgetItem;
+  categoryName: string;
+}
+
 interface BudgetSummaryProps {
   budget: Budget;
   onRefresh?: () => void;
   onTransactionClick?: (transaction: Transaction) => void;
+  selectedBudgetItem?: SelectedBudgetItem | null;
+  onCloseItemDetail?: () => void;
 }
 
 interface UncategorizedTransaction {
@@ -31,7 +38,7 @@ interface LinkedAccount {
   accountSubtype: string;
 }
 
-export default function BudgetSummary({ budget, onRefresh, onTransactionClick }: BudgetSummaryProps) {
+export default function BudgetSummary({ budget, onRefresh, onTransactionClick, selectedBudgetItem, onCloseItemDetail }: BudgetSummaryProps) {
   const [activeTab, setActiveTab] = useState<"summary" | "transactions">(
     "summary"
   );
@@ -65,7 +72,6 @@ export default function BudgetSummary({ budget, onRefresh, onTransactionClick }:
 
   const totalAvailable = buffer + totalIncome;
   const remainingToBudget = totalAvailable - totalExpenses;
-  const isBalanced = Math.abs(remainingToBudget) < 0.01;
 
   const totalActualIncome = budget.categories.income.items.reduce(
     (sum, item) => sum + item.actual,
@@ -409,6 +415,162 @@ export default function BudgetSummary({ budget, onRefresh, onTransactionClick }:
     }
   };
 
+  // Item Detail View - shown when a budget item is selected
+  if (selectedBudgetItem) {
+    const { item, categoryName } = selectedBudgetItem;
+    const remaining = item.planned - item.actual;
+    const progressPercent = item.planned > 0 ? Math.min((item.actual / item.planned) * 100, 100) : 0;
+    const isOverBudget = item.actual > item.planned;
+
+    // Combine and sort all transactions for this item
+    const itemTransactions = [
+      ...item.transactions.map(t => ({
+        id: t.id,
+        date: t.date,
+        description: t.merchant || t.description,
+        amount: t.amount,
+        type: t.type,
+        isSplit: false,
+      })),
+      ...(item.splitTransactions || []).map(s => ({
+        id: `split-${s.id}`,
+        date: s.parentDate || '',
+        description: s.description || s.parentMerchant || s.parentDescription || 'Split',
+        amount: s.amount,
+        type: s.parentType || 'expense' as const,
+        isSplit: true,
+      })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return (
+      <div className="bg-white rounded-xl shadow-lg h-full flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={onCloseItemDetail}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Progress Circle and Remaining */}
+          <div className="flex items-center gap-6 mb-4">
+            <div className="relative w-20 h-20">
+              <svg className="w-20 h-20 transform -rotate-90">
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="36"
+                  stroke="#e5e7eb"
+                  strokeWidth="8"
+                  fill="none"
+                />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="36"
+                  stroke={isOverBudget ? "#ef4444" : "#22c55e"}
+                  strokeWidth="8"
+                  fill="none"
+                  strokeDasharray={`${2 * Math.PI * 36}`}
+                  strokeDashoffset={`${2 * Math.PI * 36 * (1 - progressPercent / 100)}`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-lg font-bold text-gray-700">
+                  {progressPercent.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+            <div className="text-right flex-1">
+              <p className="text-sm text-gray-500">Remaining</p>
+              <p className={`text-3xl font-bold ${remaining < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                {remaining < 0 ? '-' : ''}${Math.abs(remaining).toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          {/* Item Name */}
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">{item.name}</h2>
+          <p className="text-sm text-gray-500 mb-4">{categoryName}</p>
+
+          {/* Spent of Planned */}
+          <p className="text-base">
+            <span className={isOverBudget ? 'text-red-600' : 'text-green-600'}>
+              ${item.actual.toFixed(2)}
+            </span>
+            <span className="text-gray-500"> spent of </span>
+            <span className="text-gray-900">${item.planned.toFixed(2)}</span>
+          </p>
+
+          {/* Recurring indicator or option */}
+          {item.recurringPaymentId ? (
+            <div className="mt-4 flex items-center gap-2 text-sm text-blue-600">
+              <span>🔄</span>
+              <span>Recurring payment</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                // Navigate to recurring page with pre-filled data including budget item ID to link
+                const params = new URLSearchParams({
+                  name: item.name,
+                  amount: item.planned.toString(),
+                  category: categoryName.toLowerCase(),
+                  budgetItemId: item.id,
+                });
+                window.location.href = `/recurring?${params.toString()}`;
+              }}
+              className="mt-4 flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 transition-colors"
+            >
+              <span>🔄</span>
+              <span>Make this recurring</span>
+            </button>
+          )}
+        </div>
+
+        {/* Activity This Month */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <h3 className="text-base font-semibold text-gray-700 mb-4">
+            Activity This Month
+          </h3>
+
+          {itemTransactions.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No transactions yet</p>
+          ) : (
+            <div className="space-y-3">
+              {itemTransactions.map((txn) => (
+                <div
+                  key={txn.id}
+                  className={`flex items-center justify-between py-2 ${txn.isSplit ? 'bg-purple-50 rounded px-2 -mx-2' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex flex-col items-center justify-center text-xs text-gray-500">
+                      <span>{new Date(txn.date).toLocaleDateString('en-US', { month: 'short' })}</span>
+                      <span className="font-semibold">{new Date(txn.date).getDate()}</span>
+                    </div>
+                    <div>
+                      <p className="text-gray-900 text-sm">{txn.description}</p>
+                      {txn.isSplit && (
+                        <span className="text-xs text-purple-600">(split)</span>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`text-sm font-medium ${txn.type === 'income' ? 'text-green-600' : 'text-gray-900'}`}>
+                    {txn.type === 'income' ? '+' : '-'}${txn.amount.toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-lg h-full flex flex-col">
       {/* Tabs */}
@@ -449,55 +611,34 @@ export default function BudgetSummary({ budget, onRefresh, onTransactionClick }:
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 text-base">Buffer:</span>
-                  <span className="text-xl font-semibold text-purple-600">
+                  <span className="text-xl font-semibold text-gray-900">
                     ${buffer.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 text-base">Total Income:</span>
-                  <span className="text-xl font-semibold text-green-600">
+                  <span className="text-xl font-semibold text-gray-900">
                     ${totalIncome.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 text-base">Total Expenses:</span>
-                  <span className="text-xl font-semibold text-red-600">
+                  <span className="text-xl font-semibold text-gray-900">
                     ${totalExpenses.toFixed(2)}
                   </span>
                 </div>
                 <div className="border-t-2 border-gray-300 pt-4 mt-4">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-gray-900 text-base">
-                        Remaining:
-                      </span>
-                      <span
-                        className={`text-3xl font-bold ${
-                          isBalanced
-                            ? "text-green-600"
-                            : remainingToBudget > 0
-                            ? "text-yellow-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        ${remainingToBudget.toFixed(2)}
-                      </span>
-                    </div>
-                    {isBalanced && (
-                      <p className="text-green-600 text-sm text-center">
-                        ✓ Budget is balanced!
-                      </p>
-                    )}
-                    {!isBalanced && remainingToBudget > 0 && (
-                      <p className="text-yellow-600 text-sm text-center">
-                        Unbudgeted income
-                      </p>
-                    )}
-                    {!isBalanced && remainingToBudget < 0 && (
-                      <p className="text-red-600 text-sm text-center">
-                        Over budget!
-                      </p>
-                    )}
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-gray-900 text-base">
+                      Remaining:
+                    </span>
+                    <span
+                      className={`text-3xl font-bold ${
+                        remainingToBudget < 0 ? "text-red-600" : "text-gray-900"
+                      }`}
+                    >
+                      ${remainingToBudget.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -511,19 +652,19 @@ export default function BudgetSummary({ budget, onRefresh, onTransactionClick }:
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 text-base">Buffer:</span>
-                  <span className="text-xl font-semibold text-purple-600">
+                  <span className="text-xl font-semibold text-gray-900">
                     ${buffer.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 text-base">Total Income:</span>
-                  <span className="text-xl font-semibold text-green-600">
+                  <span className="text-xl font-semibold text-gray-900">
                     ${totalActualIncome.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 text-base">Total Expenses:</span>
-                  <span className="text-xl font-semibold text-red-600">
+                  <span className="text-xl font-semibold text-gray-900">
                     ${totalActualExpenses.toFixed(2)}
                   </span>
                 </div>
@@ -534,7 +675,7 @@ export default function BudgetSummary({ budget, onRefresh, onTransactionClick }:
                     </span>
                     <span
                       className={`text-3xl font-bold ${
-                        actualRemaining >= 0 ? "text-green-600" : "text-red-600"
+                        actualRemaining < 0 ? "text-red-600" : "text-gray-900"
                       }`}
                     >
                       ${actualRemaining.toFixed(2)}

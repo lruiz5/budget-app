@@ -19,6 +19,11 @@ interface LinkedAccount {
   accountSubtype: string;
 }
 
+interface SelectedBudgetItem {
+  item: BudgetItem;
+  categoryName: string;
+}
+
 export default function Home() {
   const currentDate = new Date();
   const [month, setMonth] = useState(currentDate.getMonth());
@@ -29,6 +34,7 @@ export default function Home() {
   const [transactionToEdit, setTransactionToEdit] = useState<TransactionToEdit | null>(null);
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([]);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [selectedBudgetItem, setSelectedBudgetItem] = useState<SelectedBudgetItem | null>(null);
 
   const fetchLinkedAccounts = useCallback(async () => {
     try {
@@ -85,6 +91,11 @@ export default function Home() {
       items: category.items,
     }));
     return categories.filter(c => c.items.length > 0);
+  };
+
+  // Handle clicking on a budget item to show details in sidebar
+  const handleItemClick = (item: BudgetItem, categoryName: string) => {
+    setSelectedBudgetItem({ item, categoryName });
   };
 
   // Handle clicking on a transaction to edit it
@@ -165,27 +176,96 @@ export default function Home() {
     (category) => category.items.length > 0
   );
 
+  // Get month name helper
+  const getMonthName = (monthIndex: number) => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[monthIndex];
+  };
+
+  // Get previous month name
+  const getPreviousMonthName = (monthIndex: number) => {
+    const prevMonth = monthIndex === 0 ? 11 : monthIndex - 1;
+    return getMonthName(prevMonth);
+  };
+
+  // Handle copying from previous month
+  const handleCopyFromPreviousMonth = async () => {
+    const prevMonth = month === 0 ? 11 : month - 1;
+    const prevYear = month === 0 ? year - 1 : year;
+
+    try {
+      const response = await fetch('/api/budgets/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceMonth: prevMonth,
+          sourceYear: prevYear,
+          targetMonth: month,
+          targetYear: year,
+        }),
+      });
+
+      if (response.ok) {
+        refreshBudget();
+      } else {
+        console.error('Error copying budget');
+      }
+    } catch (error) {
+      console.error('Error copying budget:', error);
+    }
+  };
+
   // If no items exist, show empty state
   if (!hasAnyItems) {
     return (
-      <DashboardLayout onOpenMonthlyReport={() => setIsReportModalOpen(true)}>
+      <DashboardLayout>
         <div className="h-full flex overflow-hidden">
+          {/* Main content area */}
           <div className="flex-1 overflow-y-auto hide-scrollbar">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Header - stretched wider */}
+            <div className="px-4 sm:px-6 lg:px-8 pt-8">
               <BudgetHeader
                 month={budget.month}
                 year={budget.year}
                 remainingToBudget={0}
                 onMonthChange={handleMonthChange}
               />
-              <div className="mt-16 text-center">
-                <p className="text-gray-500 text-lg">No budget set for this month.</p>
-                <p className="text-gray-400 text-sm mt-2">
-                  Add income and expense categories to start planning.
+            </div>
+
+            {/* Empty state content */}
+            <div className="mt-8 text-center">
+                {/* Illustration */}
+                <div className="flex items-center justify-center mb-8">
+                  <img
+                    src="/clone-budget.svg"
+                    alt="Copy budget illustration"
+                    className="w-80 h-80 opacity-60"
+                  />
+                </div>
+
+                {/* Heading */}
+                <h2 className="text-2xl font-semibold text-gray-800 mb-3">
+                  Hey there, looks like you need a budget for {getMonthName(budget.month)}.
+                </h2>
+
+                {/* Subtext */}
+                <p className="text-gray-500 mb-6">
+                  We&apos;ll <span className="font-semibold">copy {getPreviousMonthName(budget.month)}&apos;s budget</span> to get you started.
                 </p>
-              </div>
+
+                {/* CTA Button */}
+                <button
+                  onClick={handleCopyFromPreviousMonth}
+                  className="px-8 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Start Planning for {getMonthName(budget.month)}
+                </button>
             </div>
           </div>
+
+          {/* Right sidebar placeholder */}
+          <div className="w-xl bg-gray-50 p-8"></div>
         </div>
       </DashboardLayout>
     );
@@ -205,19 +285,23 @@ export default function Home() {
   const remainingToBudget = totalAvailable - totalPlannedExpenses;
 
   return (
-    <DashboardLayout onOpenMonthlyReport={() => setIsReportModalOpen(true)}>
+    <DashboardLayout>
       <div className="h-full flex overflow-hidden">
         {/* Main content area */}
         <div className="flex-1 overflow-y-auto hide-scrollbar">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header - stretched wider */}
+          <div className="px-4 sm:px-6 lg:px-8 pt-8">
             <BudgetHeader
               month={budget.month}
               year={budget.year}
               remainingToBudget={remainingToBudget}
               onMonthChange={handleMonthChange}
             />
+          </div>
 
-            <div className="mt-8 space-y-6 pb-8">
+          {/* Budget content - constrained width */}
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="space-y-6 pb-8">
               <BufferSection
                 budgetId={budget.id}
                 buffer={budget.buffer}
@@ -229,49 +313,72 @@ export default function Home() {
                 onRefresh={refreshBudget}
                 isIncome={true}
                 onTransactionClick={handleTransactionClick}
+                onItemClick={handleItemClick}
+                selectedItemId={selectedBudgetItem?.item.id}
               />
 
               <BudgetSection
                 category={budget.categories.giving}
                 onRefresh={refreshBudget}
                 onTransactionClick={handleTransactionClick}
+                onItemClick={handleItemClick}
+                selectedItemId={selectedBudgetItem?.item.id}
               />
 
               <BudgetSection
                 category={budget.categories.household}
                 onRefresh={refreshBudget}
                 onTransactionClick={handleTransactionClick}
+                onItemClick={handleItemClick}
+                selectedItemId={selectedBudgetItem?.item.id}
               />
 
               <BudgetSection
                 category={budget.categories.transportation}
                 onRefresh={refreshBudget}
                 onTransactionClick={handleTransactionClick}
+                onItemClick={handleItemClick}
+                selectedItemId={selectedBudgetItem?.item.id}
               />
 
               <BudgetSection
                 category={budget.categories.food}
                 onRefresh={refreshBudget}
                 onTransactionClick={handleTransactionClick}
+                onItemClick={handleItemClick}
+                selectedItemId={selectedBudgetItem?.item.id}
               />
 
               <BudgetSection
                 category={budget.categories.personal}
                 onRefresh={refreshBudget}
                 onTransactionClick={handleTransactionClick}
+                onItemClick={handleItemClick}
+                selectedItemId={selectedBudgetItem?.item.id}
               />
 
               <BudgetSection
                 category={budget.categories.insurance}
                 onRefresh={refreshBudget}
                 onTransactionClick={handleTransactionClick}
+                onItemClick={handleItemClick}
+                selectedItemId={selectedBudgetItem?.item.id}
               />
 
               <BudgetSection
                 category={budget.categories.saving}
                 onRefresh={refreshBudget}
                 onTransactionClick={handleTransactionClick}
+                onItemClick={handleItemClick}
+                selectedItemId={selectedBudgetItem?.item.id}
               />
+
+              {/* Add Group Button */}
+              <button
+                className="w-full py-3 border-2 border-dotted border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-600 transition-colors cursor-pointer"
+              >
+                + Add Group
+              </button>
             </div>
           </div>
         </div>
@@ -282,6 +389,8 @@ export default function Home() {
             budget={budget}
             onRefresh={refreshBudget}
             onTransactionClick={handleTransactionClick}
+            selectedBudgetItem={selectedBudgetItem}
+            onCloseItemDetail={() => setSelectedBudgetItem(null)}
           />
         </div>
 

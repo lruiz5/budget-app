@@ -23,12 +23,13 @@ export const budgetItems = sqliteTable('budget_items', {
   name: text('name').notNull(),
   planned: real('planned').notNull().default(0),
   order: integer('order').notNull().default(0),
+  recurringPaymentId: integer('recurring_payment_id'), // Links to recurring_payments table
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
 
 export const transactions = sqliteTable('transactions', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  budgetItemId: integer('budget_item_id').references(() => budgetItems.id, { onDelete: 'cascade' }),
+  budgetItemId: integer('budget_item_id').references(() => budgetItems.id, { onDelete: 'set null' }),
   linkedAccountId: integer('linked_account_id').references(() => linkedAccounts.id),
   date: text('date').notNull(),
   description: text('description').notNull(),
@@ -120,3 +121,17 @@ export const splitTransactionsRelations = relations(splitTransactions, ({ one })
 export const linkedAccountsRelations = relations(linkedAccounts, ({ many }) => ({
   transactions: many(transactions),
 }));
+
+// Recurring payments for subscriptions and memberships
+export const recurringPayments = sqliteTable('recurring_payments', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  amount: real('amount').notNull(), // Total amount due when payment hits
+  frequency: text('frequency').notNull().$type<'monthly' | 'quarterly' | 'semi-annually' | 'annually'>(),
+  nextDueDate: text('next_due_date').notNull(), // ISO date string
+  fundedAmount: real('funded_amount').notNull().default(0), // Amount saved toward this payment
+  categoryType: text('category_type').$type<'income' | 'giving' | 'household' | 'transportation' | 'food' | 'personal' | 'insurance' | 'saving'>(),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});

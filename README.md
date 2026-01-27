@@ -4,7 +4,7 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 
 ## Project Status
 
-**Current Version:** v0.7.0 - Dashboard Navigation & Monthly Reports
+**Current Version:** v0.8.0 - Recurring Payments & Budget Item Details
 **Last Updated:** 2026-01-26
 
 ### Tech Stack
@@ -60,6 +60,31 @@ Each category displays with an emoji indicator:
 - Expandable transaction list showing all transactions per line item
 - Transactions sorted by date descending (most recent first)
 - Split transactions displayed under their assigned budget items
+- 🔄 emoji indicator on budget items linked to recurring payments
+- Click any budget item to view details in sidebar
+
+#### Budget Item Detail View
+Click any budget item to see a detailed sidebar view:
+- Circular progress indicator showing percentage spent
+- Remaining balance prominently displayed
+- Item name and category
+- Spent vs planned amounts
+- "Make this recurring" option to create a recurring payment
+- 🔄 indicator if already linked to a recurring payment
+- Activity list showing all transactions for this item
+- Income transactions displayed in green
+
+#### Recurring Payments
+Accessible via sidebar navigation:
+- Create and manage recurring bills and subscriptions
+- Support for multiple frequencies: Monthly, Quarterly, Semi-Annually, Annually
+- Automatic monthly contribution calculation for non-monthly payments
+- Link budget items to recurring payments for tracking
+- Progress bar showing funding status toward next payment
+- "Paid" indicator when fully funded
+- 60-day upcoming payments warning banner
+- Category assignment for auto-creation in new budgets
+- Due date tracking with days-until-due display
 
 #### Buffer Section
 - 💼 Buffer tracks money carried over from previous month
@@ -101,6 +126,12 @@ Comprehensive end-of-month budget review accessed via Insights > Monthly Summary
 - Savings Rate percentage
 - Planned vs Actual comparison
 
+**Buffer Flow:**
+- Current Buffer amount
+- Total Underspent (sum of all under-budget items)
+- Total Overspent (sum of all over-budget items)
+- Projected Next Month Buffer calculation
+
 **Category Breakdown:**
 - Each category with planned, actual, and difference
 - Progress bar showing utilization percentage
@@ -126,6 +157,7 @@ Comprehensive end-of-month budget review accessed via Insights > Monthly Summary
 | Route | Page | Description |
 |-------|------|-------------|
 | `/` | Budget | Main budget view with categories, transactions, and summary |
+| `/recurring` | Recurring | Manage recurring payments and subscriptions |
 | `/settings` | Accounts | Bank account management and Teller integration |
 | `/insights` | Insights | Insights hub with Monthly Summary and future analytics |
 
@@ -144,10 +176,11 @@ npm run db:migrate   # Run migrations
 **Database Schema:**
 - **budgets** - Monthly budget containers (month, year, buffer amount)
 - **budget_categories** - Categories within each budget (Income, Giving, etc.)
-- **budget_items** - Individual line items (e.g., "Gas", "Groceries")
+- **budget_items** - Individual line items (e.g., "Gas", "Groceries"), with optional link to recurring payments
 - **transactions** - Individual transactions linked to budget items
 - **split_transactions** - Child allocations when a transaction is split across categories
 - **linked_accounts** - Connected bank accounts from Teller
+- **recurring_payments** - Recurring bills and subscriptions with frequency, amount, and due dates
 
 ### How to Use
 
@@ -190,6 +223,7 @@ budget-app/
 │   │   ├── budgets/              # Budget CRUD operations
 │   │   ├── budget-items/         # Budget item management
 │   │   │   └── reorder/          # Drag-and-drop reorder endpoint
+│   │   ├── recurring-payments/   # Recurring payment CRUD
 │   │   ├── transactions/         # Transaction CRUD
 │   │   │   └── split/            # Split transaction operations
 │   │   └── teller/               # Bank integration
@@ -197,6 +231,8 @@ budget-app/
 │   │       └── sync/             # Transaction sync
 │   ├── insights/
 │   │   └── page.tsx              # Insights page
+│   ├── recurring/
+│   │   └── page.tsx              # Recurring payments page
 │   ├── settings/
 │   │   └── page.tsx              # Accounts page
 │   ├── layout.tsx                # Root layout
@@ -240,6 +276,12 @@ budget-app/
 - `DELETE /api/transactions?id=X` - Soft delete transaction
 - `PATCH /api/transactions` - Restore deleted transaction
 - `POST /api/transactions/split` - Split transaction across categories
+
+### Recurring Payments
+- `GET /api/recurring-payments` - Get all active recurring payments
+- `POST /api/recurring-payments` - Create recurring payment (optionally link to budget item)
+- `PUT /api/recurring-payments` - Update recurring payment
+- `DELETE /api/recurring-payments?id=X` - Delete recurring payment and unlink budget items
 
 ### Teller Integration
 - `GET /api/teller/accounts` - Get linked accounts

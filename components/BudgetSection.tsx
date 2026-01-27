@@ -26,6 +26,8 @@ interface BudgetSectionProps {
   onRefresh: () => void;
   isIncome?: boolean;
   onTransactionClick?: (transaction: Transaction) => void;
+  onItemClick?: (item: BudgetItem, categoryName: string) => void;
+  selectedItemId?: string;
 }
 
 interface SortableItemProps {
@@ -44,6 +46,8 @@ interface SortableItemProps {
   setEditingNames: (names: Record<string, string>) => void;
   setEditingValues: (values: Record<string, string | number>) => void;
   isIncome?: boolean;
+  onItemClick?: (item: BudgetItem) => void;
+  isSelected?: boolean;
 }
 
 function SortableItem({
@@ -60,6 +64,8 @@ function SortableItem({
   setEditingNames,
   setEditingValues,
   isIncome = false,
+  onItemClick,
+  isSelected = false,
 }: SortableItemProps) {
   const {
     attributes,
@@ -89,7 +95,12 @@ function SortableItem({
       style={style}
       className="relative"
     >
-      <div className="grid grid-cols-10 gap-4 items-center py-2 rounded">
+      <div
+        onClick={() => onItemClick?.(item)}
+        className={`grid grid-cols-10 gap-4 items-center py-2 rounded cursor-pointer transition-colors ${
+          isSelected ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-gray-50'
+        }`}
+      >
         <div className="col-span-5 flex items-center gap-2">
           {isEditing && (
             <button
@@ -157,6 +168,11 @@ function SortableItem({
             }}
             className="flex-1 font-medium text-gray-900 px-2 py-1 border border-transparent hover:bg-gray-50 focus:border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {item.recurringPaymentId && (
+            <span className="text-xs text-blue-500" title="Recurring payment">
+              🔄
+            </span>
+          )}
           {(item.transactions.length > 0 || (item.splitTransactions?.length || 0) > 0) && (
             <span className="text-xs text-gray-500">
               ({item.transactions.length + (item.splitTransactions?.length || 0)})
@@ -249,8 +265,8 @@ function SortableItem({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900">
-                    ${transaction.amount.toFixed(2)}
+                  <span className={`font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-gray-900'}`}>
+                    {transaction.type === 'income' ? '+' : ''}${transaction.amount.toFixed(2)}
                   </span>
                   <button
                     onClick={(e) => {
@@ -282,8 +298,8 @@ function SortableItem({
                   <span className="ml-2 text-xs text-purple-600">(split)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900">
-                    ${split.amount.toFixed(2)}
+                  <span className={`font-medium ${split.parentType === 'income' ? 'text-green-600' : 'text-gray-900'}`}>
+                    {split.parentType === 'income' ? '+' : ''}${split.amount.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -315,6 +331,8 @@ export default function BudgetSection({
   onRefresh,
   isIncome = false,
   onTransactionClick,
+  onItemClick,
+  selectedItemId,
 }: BudgetSectionProps) {
   const [newItemName, setNewItemName] = useState("");
   const [isAddingItem, setIsAddingItem] = useState(false);
@@ -546,6 +564,8 @@ export default function BudgetSection({
                       setEditingNames={setEditingNames}
                       setEditingValues={setEditingValues}
                       isIncome={isIncome}
+                      onItemClick={(item) => onItemClick?.(item, category.name)}
+                      isSelected={selectedItemId === item.id}
                     />
                   ))}
                 </SortableContext>
@@ -586,9 +606,9 @@ export default function BudgetSection({
           {!isAddingItem && (
             <button
               onClick={() => setIsAddingItem(true)}
-              className="mt-4 w-full py-2 border-2 border-dashed border-gray-300 rounded text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
+              className="mt-4 text-sm text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
             >
-              + Add Item
+              Add Item
             </button>
           )}
         </div>

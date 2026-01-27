@@ -31,7 +31,7 @@ export default function InsightsPage() {
   }, [fetchCurrentBudget]);
 
   return (
-    <DashboardLayout onOpenMonthlyReport={() => setIsReportModalOpen(true)}>
+    <DashboardLayout>
       <div className="h-full overflow-y-auto bg-gray-100 p-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Insights</h1>

@@ -122,6 +122,26 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
   const netSavings = totalAvailable - totalExpenses;
   const savingsRate = totalAvailable > 0 ? ((netSavings / totalAvailable) * 100) : 0;
 
+  // Calculate underspent and overspent for expense categories
+  let totalUnderspent = 0;
+  let totalOverspent = 0;
+  expenseCategories.forEach(([, category]) => {
+    category.items.forEach((item) => {
+      const diff = item.planned - item.actual;
+      if (diff > 0) {
+        totalUnderspent += diff;
+      } else if (diff < 0) {
+        totalOverspent += Math.abs(diff);
+      }
+    });
+  });
+
+  // Income variance (actual income vs planned income)
+  const incomeVariance = totalIncome - totalPlannedIncome;
+
+  // Theoretical next month buffer = current buffer + underspent - overspent + income variance
+  const theoreticalNextBuffer = buffer + totalUnderspent - totalOverspent + incomeVariance;
+
   // Category summaries
   const categorySummaries: CategorySummary[] = Object.entries(budget.categories)
     .filter(([key]) => key !== 'income')
@@ -260,6 +280,47 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
                   </span>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Buffer Flow */}
+          <section>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Buffer Flow</h3>
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-5 border border-slate-200">
+              <div className="space-y-3">
+                {/* Current Buffer */}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Current Buffer</span>
+                  <span className="font-semibold text-gray-900">${buffer.toFixed(2)}</span>
+                </div>
+
+                {/* Underspent */}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">+ Underspent</span>
+                  <span className="font-semibold text-green-600">+${totalUnderspent.toFixed(2)}</span>
+                </div>
+
+                {/* Overspent */}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">- Overspent</span>
+                  <span className="font-semibold text-red-600">-${totalOverspent.toFixed(2)}</span>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-300 my-2"></div>
+
+                {/* Projected Next Buffer */}
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-800">Projected Next Month Buffer</span>
+                  <span className={`text-xl font-bold ${theoreticalNextBuffer >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+                    ${theoreticalNextBuffer.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-4">
+                This shows how your buffer would change based on this month&apos;s spending and income patterns.
+              </p>
             </div>
           </section>
 

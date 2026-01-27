@@ -33,6 +33,7 @@ export interface BudgetItem {
   actual: number;
   transactions: Transaction[];
   splitTransactions?: SplitTransaction[];
+  recurringPaymentId?: number | null;
 }
 
 export interface BudgetCategory {
@@ -67,4 +68,25 @@ export interface Budget {
     insurance: BudgetCategory;
     saving: BudgetCategory;
   };
+}
+
+export type RecurringFrequency = 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+
+export interface RecurringPayment {
+  id: number;
+  name: string;
+  amount: number; // Total amount due
+  frequency: RecurringFrequency;
+  nextDueDate: string; // ISO date string
+  fundedAmount: number; // Amount saved toward this payment
+  categoryType?: CategoryType | null;
+  isActive: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+  // Computed fields
+  monthlyContribution: number; // amount / months in cycle
+  percentFunded: number; // (fundedAmount / amount) * 100
+  isFullyFunded: boolean;
+  daysUntilDue: number;
+  isPaid: boolean; // True when payment conditions are met
 }

@@ -45,7 +45,7 @@ export default function BudgetHeader({
   const isBalanced = Math.abs(remainingToBudget) < 0.01;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="p-6 border-b border-gray-200">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">

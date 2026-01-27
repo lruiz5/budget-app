@@ -53,6 +53,7 @@ export function transformDbBudgetToAppBudget(dbBudget: any): Budget {
               name: item.name,
               planned: item.planned,
               actual: directActual + splitActual,
+              recurringPaymentId: item.recurringPaymentId || null,
               transactions: activeTransactions.map((t: any) => ({
                 id: t.id.toString(),
                 date: t.date,
