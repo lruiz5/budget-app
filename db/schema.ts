@@ -124,6 +124,18 @@ export const linkedAccountsRelations = relations(linkedAccounts, ({ many }) => (
   transactions: many(transactions),
 }));
 
+// User onboarding tracking
+export const userOnboarding = sqliteTable('user_onboarding', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull().unique(),
+  currentStep: integer('current_step').notNull().default(1),
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  skippedAt: integer('skipped_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
+
+export const userOnboardingRelations = relations(userOnboarding, () => ({}));
+
 // Recurring payments for subscriptions and memberships
 export const recurringPayments = sqliteTable('recurring_payments', {
   id: integer('id').primaryKey({ autoIncrement: true }),

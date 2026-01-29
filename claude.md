@@ -6,8 +6,8 @@ This document contains context for Claude AI to continue development on this bud
 
 A zero-based budget tracking application built with Next.js, TypeScript, and Tailwind CSS. The app features bank account integration via Teller API for automatic transaction imports.
 
-**Current Version:** v1.1.0
-**Last Session:** 2026-01-28
+**Current Version:** v1.3.0
+**Last Session:** 2026-01-29
 
 ## Tech Stack
 
@@ -68,6 +68,9 @@ Budget (month/year)
 
 7. **linked_accounts** - Connected bank accounts from Teller
    - id, **userId**, tellerAccountId, accessToken, institutionName, etc.
+
+8. **user_onboarding** - Onboarding progress tracking
+   - id, **userId** (unique), currentStep, completedAt, skippedAt, createdAt
 
 ### User Data Isolation
 - `budgets`, `linked_accounts`, and `recurring_payments` have `userId` columns (Clerk user ID)
@@ -159,24 +162,32 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 ## Key Files and Their Purposes
 
 ### Pages (app/)
-- `page.tsx` - Main budget view with all categories
+- `page.tsx` - Main budget view with all categories (includes onboarding redirect check)
 - `recurring/page.tsx` - Recurring payments management
 - `settings/page.tsx` - Bank account management (Teller)
 - `insights/page.tsx` - Insights hub with Monthly Summary access
+- `onboarding/page.tsx` - Interactive onboarding flow (6 steps, standalone layout)
 - `sign-in/[[...sign-in]]/page.tsx` - Clerk sign-in page
-- `sign-up/[[...sign-up]]/page.tsx` - Clerk sign-up page
+- `sign-up/[[...sign-up]]/page.tsx` - Clerk sign-up page (redirects to `/onboarding`)
 
 ### Components (components/)
 - `BudgetSection.tsx` - Renders a single category with its items, handles drag-drop reorder
 - `BudgetSummary.tsx` - Right sidebar with Summary/Transactions tabs AND budget item detail view
-- `MonthlyReportModal.tsx` - Monthly report with Buffer Flow section
+- `MonthlyReportModal.tsx` - Monthly report with Buffer Flow section and empty-state handling
 - `DashboardLayout.tsx` - Main layout wrapper with sidebar
-- `Sidebar.tsx` - Collapsible navigation sidebar with UserButton
+- `Sidebar.tsx` - Collapsible navigation sidebar with UserButton and "Getting Started" link
 - `AddTransactionModal.tsx` - Add/edit transaction modal
 - `SplitTransactionModal.tsx` - Split transaction interface
+- `onboarding/WelcomeStep.tsx` - Step 1: Welcome screen
+- `onboarding/ConceptsStep.tsx` - Step 2: Zero-based budgeting explainer
+- `onboarding/BufferStep.tsx` - Step 3: Interactive buffer input
+- `onboarding/ItemsStep.tsx` - Step 4: Category cards with suggested items
+- `onboarding/TransactionStep.tsx` - Step 5: First transaction with suggested transactions
+- `onboarding/CompleteStep.tsx` - Step 6: Celebration and summary
 
 ### API Routes (app/api/)
 - `budgets/route.ts` - GET creates/returns budget, syncs recurring payments to budget items
+- `onboarding/route.ts` - Onboarding status CRUD (GET/POST/PUT/PATCH)
 - `recurring-payments/route.ts` - Full CRUD, DELETE unlinks budget items first
 - `transactions/route.ts` - CRUD with soft delete support
 - `transactions/split/route.ts` - Split transaction creation
@@ -268,6 +279,7 @@ const emojiMap: Record<string, string> = {
 ### Working Features
 - **User authentication** via Clerk (sign-in, sign-up, sign-out)
 - **Multi-user support** - each user sees only their own data
+- **Interactive onboarding** - 6-step guided setup for new users
 - Full budget CRUD with categories and items
 - Transaction management (add, edit, soft delete, restore)
 - Split transactions across multiple budget items
@@ -275,7 +287,7 @@ const emojiMap: Record<string, string> = {
 - Bank integration via Teller
 - Recurring payments with linking to budget items
 - Budget item detail view in sidebar
-- Monthly report with Buffer Flow
+- Monthly report with Buffer Flow and empty-state handling
 - Copy budget from previous month
 
 ### Potential Future Work
@@ -372,15 +384,48 @@ When testing recurring payments:
 - Fixed ownership verification for split transactions (parent has null `budgetItemId` after splitting)
 - Both `transactions/route.ts` and `transactions/split/route.ts` now check ownership via split transaction path
 
+## Recent Changes (v1.3.0)
+
+### Interactive Onboarding
+- **6-step guided onboarding** for new users at `/onboarding`
+- Steps: Welcome → Concepts → Set Buffer → Create Budget Items → Add Transaction → Complete
+- Required on first sign-up (redirect from `/` if not completed, sign-up redirects to `/onboarding`)
+- Revisitable via "Getting Started" link in sidebar (FaLightbulb icon)
+- Progress persisted in `user_onboarding` table — users can resume if interrupted
+- Skip option available (marks `skippedAt`, redirects to dashboard)
+
+### Onboarding Step Details
+- **Step 2 (Concepts):** Explains zero-based budgeting with 3 concept cards and example budget breakdown
+- **Step 4 (Items):** Suggested budget items as clickable pill badges per category (Rent $1,200, Groceries $400, etc.). Click populates name/amount fields.
+- **Step 5 (Transaction):** Suggested transactions as quick-fill badges based on items created in step 4 (Weekly groceries $85.50, Gas fill-up $45, etc.)
+- **Step 6 (Complete):** Summary of what was created, marks onboarding complete via API
+
+### Onboarding API (`/api/onboarding/route.ts`)
+- `GET` — Check status (completed, currentStep)
+- `POST` — Initialize record for new user
+- `PUT` — Update current step
+- `PATCH` — Complete or skip (`{ action: 'complete' | 'skip' }`)
+
+### Monthly Report Empty States
+- **Top Spending Items:** Shows friendly message instead of empty table when no spending
+- **Potential Reallocation:** Hidden entirely when `totalExpenses === 0`
+- **Category Breakdown:** Adds "No spending recorded yet" note when no expenses
+- **Buffer Flow:** Contextual help text for new users vs active users
+
+### Other Changes
+- `.env.example` file added for new users
+- `.gitignore` updated with `!.env.example` exception
+- `README.md` updated with v1.2.0 release info and setup instructions
+- Migration script: `scripts/migrate-add-onboarding.ts` for existing users
+- Standalone onboarding layout (no DashboardLayout) with `h-screen overflow-hidden` and scrollable content area
+
 ## Session Handoff Notes
 
 Last session ended after:
-1. Created `formatCurrency` utility and applied across codebase
-2. Added Total Savings rows to BudgetSummary
-3. Changed progress bar color to green
-4. Themed Clerk sign-in/sign-up pages with Emerald design system
-5. Added animated diagonal "Budget App" text background to auth pages
-6. Fixed split transaction ownership verification bug
-7. Updated CLAUDE.md and DESIGN_SYSTEM.md
+1. Built full 6-step interactive onboarding flow
+2. Added suggested items and transactions as clickable badges
+3. Added empty-state handling to Monthly Report
+4. Updated all documentation (.md files)
+5. Added .env.example and updated README
 
-The app is in a stable state with v1.2.0 changes applied.
+The app is in a stable state with v1.3.0 changes applied. All changes are uncommitted.

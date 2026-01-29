@@ -4,8 +4,8 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 
 ## Project Status
 
-**Current Version:** v1.0.0 - User Authentication & Multi-User Support
-**Last Updated:** 2026-01-27
+**Current Version:** v1.3.0 - Onboarding & Empty States (Final SQLite Release)
+**Last Updated:** 2026-01-29
 
 ### Tech Stack
 - Next.js 16.x (App Router)
@@ -13,7 +13,7 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - Tailwind CSS
 - ESLint
 - Drizzle ORM
-- SQLite (better-sqlite3)
+- SQLite (better-sqlite3) - **Final release using SQLite. Future versions will migrate to cloud storage.**
 - Clerk (authentication)
 - Teller API (bank integration)
 - React Icons (react-icons)
@@ -27,6 +27,15 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - Secure route protection - all pages require authentication
 - User account management via sidebar UserButton
 - MFA support (configurable in Clerk dashboard)
+
+#### Interactive Onboarding
+- 6-step guided setup for new users
+- Teaches zero-based budgeting concepts before hands-on setup
+- Interactive steps: set buffer, create budget items, add first transaction
+- Suggested items and transactions as quick-fill badges
+- Progress saved in database — resume if interrupted
+- Skip option for experienced users
+- Revisitable via "Getting Started" link in sidebar
 
 #### Dashboard Layout
 - Collapsible sidebar navigation
@@ -155,10 +164,12 @@ Comprehensive end-of-month budget review accessed via Insights > Monthly Summary
 **Top Spending Items:**
 - Top 10 spending items ranked by amount
 - Shows category, planned, actual, and percentage of total spending
+- Empty state message when no spending recorded
 
 **Potential Reallocation:**
 - Categories under 50% utilized highlighted
 - Suggestions for next month's budget adjustments
+- Hidden for new users with no spending data
 
 #### Data Persistence
 - All budget data stored in local SQLite database
@@ -174,6 +185,7 @@ Comprehensive end-of-month budget review accessed via Insights > Monthly Summary
 | `/recurring` | Recurring | Manage recurring payments and subscriptions |
 | `/settings` | Accounts | Bank account management and Teller integration |
 | `/insights` | Insights | Insights hub with Monthly Summary and future analytics |
+| `/onboarding` | Onboarding | Interactive 6-step guided setup for new users |
 | `/sign-in` | Sign In | Clerk authentication - sign in page |
 | `/sign-up` | Sign Up | Clerk authentication - sign up page |
 
@@ -197,6 +209,7 @@ npm run db:migrate   # Run migrations
 - **split_transactions** - Child allocations when a transaction is split across categories
 - **linked_accounts** - Connected bank accounts from Teller (userId, accessToken, institution info)
 - **recurring_payments** - Recurring bills and subscriptions (userId, frequency, amount, due dates)
+- **user_onboarding** - Onboarding progress tracking (userId, currentStep, completedAt, skippedAt)
 
 **Note:** `userId` columns store the Clerk user ID for multi-user data isolation.
 
@@ -214,6 +227,14 @@ npm run db:migrate   # Run migrations
 
 ### Environment Variables
 
+Create a `.env.local` file in the root directory. You can copy `.env.example` as a starting template:
+
+```bash
+cp .env.example .env.local
+```
+
+Then fill in your credentials:
+
 **Authentication (Clerk):**
 ```env
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
@@ -224,18 +245,37 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 
 **Bank Integration (Teller):**
 ```env
-NEXT_PUBLIC_TELLER_APP_ID=your_application_id
-TELLER_ENVIRONMENT=sandbox  # or development, production
-TELLER_SIGNING_SECRET=your_signing_secret
+TELLER_APP_ID=your_teller_app_id
+NEXT_PUBLIC_TELLER_APP_ID=your_teller_app_id
+TELLER_CERTIFICATE_PATH=./certificates/certificate.pem
+TELLER_PRIVATE_KEY_PATH=./certificates/private_key.pem
+TELLER_ENVIRONMENT=production
 ```
+
+**Note:** `.env.local` is ignored by git to keep secrets safe. Never commit it to the repository.
 
 ## Getting Started
 
-```bash
-npm install
-npm run db:push
-npm run dev
-```
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   cp .env.example .env.local
+   ```
+   Then edit `.env.local` and fill in your Clerk and Teller credentials.
+
+3. **Set up the database:**
+   ```bash
+   npm run db:push
+   ```
+
+4. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
@@ -248,6 +288,7 @@ budget-app/
 │   │   ├── auth/
 │   │   │   └── claim-data/       # Claim unclaimed data for user
 │   │   ├── budgets/              # Budget CRUD operations
+│   │   ├── onboarding/           # Onboarding status CRUD
 │   │   ├── budget-items/         # Budget item management
 │   │   │   └── reorder/          # Drag-and-drop reorder endpoint
 │   │   ├── recurring-payments/   # Recurring payment CRUD
@@ -258,6 +299,8 @@ budget-app/
 │   │       └── sync/             # Transaction sync
 │   ├── insights/
 │   │   └── page.tsx              # Insights page
+│   ├── onboarding/
+│   │   └── page.tsx              # Interactive onboarding flow
 │   ├── recurring/
 │   │   └── page.tsx              # Recurring payments page
 │   ├── settings/
@@ -280,7 +323,14 @@ budget-app/
 │   ├── MonthlyReportModal.tsx    # Monthly report modal
 │   ├── Sidebar.tsx               # Collapsible navigation with UserButton
 │   ├── SplitTransactionModal.tsx # Split transaction interface
-│   └── TransactionModal.tsx      # Transaction details modal
+│   ├── TransactionModal.tsx      # Transaction details modal
+│   └── onboarding/              # Onboarding step components
+│       ├── WelcomeStep.tsx       # Step 1: Welcome
+│       ├── ConceptsStep.tsx      # Step 2: ZBB concepts
+│       ├── BufferStep.tsx        # Step 3: Set buffer
+│       ├── ItemsStep.tsx         # Step 4: Create items
+│       ├── TransactionStep.tsx   # Step 5: First transaction
+│       └── CompleteStep.tsx      # Step 6: Summary
 ├── db/
 │   ├── index.ts                  # Database connection
 │   └── schema.ts                 # Drizzle schema definitions
@@ -290,7 +340,8 @@ budget-app/
 │   └── teller.ts                 # Teller API client
 ├── scripts/
 │   ├── check-schema.ts           # Verify database schema
-│   └── migrate-add-userid.ts     # Migration for userId columns
+│   ├── migrate-add-userid.ts     # Migration for userId columns
+│   └── migrate-add-onboarding.ts # Migration for onboarding table
 ├── middleware.ts                 # Clerk route protection
 └── types/
     └── budget.ts                 # TypeScript type definitions
@@ -314,6 +365,12 @@ budget-app/
 - `DELETE /api/transactions?id=X` - Soft delete transaction
 - `PATCH /api/transactions` - Restore deleted transaction
 - `POST /api/transactions/split` - Split transaction across categories
+
+### Onboarding
+- `GET /api/onboarding` - Check onboarding status
+- `POST /api/onboarding` - Initialize onboarding record
+- `PUT /api/onboarding` - Update current step
+- `PATCH /api/onboarding` - Complete or skip onboarding
 
 ### Recurring Payments
 - `GET /api/recurring-payments` - Get all active recurring payments

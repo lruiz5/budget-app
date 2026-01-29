@@ -320,7 +320,9 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
               </div>
 
               <p className="text-xs text-text-secondary mt-4">
-                This shows how your buffer would change based on this month&apos;s spending and income patterns.
+                {totalExpenses === 0 && totalIncome === 0
+                  ? 'Start adding transactions to see how next months buffer changes over time.'
+                  : 'This shows how your buffer would change based on this month\u2019s spending and income patterns.'}
               </p>
             </div>
           </section>
@@ -328,6 +330,11 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
           {/* Category Breakdown */}
           <section>
             <h3 className="text-lg font-semibold text-text-primary mb-4">Category Breakdown</h3>
+            {totalExpenses === 0 && (
+              <p className="text-sm text-text-tertiary mb-3">
+                No spending recorded yet. The breakdown below shows your planned amounts.
+              </p>
+            )}
             <div className="space-y-3">
               {categorySummaries.map((cat) => (
                 <div key={cat.name} className="bg-surface-secondary rounded-lg p-4">
@@ -387,38 +394,45 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
           {/* Top Spending Items */}
           <section>
             <h3 className="text-lg font-semibold text-text-primary mb-4">Top Spending Items</h3>
-            <div className="bg-surface-secondary rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-surface-secondary">
-                  <tr>
-                    <th className="text-left px-4 py-2 text-sm font-medium text-text-secondary">#</th>
-                    <th className="text-left px-4 py-2 text-sm font-medium text-text-secondary">Item</th>
-                    <th className="text-left px-4 py-2 text-sm font-medium text-text-secondary">Category</th>
-                    <th className="text-right px-4 py-2 text-sm font-medium text-text-secondary">Planned</th>
-                    <th className="text-right px-4 py-2 text-sm font-medium text-text-secondary">Actual</th>
-                    <th className="text-right px-4 py-2 text-sm font-medium text-text-secondary">% of Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topSpending.map((item, index) => (
-                    <tr key={`${item.category}-${item.name}`} className="border-t border-border">
-                      <td className="px-4 py-2 text-sm text-text-secondary">{index + 1}</td>
-                      <td className="px-4 py-2 text-sm font-medium text-text-primary">{item.name}</td>
-                      <td className="px-4 py-2 text-sm text-text-secondary">{item.category}</td>
-                      <td className="px-4 py-2 text-sm text-right text-text-secondary">${formatCurrency(item.planned)}</td>
-                      <td className={`px-4 py-2 text-sm text-right font-medium ${item.actual > item.planned ? 'text-danger' : 'text-text-primary'}`}>
-                        ${formatCurrency(item.actual)}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-right text-text-secondary">{item.percentOfTotal.toFixed(1)}%</td>
+            {topSpending.length === 0 ? (
+              <div className="bg-surface-secondary rounded-lg p-6 text-center">
+                <p className="text-text-tertiary">No spending recorded yet this month.</p>
+                <p className="text-sm text-text-tertiary mt-1">Add transactions to see your top spending items here.</p>
+              </div>
+            ) : (
+              <div className="bg-surface-secondary rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-surface-secondary">
+                    <tr>
+                      <th className="text-left px-4 py-2 text-sm font-medium text-text-secondary">#</th>
+                      <th className="text-left px-4 py-2 text-sm font-medium text-text-secondary">Item</th>
+                      <th className="text-left px-4 py-2 text-sm font-medium text-text-secondary">Category</th>
+                      <th className="text-right px-4 py-2 text-sm font-medium text-text-secondary">Planned</th>
+                      <th className="text-right px-4 py-2 text-sm font-medium text-text-secondary">Actual</th>
+                      <th className="text-right px-4 py-2 text-sm font-medium text-text-secondary">% of Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {topSpending.map((item, index) => (
+                      <tr key={`${item.category}-${item.name}`} className="border-t border-border">
+                        <td className="px-4 py-2 text-sm text-text-secondary">{index + 1}</td>
+                        <td className="px-4 py-2 text-sm font-medium text-text-primary">{item.name}</td>
+                        <td className="px-4 py-2 text-sm text-text-secondary">{item.category}</td>
+                        <td className="px-4 py-2 text-sm text-right text-text-secondary">${formatCurrency(item.planned)}</td>
+                        <td className={`px-4 py-2 text-sm text-right font-medium ${item.actual > item.planned ? 'text-danger' : 'text-text-primary'}`}>
+                          ${formatCurrency(item.actual)}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-right text-text-secondary">{item.percentOfTotal.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
-          {/* Underspent Categories */}
-          {underspentCategories.length > 0 && (
+          {/* Underspent Categories — only show when there's actual spending */}
+          {underspentCategories.length > 0 && totalExpenses > 0 && (
             <section>
               <h3 className="text-lg font-semibold text-text-primary mb-4">Potential Reallocation</h3>
               <p className="text-sm text-text-secondary mb-3">

@@ -118,6 +118,15 @@ All colors are defined as CSS custom properties in `globals.css` and mapped to T
 - Over budget: `bg-danger shadow-[0_0_2px_rgba(239,68,68,0.4)]`
 - Track: `bg-surface-secondary rounded-full`
 
+### Onboarding Pages
+- Standalone layout (no DashboardLayout): `h-screen bg-surface-secondary flex flex-col overflow-hidden`
+- Content area: `flex-1 overflow-y-auto px-6 py-8` with `max-w-2xl mx-auto`
+- Progress bar: 6 segments with `bg-success` (completed), `bg-primary` (current), `bg-border` (upcoming)
+- Step header: `text-sm text-text-tertiary` with skip button
+- Concept cards: `bg-surface rounded-xl shadow-md p-6` with icon circles (`w-14 h-14 rounded-full bg-primary/10`)
+- Suggested item/transaction badges: `text-xs border border-primary/30 text-primary bg-primary/5 px-3 py-1.5 rounded-full hover:bg-primary/10`
+- Category expanders: `bg-surface rounded-xl shadow-md` with expand/collapse toggle
+
 ## Category Emojis
 
 | Category | Emoji |

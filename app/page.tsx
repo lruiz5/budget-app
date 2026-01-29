@@ -30,6 +30,25 @@ export default function Home() {
   const [year, setYear] = useState(currentDate.getFullYear());
   const [budget, setBudget] = useState<Budget | null>(null);
   const [loading, setLoading] = useState(true);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  // Check if user needs onboarding
+  useEffect(() => {
+    async function checkOnboarding() {
+      try {
+        const res = await fetch('/api/onboarding');
+        const { completed } = await res.json();
+        if (!completed) {
+          window.location.href = '/onboarding';
+          return;
+        }
+      } catch {
+        // If onboarding check fails, proceed to dashboard
+      }
+      setCheckingOnboarding(false);
+    }
+    checkOnboarding();
+  }, []);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<TransactionToEdit | null>(null);
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([]);
@@ -170,7 +189,7 @@ export default function Home() {
     setTransactionToEdit(null);
   };
 
-  if (loading || !budget) {
+  if (checkingOnboarding || loading || !budget) {
     return (
       <DashboardLayout>
         <div className="h-full flex items-center justify-center">

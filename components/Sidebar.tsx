@@ -11,6 +11,7 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaRedo,
+  FaLightbulb,
 } from 'react-icons/fa';
 
 interface NavItem {
@@ -100,6 +101,22 @@ export default function Sidebar() {
           ))}
         </ul>
       </nav>
+
+      {/* Help */}
+      <div className="px-2 mb-2">
+        <Link
+          href="/onboarding"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+            isActive('/onboarding')
+              ? 'bg-primary text-white'
+              : 'text-sidebar-text-muted hover:bg-sidebar-hover hover:text-white'
+          }`}
+          title={isCollapsed ? 'Getting Started' : undefined}
+        >
+          <span className="flex-shrink-0"><FaLightbulb size={20} /></span>
+          {!isCollapsed && <span className="font-medium">Getting Started</span>}
+        </Link>
+      </div>
 
       {/* Footer */}
       <div className={`p-4 border-t border-sidebar-border ${isCollapsed ? 'flex justify-center' : ''}`}>
