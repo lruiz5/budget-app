@@ -1,4 +1,5 @@
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 interface BudgetHeaderProps {
   month: number;
@@ -57,7 +58,7 @@ export default function BudgetHeader({
           <p className="text-base font-semibold mt-1 text-text-secondary">
             {isBalanced
               ? "Budget is balanced"
-              : `$${Math.abs(remainingToBudget).toFixed(2)} ${remainingToBudget > 0 ? "left to budget" : "over budget"}`}
+              : `$${formatCurrency(Math.abs(remainingToBudget))} ${remainingToBudget > 0 ? "left to budget" : "over budget"}`}
           </p>
         </div>
         <div className="flex items-center border border-primary-border rounded-lg overflow-hidden">

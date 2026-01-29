@@ -340,13 +340,47 @@ When testing recurring payments:
 - **Cursor:** Global `cursor: pointer` on all interactive elements via `@layer base`
 - **Sidebar tabs:** Summary/Transactions icons wrapped in circles with proper badge positioning
 
+## Recent Changes (v1.2.0)
+
+### Currency Formatting
+- **`lib/formatCurrency.ts`:** Utility function for consistent `$x,xxx.xx` formatting
+- Applied across 6+ files (BudgetHeader, BudgetSummary, BudgetSection, MonthlyReportModal, SplitTransactionModal, recurring page)
+
+### Budget Summary Enhancements
+- **Total Savings rows** added to Planned and Actual sections in BudgetSummary sidebar
+- **Tighter spacing** in summary sidebar
+
+### Progress Bar Color
+- Changed budget item progress bar from faint blue (`bg-primary-light`) to green (`bg-success`)
+- Over-budget items use red (`bg-danger`) with matching glow shadows
+
+### Auth Page Theming
+- **Clerk components** styled with Emerald design system via `appearance` prop
+- Variables: `colorPrimary: #059669`, Outfit font, matching text/input colors
+- Card styling: `shadow-xl border border-border`
+
+### Animated Auth Background
+- Diagonal repeating "BUDGET APP" text on sign-in and sign-up pages
+- 45-degree rotation with oversized container (`-100%` inset) for full coverage
+- **Animated:** Alternating `scroll-left` / `scroll-right` CSS keyframe animations per row
+- Non-uniform pattern: varying text sizes (`text-xl`/`text-2xl`/`text-3xl`), opacities (`0.04`–`0.07`), and gaps
+- Animation speeds: 240s / 280s / 320s (slow, subtle movement)
+- Keyframes added to `globals.css`: `scroll-left` and `scroll-right`
+- Decorative: `pointer-events-none`, `select-none`, `aria-hidden="true"`
+
+### Split Transaction Bug Fix
+- Fixed ownership verification for split transactions (parent has null `budgetItemId` after splitting)
+- Both `transactions/route.ts` and `transactions/split/route.ts` now check ownership via split transaction path
+
 ## Session Handoff Notes
 
 Last session ended after:
-1. UI overhaul — Outfit font, Emerald color scheme, semantic tokens (v1.1.0)
-2. Unified icon library to react-icons/fa
-3. Global cursor-pointer rule
-4. Summary/Transactions tab icon circles in BudgetSummary
-5. Created DESIGN_SYSTEM.md
+1. Created `formatCurrency` utility and applied across codebase
+2. Added Total Savings rows to BudgetSummary
+3. Changed progress bar color to green
+4. Themed Clerk sign-in/sign-up pages with Emerald design system
+5. Added animated diagonal "Budget App" text background to auth pages
+6. Fixed split transaction ownership verification bug
+7. Updated CLAUDE.md and DESIGN_SYSTEM.md
 
-The app is in a stable state with the new design system fully applied.
+The app is in a stable state with v1.2.0 changes applied.

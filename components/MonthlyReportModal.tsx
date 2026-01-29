@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Budget, BudgetItem } from '@/types/budget';
 import { FaTimes, FaArrowUp, FaArrowDown, FaMinus } from 'react-icons/fa';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 interface MonthlyReportModalProps {
   isOpen: boolean;
@@ -222,7 +223,7 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-success-light rounded-lg p-4">
                 <div className="text-sm text-success mb-1">Total Income</div>
-                <div className="text-2xl font-bold text-success">${totalIncome.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-success">${formatCurrency(totalIncome)}</div>
                 {incomeTrend !== null && (
                   <div className={`text-xs flex items-center gap-1 mt-1 ${incomeTrend >= 0 ? 'text-success' : 'text-danger'}`}>
                     {incomeTrend >= 0 ? <FaArrowUp size={10} /> : <FaArrowDown size={10} />}
@@ -232,7 +233,7 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
               </div>
               <div className="bg-danger-light rounded-lg p-4">
                 <div className="text-sm text-danger mb-1">Total Expenses</div>
-                <div className="text-2xl font-bold text-danger">${totalExpenses.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-danger">${formatCurrency(totalExpenses)}</div>
                 {expenseTrend !== null && (
                   <div className={`text-xs flex items-center gap-1 mt-1 ${expenseTrend <= 0 ? 'text-success' : 'text-danger'}`}>
                     {expenseTrend >= 0 ? <FaArrowUp size={10} /> : <FaArrowDown size={10} />}
@@ -243,7 +244,7 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
               <div className={`${netSavings >= 0 ? 'bg-primary-light' : 'bg-accent-orange-light'} rounded-lg p-4`}>
                 <div className={`text-sm ${netSavings >= 0 ? 'text-primary' : 'text-accent-orange'} mb-1`}>Net Savings</div>
                 <div className={`text-2xl font-bold ${netSavings >= 0 ? 'text-primary' : 'text-accent-orange'}`}>
-                  ${netSavings.toFixed(2)}
+                  ${formatCurrency(netSavings)}
                 </div>
               </div>
               <div className={`${savingsRate >= 10 ? 'bg-accent-purple-light' : 'bg-surface-secondary'} rounded-lg p-4`}>
@@ -259,24 +260,24 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
               <div className="bg-surface-secondary rounded-lg p-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-text-secondary">Planned Income</span>
-                  <span className="font-semibold">${totalPlannedIncome.toFixed(2)}</span>
+                  <span className="font-semibold">${formatCurrency(totalPlannedIncome)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-text-secondary">Actual Income</span>
                   <span className={`font-semibold ${totalIncome >= totalPlannedIncome ? 'text-success' : 'text-danger'}`}>
-                    ${totalIncome.toFixed(2)}
+                    ${formatCurrency(totalIncome)}
                   </span>
                 </div>
               </div>
               <div className="bg-surface-secondary rounded-lg p-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-text-secondary">Planned Expenses</span>
-                  <span className="font-semibold">${totalPlannedExpenses.toFixed(2)}</span>
+                  <span className="font-semibold">${formatCurrency(totalPlannedExpenses)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-text-secondary">Actual Expenses</span>
                   <span className={`font-semibold ${totalExpenses <= totalPlannedExpenses ? 'text-success' : 'text-danger'}`}>
-                    ${totalExpenses.toFixed(2)}
+                    ${formatCurrency(totalExpenses)}
                   </span>
                 </div>
               </div>
@@ -291,19 +292,19 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
                 {/* Current Buffer */}
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary">Current Buffer</span>
-                  <span className="font-semibold text-text-primary">${buffer.toFixed(2)}</span>
+                  <span className="font-semibold text-text-primary">${formatCurrency(buffer)}</span>
                 </div>
 
                 {/* Underspent */}
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary">+ Underspent</span>
-                  <span className="font-semibold text-success">+${totalUnderspent.toFixed(2)}</span>
+                  <span className="font-semibold text-success">+${formatCurrency(totalUnderspent)}</span>
                 </div>
 
                 {/* Overspent */}
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary">- Overspent</span>
-                  <span className="font-semibold text-danger">-${totalOverspent.toFixed(2)}</span>
+                  <span className="font-semibold text-danger">-${formatCurrency(totalOverspent)}</span>
                 </div>
 
                 {/* Divider */}
@@ -313,7 +314,7 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-text-primary">Projected Next Month Buffer</span>
                   <span className={`text-xl font-bold ${theoreticalNextBuffer >= 0 ? 'text-primary' : 'text-danger'}`}>
-                    ${theoreticalNextBuffer.toFixed(2)}
+                    ${formatCurrency(theoreticalNextBuffer)}
                   </span>
                 </div>
               </div>
@@ -338,15 +339,15 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <div className="text-sm text-text-secondary">Planned</div>
-                        <div className="font-semibold">${cat.planned.toFixed(2)}</div>
+                        <div className="font-semibold">${formatCurrency(cat.planned)}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-sm text-text-secondary">Actual</div>
-                        <div className="font-semibold">${cat.actual.toFixed(2)}</div>
+                        <div className="font-semibold">${formatCurrency(cat.actual)}</div>
                       </div>
                       <div className={`text-right min-w-[80px] ${cat.difference >= 0 ? 'text-success' : 'text-danger'}`}>
                         <div className="text-sm">{cat.difference >= 0 ? 'Under' : 'Over'}</div>
-                        <div className="font-semibold">${Math.abs(cat.difference).toFixed(2)}</div>
+                        <div className="font-semibold">${formatCurrency(Math.abs(cat.difference))}</div>
                       </div>
                     </div>
                   </div>
@@ -404,9 +405,9 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
                       <td className="px-4 py-2 text-sm text-text-secondary">{index + 1}</td>
                       <td className="px-4 py-2 text-sm font-medium text-text-primary">{item.name}</td>
                       <td className="px-4 py-2 text-sm text-text-secondary">{item.category}</td>
-                      <td className="px-4 py-2 text-sm text-right text-text-secondary">${item.planned.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-text-secondary">${formatCurrency(item.planned)}</td>
                       <td className={`px-4 py-2 text-sm text-right font-medium ${item.actual > item.planned ? 'text-danger' : 'text-text-primary'}`}>
-                        ${item.actual.toFixed(2)}
+                        ${formatCurrency(item.actual)}
                       </td>
                       <td className="px-4 py-2 text-sm text-right text-text-secondary">{item.percentOfTotal.toFixed(1)}%</td>
                     </tr>
@@ -431,10 +432,10 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
                       <span className="font-medium text-text-primary">{cat.name}</span>
                     </div>
                     <div className="text-sm text-text-secondary">
-                      ${cat.actual.toFixed(2)} of ${cat.planned.toFixed(2)} used
+                      ${formatCurrency(cat.actual)} of ${formatCurrency(cat.planned)} used
                     </div>
                     <div className="text-sm text-warning font-medium">
-                      ${cat.difference.toFixed(2)} unused
+                      ${formatCurrency(cat.difference)} unused
                     </div>
                   </div>
                 ))}

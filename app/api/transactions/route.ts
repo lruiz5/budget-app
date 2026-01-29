@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { transactions, budgetItems, linkedAccounts } from '@/db/schema';
 import { eq, isNotNull, and } from 'drizzle-orm';
 import { requireAuth, isAuthError } from '@/lib/auth';
+import { splitTransactions } from '@/db/schema';
 
 // Helper to verify budget item ownership
 async function verifyBudgetItemOwnership(budgetItemId: number, userId: string): Promise<boolean> {
@@ -17,7 +18,7 @@ async function verifyBudgetItemOwnership(budgetItemId: number, userId: string): 
   return item?.category?.budget?.userId === userId;
 }
 
-// Helper to verify transaction ownership (via budgetItem or linkedAccount)
+// Helper to verify transaction ownership (via budgetItem, linkedAccount, or split transactions)
 async function verifyTransactionOwnership(transactionId: number, userId: string): Promise<boolean> {
   const txn = await db.query.transactions.findFirst({
     where: eq(transactions.id, transactionId),
@@ -45,8 +46,26 @@ async function verifyTransactionOwnership(transactionId: number, userId: string)
     return true;
   }
 
-  // If no budgetItem or linkedAccount, transaction is orphaned - allow owner if created by them
-  // For now, we'll require at least one ownership path
+  // Check via split transactions (parent has null budgetItemId after splitting)
+  const splits = await db.query.splitTransactions.findMany({
+    where: eq(splitTransactions.parentTransactionId, transactionId),
+    with: {
+      budgetItem: {
+        with: {
+          category: {
+            with: { budget: true },
+          },
+        },
+      },
+    },
+  });
+
+  for (const split of splits) {
+    if (split.budgetItem?.category?.budget?.userId === userId) {
+      return true;
+    }
+  }
+
   return false;
 }
 

@@ -106,6 +106,18 @@ All colors are defined as CSS custom properties in `globals.css` and mapped to T
 - Auto-dismiss after 4 seconds
 - Types: `success`, `error`, `warning`, `info`
 
+### Auth Pages (Sign-in / Sign-up)
+- Background: `bg-surface-secondary` with animated diagonal repeating "Budget App" text
+- Diagonal text: 45° rotation, `text-primary` at 4–7% opacity, varying sizes and gaps
+- Animation: Alternating `scroll-left` / `scroll-right` keyframes (240–320s), defined in `globals.css`
+- Clerk components themed via `appearance` prop with Emerald variables (`colorPrimary: #059669`, Outfit font)
+- Card: `shadow-xl border border-border`
+
+### Progress Bars
+- Default: `bg-success shadow-[0_0_2px_rgba(16,185,129,0.4)]`
+- Over budget: `bg-danger shadow-[0_0_2px_rgba(239,68,68,0.4)]`
+- Track: `bg-surface-secondary rounded-full`
+
 ## Category Emojis
 
 | Category | Emoji |

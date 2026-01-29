@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BudgetItem } from '@/types/budget';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import { useToast } from '@/contexts/ToastContext';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 interface SplitItem {
   budgetItemId: string;
@@ -109,7 +110,7 @@ export default function SplitTransactionModal({
 
     const remaining = calculateRemaining();
     if (Math.abs(remaining) > 0.01) {
-      toast.warning(`Split amounts must equal the transaction amount. Remaining: $${remaining.toFixed(2)}`);
+      toast.warning(`Split amounts must equal the transaction amount. Remaining: $${formatCurrency(remaining)}`);
       return;
     }
 
@@ -137,7 +138,7 @@ export default function SplitTransactionModal({
         <div className="bg-surface-secondary rounded-lg p-3 mb-6">
           <div className="flex justify-between items-center">
             <span className="text-text-secondary">Total Amount:</span>
-            <span className="text-xl font-bold text-text-primary">${transactionAmount.toFixed(2)}</span>
+            <span className="text-xl font-bold text-text-primary">${formatCurrency(transactionAmount)}</span>
           </div>
         </div>
 
@@ -231,7 +232,7 @@ export default function SplitTransactionModal({
                 {isBalanced ? 'Balanced!' : 'Remaining:'}
               </span>
               <span className={`font-bold ${isBalanced ? 'text-success' : 'text-warning'}`}>
-                ${remaining.toFixed(2)}
+                ${formatCurrency(remaining)}
               </span>
             </div>
           </div>

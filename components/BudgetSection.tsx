@@ -20,6 +20,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 interface BudgetSectionProps {
   category: BudgetCategory;
@@ -187,10 +188,7 @@ function SortableItem({
             value={
               editingValues[item.id] !== undefined
                 ? String(editingValues[item.id])
-                : `$${item.planned.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`
+                : `$${formatCurrency(item.planned)}`
             }
             onChange={(e) => {
               const value = e.target.value.replace(/[$,]/g, "");
@@ -223,7 +221,7 @@ function SortableItem({
         </div>
         <div className="col-span-2">
           <div className="text-right px-2 py-1 text-text-secondary font-medium">
-            ${showRemaining ? (item.planned - item.actual).toFixed(2) : item.actual.toFixed(2)}
+            ${showRemaining ? formatCurrency(item.planned - item.actual) : formatCurrency(item.actual)}
           </div>
         </div>
       </div>
@@ -232,7 +230,7 @@ function SortableItem({
       <div className="h-px w-full bg-surface-secondary">
         <div
           className={`h-full transition-all duration-300 ${
-            isOverBudget ? 'bg-danger shadow-[0_0_2px_rgba(239,68,68,0.4)]' : 'bg-primary-light0 shadow-[0_0_2px_rgba(59,130,246,0.4)]'
+            isOverBudget ? 'bg-danger shadow-[0_0_2px_rgba(239,68,68,0.4)]' : 'bg-success shadow-[0_0_2px_rgba(16,185,129,0.4)]'
           }`}
           style={{ width: `${isOverBudget ? 100 : progressPercent}%` }}
         />
@@ -262,7 +260,7 @@ function SortableItem({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`font-medium ${transaction.type === 'income' ? 'text-success' : 'text-text-primary'}`}>
-                    {transaction.type === 'income' ? '+' : ''}${transaction.amount.toFixed(2)}
+                    {transaction.type === 'income' ? '+' : ''}${formatCurrency(transaction.amount)}
                   </span>
                   <button
                     onClick={(e) => {
@@ -296,7 +294,7 @@ function SortableItem({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`font-medium ${split.parentType === 'income' ? 'text-success' : 'text-text-primary'}`}>
-                    {split.parentType === 'income' ? '+' : ''}${split.amount.toFixed(2)}
+                    {split.parentType === 'income' ? '+' : ''}${formatCurrency(split.amount)}
                   </span>
                 </div>
               </div>
@@ -508,7 +506,7 @@ export default function BudgetSection({
             <div className="col-span-2 text-right text-text-secondary">
               <div className="text-sm opacity-90">Planned</div>
               <div className="text-lg font-semibold">
-                ${totalPlanned.toFixed(2)}
+                ${formatCurrency(totalPlanned)}
               </div>
             </div>
             <div
@@ -518,7 +516,7 @@ export default function BudgetSection({
             >
               <div className="text-sm opacity-90">{showRemaining ? 'Remaining' : actualLabel}</div>
               <div className="text-lg font-semibold">
-                ${showRemaining ? (totalPlanned - totalActual).toFixed(2) : totalActual.toFixed(2)}
+                ${showRemaining ? formatCurrency(totalPlanned - totalActual) : formatCurrency(totalActual)}
               </div>
             </div>
           </div>

@@ -10,7 +10,7 @@ interface SplitItem {
   description?: string;
 }
 
-// Helper to verify transaction ownership (via budgetItem or linkedAccount)
+// Helper to verify transaction ownership (via budgetItem, linkedAccount, or split transactions)
 async function verifyTransactionOwnership(transactionId: number, userId: string): Promise<boolean> {
   const txn = await db.query.transactions.findFirst({
     where: eq(transactions.id, transactionId),
@@ -30,6 +30,26 @@ async function verifyTransactionOwnership(transactionId: number, userId: string)
 
   if (txn.budgetItem?.category?.budget?.userId === userId) return true;
   if (txn.linkedAccount?.userId === userId) return true;
+
+  // Check via split transactions (parent has null budgetItemId after splitting)
+  const splits = await db.query.splitTransactions.findMany({
+    where: eq(splitTransactions.parentTransactionId, transactionId),
+    with: {
+      budgetItem: {
+        with: {
+          category: {
+            with: { budget: true },
+          },
+        },
+      },
+    },
+  });
+
+  for (const split of splits) {
+    if (split.budgetItem?.category?.budget?.userId === userId) {
+      return true;
+    }
+  }
 
   return false;
 }

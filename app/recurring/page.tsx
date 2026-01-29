@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { FaPlus, FaEdit, FaTrash, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
 import DashboardLayout from '@/components/DashboardLayout';
 import { RecurringPayment, RecurringFrequency, CategoryType } from '@/types/budget';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const frequencyLabels: Record<RecurringFrequency, string> = {
   'monthly': 'Monthly',
@@ -168,13 +169,8 @@ export default function RecurringPage() {
     });
   };
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  // Format currency for display
+  const fmtCurrency = (amount: number) => `$${formatCurrency(amount)}`;
 
   if (isLoading) {
     return (
@@ -213,7 +209,7 @@ export default function RecurringPage() {
                   <div key={payment.id} className="flex items-center justify-between text-sm">
                     <span className="text-text-primary">{payment.name}</span>
                     <div className="flex items-center gap-4">
-                      <span className="text-text-secondary">{formatCurrency(payment.amount)}</span>
+                      <span className="text-text-secondary">{fmtCurrency(payment.amount)}</span>
                       <span className={`font-medium ${payment.daysUntilDue <= 7 ? 'text-danger' : 'text-warning'}`}>
                         {payment.daysUntilDue === 0
                           ? 'Due today'
@@ -278,7 +274,7 @@ export default function RecurringPage() {
                     </select>
                     {formData.frequency !== 'monthly' && formData.amount && (
                       <p className="mt-1 text-sm text-text-secondary">
-                        Monthly contribution: {formatCurrency(parseFloat(formData.amount) / frequencyMonths[formData.frequency])}
+                        Monthly contribution: {fmtCurrency(parseFloat(formData.amount) / frequencyMonths[formData.frequency])}
                       </p>
                     )}
                   </div>
@@ -392,14 +388,14 @@ export default function RecurringPage() {
                           <span className="text-sm font-medium">Paid</span>
                         </div>
                         <span className="text-sm text-text-secondary">
-                          {formatCurrency(payment.fundedAmount)} of {formatCurrency(payment.amount)}
+                          {fmtCurrency(payment.fundedAmount)} of {fmtCurrency(payment.amount)}
                         </span>
                       </div>
                     ) : (
                       <>
                         <div className="flex items-center justify-between text-sm mb-1">
                           <span className="text-text-secondary">
-                            {formatCurrency(payment.fundedAmount)} of {formatCurrency(payment.amount)}
+                            {fmtCurrency(payment.fundedAmount)} of {fmtCurrency(payment.amount)}
                           </span>
                           <span className="font-medium text-text-secondary">
                             {payment.percentFunded.toFixed(0)}% funded
@@ -413,7 +409,7 @@ export default function RecurringPage() {
                         </div>
                         {payment.frequency !== 'monthly' && (
                           <p className="text-xs text-text-secondary mt-1">
-                            Monthly contribution: {formatCurrency(payment.monthlyContribution)}
+                            Monthly contribution: {fmtCurrency(payment.monthlyContribution)}
                           </p>
                         )}
                       </>

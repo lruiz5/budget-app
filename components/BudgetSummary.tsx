@@ -16,6 +16,7 @@ import AddTransactionModal, { TransactionToEdit } from "./AddTransactionModal";
 import SplitTransactionModal, { ExistingSplit } from "./SplitTransactionModal";
 import { useToast } from "@/contexts/ToastContext";
 import { useUncategorizedCount } from "@/contexts/UncategorizedCountContext";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 interface SelectedBudgetItem {
   item: BudgetItem;
@@ -93,8 +94,12 @@ export default function BudgetSummary({
     0,
   );
 
+  const totalPlannedSavings = budget.categories.saving
+    ? budget.categories.saving.items.reduce((sum, item) => sum + item.planned, 0)
+    : 0;
+
   const totalExpenses = Object.entries(budget.categories)
-    .filter(([key]) => key !== "income")
+    .filter(([key]) => key !== "income" && key !== "saving")
     .reduce((sum, [, category]) => {
       return (
         sum + category.items.reduce((catSum, item) => catSum + item.planned, 0)
@@ -102,15 +107,19 @@ export default function BudgetSummary({
     }, 0);
 
   const totalAvailable = buffer + totalIncome;
-  const remainingToBudget = totalAvailable - totalExpenses;
+  const remainingToBudget = totalAvailable - totalExpenses - totalPlannedSavings;
 
   const totalActualIncome = budget.categories.income.items.reduce(
     (sum, item) => sum + item.actual,
     0,
   );
 
+  const totalActualSavings = budget.categories.saving
+    ? budget.categories.saving.items.reduce((sum, item) => sum + item.actual, 0)
+    : 0;
+
   const totalActualExpenses = Object.entries(budget.categories)
-    .filter(([key]) => key !== "income")
+    .filter(([key]) => key !== "income" && key !== "saving")
     .reduce((sum, [, category]) => {
       return (
         sum + category.items.reduce((catSum, item) => catSum + item.actual, 0)
@@ -118,7 +127,7 @@ export default function BudgetSummary({
     }, 0);
 
   const totalActualAvailable = buffer + totalActualIncome;
-  const actualRemaining = totalActualAvailable - totalActualExpenses;
+  const actualRemaining = totalActualAvailable - totalActualExpenses - totalActualSavings;
 
   // Fetch parent transaction and its splits, then open split modal for editing
   const fetchAndOpenSplitModal = async (parentTransactionId: string) => {
@@ -602,7 +611,7 @@ export default function BudgetSummary({
               <p
                 className={`text-3xl font-bold ${remaining < 0 ? "text-danger" : "text-text-primary"}`}
               >
-                {remaining < 0 ? "-" : ""}${Math.abs(remaining).toFixed(2)}
+                {remaining < 0 ? "-" : ""}${formatCurrency(Math.abs(remaining))}
               </p>
             </div>
           </div>
@@ -616,11 +625,11 @@ export default function BudgetSummary({
           {/* Spent of Planned */}
           <p className="text-base">
             <span className={isOverBudget ? "text-danger" : "text-success"}>
-              ${item.actual.toFixed(2)}
+              ${formatCurrency(item.actual)}
             </span>
             <span className="text-text-secondary"> spent of </span>
             <span className="text-text-primary">
-              ${item.planned.toFixed(2)}
+              ${formatCurrency(item.planned)}
             </span>
           </p>
 
@@ -703,7 +712,7 @@ export default function BudgetSummary({
                   <span
                     className={`text-sm font-medium ${txn.type === "income" ? "text-success" : "text-text-primary"}`}
                   >
-                    {txn.type === "income" ? "+" : "-"}${txn.amount.toFixed(2)}
+                    {txn.type === "income" ? "+" : "-"}${formatCurrency(txn.amount)}
                   </span>
                 </div>
               ))}
@@ -790,30 +799,38 @@ export default function BudgetSummary({
               <h3 className="text-xl font-semibold text-text-secondary mb-5">
                 Planned
               </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-2">
+              <div className="space-y-1">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-text-secondary text-base">Buffer:</span>
                   <span className="text-xl font-semibold text-text-primary">
-                    ${buffer.toFixed(2)}
+                    ${formatCurrency(buffer)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-2">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-text-secondary text-base">
                     Total Income:
                   </span>
                   <span className="text-xl font-semibold text-text-primary">
-                    ${totalIncome.toFixed(2)}
+                    ${formatCurrency(totalIncome)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-2">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-text-secondary text-base">
                     Total Expenses:
                   </span>
                   <span className="text-xl font-semibold text-text-primary">
-                    ${totalExpenses.toFixed(2)}
+                    ${formatCurrency(totalExpenses)}
                   </span>
                 </div>
-                <div className="border-t-2 border-border-strong pt-4 mt-4">
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-text-secondary text-base">
+                    Total Savings:
+                  </span>
+                  <span className="text-xl font-semibold text-text-primary">
+                    ${formatCurrency(totalPlannedSavings)}
+                  </span>
+                </div>
+                <div className="border-t-2 border-border-strong pt-4 mt-3">
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-text-primary text-base">
                       Remaining:
@@ -825,7 +842,7 @@ export default function BudgetSummary({
                           : "text-text-primary"
                       }`}
                     >
-                      ${remainingToBudget.toFixed(2)}
+                      ${formatCurrency(remainingToBudget)}
                     </span>
                   </div>
                 </div>
@@ -837,30 +854,38 @@ export default function BudgetSummary({
               <h3 className="text-xl font-semibold text-text-secondary mb-5">
                 Actual
               </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-2">
+              <div className="space-y-1">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-text-secondary text-base">Buffer:</span>
                   <span className="text-xl font-semibold text-text-primary">
-                    ${buffer.toFixed(2)}
+                    ${formatCurrency(buffer)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-2">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-text-secondary text-base">
                     Total Income:
                   </span>
                   <span className="text-xl font-semibold text-text-primary">
-                    ${totalActualIncome.toFixed(2)}
+                    ${formatCurrency(totalActualIncome)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-2">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-text-secondary text-base">
                     Total Expenses:
                   </span>
                   <span className="text-xl font-semibold text-text-primary">
-                    ${totalActualExpenses.toFixed(2)}
+                    ${formatCurrency(totalActualExpenses)}
                   </span>
                 </div>
-                <div className="border-t-2 border-border-strong pt-4 mt-4">
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-text-secondary text-base">
+                    Total Savings:
+                  </span>
+                  <span className="text-xl font-semibold text-text-primary">
+                    ${formatCurrency(totalActualSavings)}
+                  </span>
+                </div>
+                <div className="border-t-2 border-border-strong pt-4 mt-3">
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-text-primary text-base">
                       Remaining:
@@ -872,7 +897,7 @@ export default function BudgetSummary({
                           : "text-text-primary"
                       }`}
                     >
-                      ${actualRemaining.toFixed(2)}
+                      ${formatCurrency(actualRemaining)}
                     </span>
                   </div>
                 </div>
@@ -963,7 +988,7 @@ export default function BudgetSummary({
                               className={`text-base font-medium ${txn.type === "income" ? "text-success" : "text-danger"}`}
                             >
                               {txn.type === "income" ? "+" : "-"}$
-                              {txn.amount.toFixed(2)}
+                              {formatCurrency(txn.amount)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1027,7 +1052,7 @@ export default function BudgetSummary({
                               className={`text-base font-medium ${txn.type === "income" ? "text-success" : "text-danger"}`}
                             >
                               {txn.type === "income" ? "+" : "-"}$
-                              {txn.amount.toFixed(2)}
+                              {formatCurrency(txn.amount)}
                             </span>
                             <button
                               onClick={() => setAssigningId(txn.id)}
@@ -1100,7 +1125,7 @@ export default function BudgetSummary({
                             </p>
                           </div>
                           <span className="text-base font-medium text-text-primary ml-3">
-                            ${Math.abs(transaction.amount).toFixed(2)}
+                            ${formatCurrency(Math.abs(transaction.amount))}
                           </span>
                         </div>
                       </div>
@@ -1135,7 +1160,7 @@ export default function BudgetSummary({
                         </div>
                         <div className="flex items-center gap-2 ml-3">
                           <span className="text-base text-text-tertiary line-through">
-                            ${txn.amount.toFixed(2)}
+                            ${formatCurrency(txn.amount)}
                           </span>
                           <button
                             onClick={() => handleRestoreTransaction(txn.id)}
