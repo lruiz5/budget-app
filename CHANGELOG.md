@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2026-01-29 - Build Fix
+
+### Fixed
+- **Production build failure** — wrapped `useSearchParams()` in Suspense boundary on `/recurring` page (required by Next.js for static prerendering)
+
 ## [1.3.0] - 2026-01-29 - Onboarding & Empty States (Final SQLite Release)
 
 ### Added

@@ -4,7 +4,7 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 
 ## Project Status
 
-**Current Version:** v1.3.0 - Onboarding & Empty States (Final SQLite Release)
+**Current Version:** v1.3.1 - Build Fix
 **Last Updated:** 2026-01-29
 
 ### Tech Stack

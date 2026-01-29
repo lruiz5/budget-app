@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { FaPlus, FaEdit, FaTrash, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -32,7 +32,15 @@ const categoryLabels: Record<CategoryType, string> = {
   'saving': 'Saving',
 };
 
-export default function RecurringPage() {
+export default function RecurringPageWrapper() {
+  return (
+    <Suspense>
+      <RecurringPage />
+    </Suspense>
+  );
+}
+
+function RecurringPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [payments, setPayments] = useState<RecurringPayment[]>([]);

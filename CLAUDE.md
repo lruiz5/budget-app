@@ -6,7 +6,7 @@ This document contains context for Claude AI to continue development on this bud
 
 A zero-based budget tracking application built with Next.js, TypeScript, and Tailwind CSS. The app features bank account integration via Teller API for automatic transaction imports.
 
-**Current Version:** v1.3.0
+**Current Version:** v1.3.1
 **Last Session:** 2026-01-29
 
 ## Tech Stack
