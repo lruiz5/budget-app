@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { FaChartLine, FaChartBar, FaChartPie, FaSync } from 'react-icons/fa';
 import DashboardLayout from '@/components/DashboardLayout';
 import MonthlyReportModal from '@/components/MonthlyReportModal';
@@ -10,21 +11,32 @@ import FlowDiagram from '@/components/charts/FlowDiagram';
 import { Budget } from '@/types/budget';
 import { transformDbBudgetToAppBudget } from '@/lib/budgetHelpers';
 
-export default function InsightsPage() {
+export default function InsightsPageWrapper() {
+  return (
+    <Suspense>
+      <InsightsPage />
+    </Suspense>
+  );
+}
+
+function InsightsPage() {
+  const searchParams = useSearchParams();
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [currentBudget, setCurrentBudget] = useState<Budget | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const selectedMonth = searchParams.get('month') !== null ? parseInt(searchParams.get('month')!) : new Date().getMonth();
+  const selectedYear = searchParams.get('year') !== null ? parseInt(searchParams.get('year')!) : new Date().getFullYear();
+
   const fetchMultiMonthBudgets = useCallback(async () => {
     setIsLoading(true);
-    const currentDate = new Date();
     const budgetsData: Budget[] = [];
 
-    // Fetch last 3 months of budgets
+    // Fetch last 3 months of budgets (centered on selected month)
     for (let i = 0; i < 3; i++) {
-      let month = currentDate.getMonth() - i;
-      let year = currentDate.getFullYear();
+      let month = selectedMonth - i;
+      let year = selectedYear;
 
       // Handle year boundary
       if (month < 0) {
@@ -45,7 +57,7 @@ export default function InsightsPage() {
     setBudgets(budgetsData.reverse()); // Oldest to newest
     setCurrentBudget(budgetsData[budgetsData.length - 1] || null);
     setIsLoading(false);
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   useEffect(() => {
     fetchMultiMonthBudgets();
@@ -53,7 +65,7 @@ export default function InsightsPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-full overflow-y-auto bg-surface-secondary p-8">
+      <div className="h-full overflow-y-auto bg-surface-secondary p-4 lg:p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-text-primary">Insights</h1>

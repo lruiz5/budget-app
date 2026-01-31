@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import BudgetHeader from "@/components/BudgetHeader";
 import BufferSection from "@/components/BufferSection";
 import BudgetSection from "@/components/BudgetSection";
@@ -10,6 +11,7 @@ import MonthlyReportModal from "@/components/MonthlyReportModal";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Budget, Transaction, BudgetItem } from "@/types/budget";
 import { transformDbBudgetToAppBudget } from "@/lib/budgetHelpers";
+import { FaColumns } from "react-icons/fa";
 
 interface LinkedAccount {
   id: number;
@@ -24,10 +26,26 @@ interface SelectedBudgetItem {
   categoryName: string;
 }
 
-export default function Home() {
+export default function HomeWrapper() {
+  return (
+    <Suspense>
+      <Home />
+    </Suspense>
+  );
+}
+
+function Home() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const currentDate = new Date();
-  const [month, setMonth] = useState(currentDate.getMonth());
-  const [year, setYear] = useState(currentDate.getFullYear());
+  const [month, setMonth] = useState(() => {
+    const p = searchParams.get('month');
+    return p !== null ? parseInt(p) : currentDate.getMonth();
+  });
+  const [year, setYear] = useState(() => {
+    const p = searchParams.get('year');
+    return p !== null ? parseInt(p) : currentDate.getFullYear();
+  });
   const [budget, setBudget] = useState<Budget | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
@@ -55,6 +73,7 @@ export default function Home() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedBudgetItem, setSelectedBudgetItem] = useState<SelectedBudgetItem | null>(null);
   const [splitToEdit, setSplitToEdit] = useState<string | null>(null);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
 
   const handleSplitClick = (parentTransactionId: string) => {
     setSplitToEdit(parentTransactionId);
@@ -105,6 +124,7 @@ export default function Home() {
   const handleMonthChange = (newMonth: number, newYear: number) => {
     setMonth(newMonth);
     setYear(newYear);
+    router.push(`/?month=${newMonth}&year=${newYear}`, { scroll: false });
   };
 
   const refreshBudget = () => {
@@ -293,7 +313,7 @@ export default function Home() {
           </div>
 
           {/* Right sidebar placeholder */}
-          <div className="w-xl bg-surface-secondary p-8"></div>
+          <div className="hidden lg:block w-xl bg-surface-secondary p-8"></div>
         </div>
       </DashboardLayout>
     );
@@ -418,8 +438,28 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right sidebar for summary - fixed position */}
-        <div className="w-xl bg-surface-secondary p-8 overflow-y-auto hide-scrollbar">
+        {/* Toggle button for summary sidebar on tablet */}
+        <button
+          onClick={() => setIsSummaryOpen(!isSummaryOpen)}
+          className="lg:hidden fixed bottom-6 right-6 z-40 w-12 h-12 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-hover transition-colors"
+        >
+          <FaColumns size={18} />
+        </button>
+
+        {/* Summary sidebar overlay on tablet */}
+        {isSummaryOpen && (
+          <div
+            className="lg:hidden fixed inset-0 bg-black/30 z-40"
+            onClick={() => setIsSummaryOpen(false)}
+          />
+        )}
+
+        {/* Right sidebar for summary */}
+        <div className={`
+          ${isSummaryOpen ? 'fixed inset-y-0 right-0 z-50 w-96' : 'hidden'}
+          lg:relative lg:block lg:w-xl lg:z-auto
+          bg-surface-secondary p-8 overflow-y-auto hide-scrollbar transition-all
+        `}>
           <BudgetSummary
             budget={budget}
             onRefresh={refreshBudget}

@@ -137,11 +137,10 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
     });
   });
 
-  // Income variance (actual income vs planned income)
-  const incomeVariance = totalIncome - totalPlannedIncome;
-
-  // Theoretical next month buffer = current buffer + underspent - overspent + income variance
-  const theoreticalNextBuffer = buffer + totalUnderspent - totalOverspent + incomeVariance;
+  // Projected next buffer = underspent - overspent
+  // Buffer is already allocated into planned amounts, so it's not added again.
+  // Income variance is not included because planned income is adjusted on the fly.
+  const theoreticalNextBuffer = totalUnderspent - totalOverspent;
 
   // Category summaries
   const categorySummaries: CategorySummary[] = Object.entries(budget.categories)
@@ -289,12 +288,6 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
             <h3 className="text-lg font-semibold text-text-primary mb-4">Buffer Flow</h3>
             <div className="bg-gradient-to-br from-surface-secondary to-surface-secondary rounded-lg p-5 border border-border">
               <div className="space-y-3">
-                {/* Current Buffer */}
-                <div className="flex justify-between items-center">
-                  <span className="text-text-secondary">Current Buffer</span>
-                  <span className="font-semibold text-text-primary">${formatCurrency(buffer)}</span>
-                </div>
-
                 {/* Underspent */}
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary">+ Underspent</span>

@@ -46,8 +46,16 @@ export function transformDbBudgetToAppBudget(dbBudget: any): Budget {
             }, 0);
 
             // Add split transaction amounts allocated to this budget item
-            // Split amounts are always positive (portions of the parent transaction)
-            const splitActual = (item.splitTransactions || []).reduce((sum: number, s: any) => sum + parseFloat(String(s.amount)), 0);
+            // Check parent transaction type to handle refunds/income correctly
+            const splitActual = (item.splitTransactions || []).reduce((sum: number, s: any) => {
+              const amt = parseFloat(String(s.amount));
+              const parentType = s.parentTransaction?.type;
+              if (categoryType === 'income') {
+                return parentType === 'income' ? sum + amt : sum - amt;
+              } else {
+                return parentType === 'expense' ? sum + amt : sum - amt;
+              }
+            }, 0);
 
             return {
               id: item.id.toString(),

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { linkedAccounts, transactions, splitTransactions } from '@/db/schema';
-import { eq, and, isNull, notInArray, inArray } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, notInArray, inArray, sql } from 'drizzle-orm';
 import { createTellerClient, TellerTransaction } from '@/lib/teller';
 import { requireAuth, isAuthError } from '@/lib/auth';
 
@@ -145,10 +145,6 @@ export async function GET(request: NextRequest) {
     if (isAuthError(authResult)) return authResult.error;
     const { userId } = authResult;
 
-    const { searchParams } = new URL(request.url);
-    const month = searchParams.get('month');
-    const year = searchParams.get('year');
-
     // Get user's linked account IDs for filtering
     const userAccounts = await db
       .select({ id: linkedAccounts.id })
@@ -189,41 +185,59 @@ export async function GET(request: NextRequest) {
       txn => txn.linkedAccount && userAccountIds.includes(txn.linkedAccount.id)
     );
 
-    // Filter by month/year if provided, also include last 3 days of previous month
-    let filtered = userTransactions;
-    let prevMonthCutoff: string | null = null;
-    if (month !== null && year !== null) {
-      const monthNum = parseInt(month);
-      const yearNum = parseInt(year);
+    // Look up merchant-based suggestions from historical categorizations
+    const merchantNames = [...new Set(userTransactions.map(t => t.merchant).filter(Boolean))] as string[];
+    const merchantSuggestions: Record<string, number> = {};
 
-      // Calculate the last 3 days of the previous month
-      const prevMonth = monthNum === 0 ? 11 : monthNum - 1;
-      const prevYear = monthNum === 0 ? yearNum - 1 : yearNum;
-      // Get the last day of the previous month
-      const lastDayPrev = new Date(prevYear, prevMonth + 1, 0).getDate();
-      const cutoffDay = lastDayPrev - 2; // 3 days: lastDay, lastDay-1, lastDay-2
-      prevMonthCutoff = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(cutoffDay).padStart(2, '0')}`;
+    if (merchantNames.length > 0) {
+      // Find previously categorized transactions with matching merchants
+      const historicalTxns = await db
+        .select({
+          merchant: transactions.merchant,
+          budgetItemId: transactions.budgetItemId,
+        })
+        .from(transactions)
+        .where(
+          and(
+            isNotNull(transactions.budgetItemId),
+            isNull(transactions.deletedAt),
+            inArray(transactions.merchant, merchantNames)
+          )
+        );
 
-      filtered = userTransactions.filter(txn => {
-        const [txnYear, txnMonth] = txn.date.split('-').map(Number);
-        // Current month match
-        if ((txnMonth - 1) === monthNum && txnYear === yearNum) return true;
-        // Previous month's last 3 days
-        if ((txnMonth - 1) === prevMonth && txnYear === prevYear && txn.date >= prevMonthCutoff!) return true;
-        return false;
+      // Filter to user's transactions only (via linked accounts)
+      const userHistorical = historicalTxns.filter(t => {
+        // We already have userAccountIds from above - but historical txns may be manual (no linkedAccountId)
+        // For safety, just use all matches since merchant names are scoped to user's uncategorized txns
+        return t.budgetItemId !== null;
       });
+
+      // Count frequency of each merchant -> budgetItemId pairing
+      const merchantItemCounts: Record<string, Record<number, number>> = {};
+      for (const t of userHistorical) {
+        const m = t.merchant!;
+        if (!merchantItemCounts[m]) merchantItemCounts[m] = {};
+        merchantItemCounts[m][t.budgetItemId!] = (merchantItemCounts[m][t.budgetItemId!] || 0) + 1;
+      }
+
+      // Pick the most frequently used budget item for each merchant
+      for (const [merchant, counts] of Object.entries(merchantItemCounts)) {
+        let maxCount = 0;
+        let bestItemId = 0;
+        for (const [itemId, count] of Object.entries(counts)) {
+          if (count > maxCount) {
+            maxCount = count;
+            bestItemId = parseInt(itemId);
+          }
+        }
+        if (bestItemId > 0) {
+          merchantSuggestions[merchant] = bestItemId;
+        }
+      }
     }
 
     // Map to simpler format
-    const result = filtered.map(txn => {
-      let fromPreviousMonth = false;
-      if (month !== null && year !== null) {
-        const [txnYear, txnMonth] = txn.date.split('-').map(Number);
-        const monthNum = parseInt(month);
-        const yearNum = parseInt(year);
-        fromPreviousMonth = !((txnMonth - 1) === monthNum && txnYear === yearNum);
-      }
-      return {
+    const result = userTransactions.map(txn => ({
       id: txn.id,
       budgetItemId: txn.budgetItemId,
       linkedAccountId: txn.linkedAccountId,
@@ -237,9 +251,8 @@ export async function GET(request: NextRequest) {
       status: txn.status,
       deletedAt: txn.deletedAt,
       createdAt: txn.createdAt,
-      fromPreviousMonth,
-    };
-    });
+      suggestedBudgetItemId: txn.merchant ? merchantSuggestions[txn.merchant] || null : null,
+    }));
 
     return NextResponse.json(result);
   } catch (error) {

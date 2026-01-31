@@ -192,7 +192,7 @@ function RecurringPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-full overflow-y-auto bg-surface-secondary p-8">
+      <div className="h-full overflow-y-auto bg-surface-secondary p-4 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-text-primary">Recurring Payments</h1>

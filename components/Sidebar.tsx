@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { UserButton, useUser } from '@clerk/nextjs';
 import {
   FaWallet,
@@ -22,9 +22,23 @@ interface NavItem {
 }
 
 export default function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)');
+    const handler = (e: MediaQueryListEvent) => setIsCollapsed(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useUser();
+
+  const monthParam = searchParams.get('month');
+  const yearParam = searchParams.get('year');
+  const monthYearQuery = monthParam !== null && yearParam !== null ? `?month=${monthParam}&year=${yearParam}` : '';
 
   const navItems: NavItem[] = [
     {
@@ -86,7 +100,7 @@ export default function Sidebar() {
           {navItems.map((item) => (
             <li key={item.id}>
               <Link
-                href={item.href}
+                href={`${item.href}${monthYearQuery}`}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                   isActive(item.href)
                     ? 'bg-primary text-white'

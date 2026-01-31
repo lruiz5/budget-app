@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Budget, Transaction, BudgetItem } from "@/types/budget";
 import {
   FaChartPie,
@@ -41,7 +41,7 @@ interface UncategorizedTransaction {
   type: "income" | "expense";
   merchant: string | null;
   status: string | null;
-  fromPreviousMonth?: boolean;
+  suggestedBudgetItemId?: number | null;
 }
 
 interface LinkedAccount {
@@ -213,20 +213,42 @@ export default function BudgetSummary({
   const fetchUncategorized = useCallback(async () => {
     setIsLoadingUncategorized(true);
     try {
-      const response = await fetch(
-        `/api/teller/sync?month=${budget.month}&year=${budget.year}`,
-      );
+      const response = await fetch(`/api/teller/sync`);
       if (response.ok) {
         const data = await response.json();
         setUncategorizedTxns(data);
-        setUncategorizedCount(data.length);
       }
     } catch (error) {
       console.error("Error fetching uncategorized transactions:", error);
     } finally {
       setIsLoadingUncategorized(false);
     }
-  }, [budget.month, budget.year, setUncategorizedCount]);
+  }, [budget.month, budget.year]);
+
+  // Filter uncategorized transactions to 7 days before/after the current month
+  const filteredUncategorizedTxns = useMemo(() => {
+    const curM = budget.month; // 0-indexed
+    const curY = budget.year;
+    // First day of current month
+    const monthStart = new Date(curY, curM, 1);
+    // Last day of current month
+    const monthEnd = new Date(curY, curM + 1, 0);
+    // 7 days before month start
+    const rangeStart = new Date(monthStart);
+    rangeStart.setDate(rangeStart.getDate() - 7);
+    const startStr = rangeStart.toISOString().slice(0, 10);
+    // 7 days after month end
+    const rangeEnd = new Date(monthEnd);
+    rangeEnd.setDate(rangeEnd.getDate() + 7);
+    const endStr = rangeEnd.toISOString().slice(0, 10);
+
+    return uncategorizedTxns.filter(txn => txn.date >= startStr && txn.date <= endStr);
+  }, [uncategorizedTxns, budget.month, budget.year]);
+
+  // Update the badge count to match filtered transactions
+  useEffect(() => {
+    setUncategorizedCount(filteredUncategorizedTxns.length);
+  }, [filteredUncategorizedTxns, setUncategorizedCount]);
 
   // Fetch deleted transactions
   const fetchDeleted = useCallback(async () => {
@@ -382,6 +404,16 @@ export default function BudgetSummary({
     } catch (error) {
       console.error("Error permanently deleting transaction:", error);
     }
+  };
+
+  // Look up a budget item name by ID for suggestion badges
+  const getBudgetItemName = (itemId: number): string | null => {
+    for (const category of Object.values(budget.categories)) {
+      for (const item of category.items) {
+        if (String(item.id) === String(itemId)) return item.name;
+      }
+    }
+    return null;
   };
 
   // Get all budget items for the dropdown
@@ -779,11 +811,11 @@ export default function BudgetSummary({
             }`}
           >
             <FaReceipt className="text-2xl" />
-            {uncategorizedTxns.length > 0 && (
+            {filteredUncategorizedTxns.length > 0 && (
               <span className="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center bg-accent-orange text-white text-xs font-bold rounded-full px-1">
-                {uncategorizedTxns.length > 99
+                {filteredUncategorizedTxns.length > 99
                   ? "99+"
-                  : uncategorizedTxns.length}
+                  : filteredUncategorizedTxns.length}
               </span>
             )}
           </span>
@@ -918,8 +950,8 @@ export default function BudgetSummary({
                 }`}
               >
                 New{" "}
-                {uncategorizedTxns.length > 0 &&
-                  `(${uncategorizedTxns.length})`}
+                {filteredUncategorizedTxns.length > 0 &&
+                  `(${filteredUncategorizedTxns.length})`}
               </button>
               <button
                 onClick={() => setTransactionSubTab("tracked")}
@@ -962,245 +994,165 @@ export default function BudgetSummary({
               {/* New (Uncategorized) Tab */}
               {transactionSubTab === "new" && (
                 <div className="space-y-3">
-                  {uncategorizedTxns.length === 0 &&
+                  {filteredUncategorizedTxns.length === 0 &&
                     !isLoadingUncategorized && (
                       <p className="text-text-secondary text-center py-12 text-base">
                         No new transactions. Click &quot;Sync&quot; to import
                         from your bank.
                       </p>
                     )}
-                  {isLoadingUncategorized && uncategorizedTxns.length === 0 && (
+                  {isLoadingUncategorized && filteredUncategorizedTxns.length === 0 && (
                     <p className="text-text-secondary text-center py-12 text-base">
                       Loading transactions...
                     </p>
                   )}
-                  {/* Previous month's last 3 days */}
-                  {uncategorizedTxns.filter(t => t.fromPreviousMonth).length > 0 && (
-                    <div className="mb-2">
-                      <h4 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">
-                        Previous Month (Last 3 Days)
-                      </h4>
-                    </div>
-                  )}
-                  {uncategorizedTxns.filter(t => t.fromPreviousMonth).map((txn) => (
-                    <div
-                      key={`prev-${txn.id}`}
-                      className="bg-accent-orange-light border border-accent-orange-border rounded-lg p-3"
-                    >
-                      {assigningId === txn.id ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium truncate text-base">
-                              {txn.merchant || txn.description}
-                            </span>
-                            <span
-                              className={`text-base font-medium ${txn.type === "income" ? "text-success" : "text-danger"}`}
+                  {/* Group filtered transactions by month, newest first */}
+                  {(() => {
+                    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                    const grouped: Record<string, UncategorizedTransaction[]> = {};
+                    for (const txn of filteredUncategorizedTxns) {
+                      const [y, m] = txn.date.split('-').map(Number);
+                      const key = `${y}-${String(m).padStart(2, '0')}`;
+                      if (!grouped[key]) grouped[key] = [];
+                      grouped[key].push(txn);
+                    }
+                    const sortedKeys = Object.keys(grouped).sort().reverse();
+                    const multipleMonths = sortedKeys.length > 1;
+
+                    return sortedKeys.map((key) => {
+                      const [y, m] = key.split('-').map(Number);
+                      const label = `${monthNames[m - 1]} ${y}`;
+                      const txns = grouped[key];
+
+                      return (
+                        <div key={key}>
+                          {multipleMonths && (
+                            <div className="mb-2 mt-4 first:mt-0">
+                              <h4 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">
+                                {label}
+                              </h4>
+                            </div>
+                          )}
+                          {txns.map((txn) => (
+                            <div
+                              key={txn.id}
+                              className="bg-accent-orange-light border border-accent-orange-border rounded-lg p-3 mb-3 last:mb-0"
                             >
-                              {txn.type === "income" ? "+" : "-"}$
-                              {formatCurrency(txn.amount)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={selectedBudgetItemId}
-                              onChange={(e) =>
-                                setSelectedBudgetItemId(e.target.value)
-                              }
-                              className="flex-1 text-sm border rounded px-2 py-1.5"
-                            >
-                              <option value="">Select item...</option>
-                              {getAllBudgetItems().map(
-                                ({ category, items }) => (
-                                  <optgroup key={category} label={category}>
-                                    {items.map((item) => (
-                                      <option key={item.id} value={item.id}>
-                                        {item.name}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                ),
-                              )}
-                            </select>
-                            <button
-                              onClick={() => handleAssign(txn.id)}
-                              disabled={!selectedBudgetItemId}
-                              className="p-2 text-success hover:bg-success-light rounded disabled:opacity-50"
-                            >
-                              <FaCheck size={14} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setAssigningId(null);
-                                setSelectedBudgetItemId("");
-                              }}
-                              className="p-2 text-text-secondary hover:bg-surface-secondary rounded"
-                            >
-                              <FaTimes size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-text-secondary">
-                                {formatDate(txn.date)}
-                              </span>
-                              {txn.status === "pending" && (
-                                <span className="text-xs bg-warning-light text-warning px-1.5 py-0.5 rounded">
-                                  pending
-                                </span>
+                              {assigningId === txn.id ? (
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium truncate text-base">
+                                      {txn.merchant || txn.description}
+                                    </span>
+                                    <span
+                                      className={`text-base font-medium ${txn.type === "income" ? "text-success" : "text-danger"}`}
+                                    >
+                                      {txn.type === "income" ? "+" : "-"}$
+                                      {formatCurrency(txn.amount)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <select
+                                      value={selectedBudgetItemId}
+                                      onChange={(e) =>
+                                        setSelectedBudgetItemId(e.target.value)
+                                      }
+                                      className="flex-1 text-sm border rounded px-2 py-1.5"
+                                    >
+                                      <option value="">Select item...</option>
+                                      {getAllBudgetItems().map(
+                                        ({ category, items }) => (
+                                          <optgroup key={category} label={category}>
+                                            {items.map((item) => (
+                                              <option key={item.id} value={item.id}>
+                                                {item.name}
+                                              </option>
+                                            ))}
+                                          </optgroup>
+                                        ),
+                                      )}
+                                    </select>
+                                    <button
+                                      onClick={() => handleAssign(txn.id)}
+                                      disabled={!selectedBudgetItemId}
+                                      className="p-2 text-success hover:bg-success-light rounded disabled:opacity-50"
+                                    >
+                                      <FaCheck size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setAssigningId(null);
+                                        setSelectedBudgetItemId("");
+                                      }}
+                                      className="p-2 text-text-secondary hover:bg-surface-secondary rounded"
+                                    >
+                                      <FaTimes size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-text-secondary">
+                                        {formatDate(txn.date)}
+                                      </span>
+                                      {txn.status === "pending" && (
+                                        <span className="text-xs bg-warning-light text-warning px-1.5 py-0.5 rounded">
+                                          pending
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-base text-text-primary truncate mt-1">
+                                      {txn.merchant || txn.description}
+                                    </p>
+                                    {txn.suggestedBudgetItemId && getBudgetItemName(txn.suggestedBudgetItemId) && (
+                                      <button
+                                        onClick={() => {
+                                          setAssigningId(txn.id);
+                                          setSelectedBudgetItemId(String(txn.suggestedBudgetItemId));
+                                        }}
+                                        className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-primary bg-primary-light rounded-full hover:bg-primary hover:text-white transition-colors"
+                                      >
+                                        {getBudgetItemName(txn.suggestedBudgetItemId!)}
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 ml-3">
+                                    <span
+                                      className={`text-base font-medium ${txn.type === "income" ? "text-success" : "text-danger"}`}
+                                    >
+                                      {txn.type === "income" ? "+" : "-"}$
+                                      {formatCurrency(txn.amount)}
+                                    </span>
+                                    <button
+                                      onClick={() => setAssigningId(txn.id)}
+                                      className="px-2 py-1 text-xs text-primary bg-primary-light hover:bg-primary-light rounded"
+                                    >
+                                      Assign
+                                    </button>
+                                    <button
+                                      onClick={() => openSplitModal(txn)}
+                                      className="p-1 text-accent-purple hover:bg-accent-purple-light rounded"
+                                      title="Split transaction"
+                                    >
+                                      <HiOutlineScissors size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteUncategorized(txn.id)}
+                                      className="p-1 text-danger hover:bg-danger-light rounded"
+                                    >
+                                      <FaTimes size={12} />
+                                    </button>
+                                  </div>
+                                </div>
                               )}
                             </div>
-                            <p className="text-base text-text-primary truncate mt-1">
-                              {txn.merchant || txn.description}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 ml-3">
-                            <span
-                              className={`text-base font-medium ${txn.type === "income" ? "text-success" : "text-danger"}`}
-                            >
-                              {txn.type === "income" ? "+" : "-"}$
-                              {formatCurrency(txn.amount)}
-                            </span>
-                            <button
-                              onClick={() => setAssigningId(txn.id)}
-                              className="px-2 py-1 text-xs text-primary bg-primary-light hover:bg-primary-light rounded"
-                            >
-                              Assign
-                            </button>
-                            <button
-                              onClick={() => openSplitModal(txn)}
-                              className="p-1 text-accent-purple hover:bg-accent-purple-light rounded"
-                              title="Split transaction"
-                            >
-                              <HiOutlineScissors size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUncategorized(txn.id)}
-                              className="p-1 text-danger hover:bg-danger-light rounded"
-                            >
-                              <FaTimes size={12} />
-                            </button>
-                          </div>
+                          ))}
                         </div>
-                      )}
-                    </div>
-                  ))}
-                  {/* Current month heading (only show if there are also previous month txns) */}
-                  {uncategorizedTxns.filter(t => t.fromPreviousMonth).length > 0 &&
-                   uncategorizedTxns.filter(t => !t.fromPreviousMonth).length > 0 && (
-                    <div className="mb-2 mt-4">
-                      <h4 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">
-                        This Month
-                      </h4>
-                    </div>
-                  )}
-                  {uncategorizedTxns.filter(t => !t.fromPreviousMonth).map((txn) => (
-                    <div
-                      key={txn.id}
-                      className="bg-accent-orange-light border border-accent-orange-border rounded-lg p-3"
-                    >
-                      {assigningId === txn.id ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium truncate text-base">
-                              {txn.merchant || txn.description}
-                            </span>
-                            <span
-                              className={`text-base font-medium ${txn.type === "income" ? "text-success" : "text-danger"}`}
-                            >
-                              {txn.type === "income" ? "+" : "-"}$
-                              {formatCurrency(txn.amount)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={selectedBudgetItemId}
-                              onChange={(e) =>
-                                setSelectedBudgetItemId(e.target.value)
-                              }
-                              className="flex-1 text-sm border rounded px-2 py-1.5"
-                            >
-                              <option value="">Select item...</option>
-                              {getAllBudgetItems().map(
-                                ({ category, items }) => (
-                                  <optgroup key={category} label={category}>
-                                    {items.map((item) => (
-                                      <option key={item.id} value={item.id}>
-                                        {item.name}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                ),
-                              )}
-                            </select>
-                            <button
-                              onClick={() => handleAssign(txn.id)}
-                              disabled={!selectedBudgetItemId}
-                              className="p-2 text-success hover:bg-success-light rounded disabled:opacity-50"
-                            >
-                              <FaCheck size={14} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setAssigningId(null);
-                                setSelectedBudgetItemId("");
-                              }}
-                              className="p-2 text-text-secondary hover:bg-surface-secondary rounded"
-                            >
-                              <FaTimes size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-text-secondary">
-                                {formatDate(txn.date)}
-                              </span>
-                              {txn.status === "pending" && (
-                                <span className="text-xs bg-warning-light text-warning px-1.5 py-0.5 rounded">
-                                  pending
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-base text-text-primary truncate mt-1">
-                              {txn.merchant || txn.description}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 ml-3">
-                            <span
-                              className={`text-base font-medium ${txn.type === "income" ? "text-success" : "text-danger"}`}
-                            >
-                              {txn.type === "income" ? "+" : "-"}$
-                              {formatCurrency(txn.amount)}
-                            </span>
-                            <button
-                              onClick={() => setAssigningId(txn.id)}
-                              className="px-2 py-1 text-xs text-primary bg-primary-light hover:bg-primary-light rounded"
-                            >
-                              Assign
-                            </button>
-                            <button
-                              onClick={() => openSplitModal(txn)}
-                              className="p-1 text-accent-purple hover:bg-accent-purple-light rounded"
-                              title="Split transaction"
-                            >
-                              <HiOutlineScissors size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUncategorized(txn.id)}
-                              className="p-1 text-danger hover:bg-danger-light rounded"
-                            >
-                              <FaTimes size={12} />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                      );
+                    });
+                  })()}
                 </div>
               )}
 

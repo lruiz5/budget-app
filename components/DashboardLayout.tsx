@@ -1,7 +1,8 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, Suspense } from 'react';
 import Sidebar from './Sidebar';
+import MobileBlockScreen from './MobileBlockScreen';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -9,11 +10,16 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="h-screen flex overflow-hidden bg-surface-secondary">
-      <Sidebar />
-      <main className="flex-1 overflow-hidden">
-        {children}
-      </main>
-    </div>
+    <>
+      <MobileBlockScreen />
+      <div className="h-screen hidden md:flex overflow-hidden bg-surface-secondary">
+        <Suspense>
+          <Sidebar />
+        </Suspense>
+        <main className="flex-1 overflow-hidden">
+          {children}
+        </main>
+      </div>
+    </>
   );
 }

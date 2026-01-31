@@ -154,7 +154,7 @@ export default function SettingsPage() {
         onLoad={() => setTellerReady(true)}
       />
 
-      <div className="h-full overflow-y-auto bg-surface-secondary p-8">
+      <div className="h-full overflow-y-auto bg-surface-secondary p-4 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-text-primary mb-8">Accounts</h1>
 
