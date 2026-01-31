@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-01-30 - Interactive Insights Charts
+
+### Added
+- **D3.js charts** on Insights page — three interactive visualizations powered by D3.js and d3-sankey
+- **Budget vs Actual** — horizontal grouped bar chart comparing planned vs actual spending per category, with over-budget highlighting in red
+- **Spending Trends** — multi-line chart tracking spending by category over the last 3 months, with clickable legend to toggle category visibility
+- **Cash Flow (Sankey)** — 3-column flow diagram: Sources (Buffer, Income) → Categories → Individual Budget Items, with gradient-colored flows and detailed hover tooltips
+- **Chart infrastructure** — shared tooltip component, empty state component, category color mapping, and data transformation utilities
+- **Multi-month data fetching** — insights page loads current + 2 previous months for trend analysis
+
+### Changed
+- Insights page max width increased from `max-w-4xl` to `max-w-6xl`
+- Replaced "Coming Soon" placeholder cards with live interactive charts
+- Added refresh button with loading spinner to insights page
+
 ## [1.4.0] - 2026-01-29 - Supabase Migration & Mobile Prep
 
 ### Added

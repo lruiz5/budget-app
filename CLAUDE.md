@@ -6,8 +6,8 @@ This document contains context for Claude AI to continue development on this bud
 
 A zero-based budget tracking application built with Next.js, TypeScript, and Tailwind CSS. The app features bank account integration via Teller API for automatic transaction imports.
 
-**Current Version:** v1.4.0
-**Last Session:** 2026-01-29
+**Current Version:** v1.5.0
+**Last Session:** 2026-01-30
 
 ## Tech Stack
 
@@ -19,6 +19,7 @@ A zero-based budget tracking application built with Next.js, TypeScript, and Tai
 - **Authentication:** Clerk (@clerk/nextjs)
 - **Bank Integration:** Teller API
 - **Mobile:** Capacitor (live server mode)
+- **Charts:** D3.js + d3-sankey
 - **Icons:** react-icons (FaXxx from react-icons/fa only)
 
 ## Key Concepts
@@ -290,11 +291,15 @@ const emojiMap: Record<string, string> = {
 - Budget item detail view in sidebar
 - Monthly report with Buffer Flow and empty-state handling
 - Copy budget from previous month
+- **Insights charts** — Budget vs Actual (bar), Spending Trends (line), Cash Flow (Sankey)
 
 ### Potential Future Work
 - The "Add Group" button at bottom of budget page is non-functional (placeholder)
 - Could add ability to edit recurring payment from budget item detail view
 - Could add recurring payment auto-advance when marked as paid
+- Cross-chart filtering (click category to filter all charts)
+- Export charts as PNG/SVG
+- Custom date range selector for trends (6 months, 1 year)
 
 ## Development Commands
 
@@ -497,17 +502,72 @@ DATABASE_URL=postgresql://postgres.xxx:password@aws-0-us-east-1.pooler.supabase.
 # Supabase client not used directly (queries go through Drizzle ORM)
 ```
 
+## Recent Changes (v1.5.0)
+
+### Interactive Insights Charts
+- **Dependencies:** Added `d3`, `d3-sankey`, `@types/d3`, `@types/d3-sankey`
+- **Chart infrastructure:**
+  - `lib/chartColors.ts` — category color mapping (`getCategoryColor`, `getCategoryLightColor`, `getCategoryEmoji`)
+  - `lib/chartHelpers.ts` — data transformation utilities for all 3 chart types
+  - `types/chart.ts` — TypeScript interfaces (`CategoryChartData`, `MonthlyTrendData`, `FlowNode`, `FlowLink`, `FlowData`, `TooltipData`)
+  - `components/charts/ChartTooltip.tsx` — shared fixed-position tooltip
+  - `components/charts/ChartEmptyState.tsx` — shared empty state with icon/title/message/action
+
+### Budget vs Actual Chart (`components/charts/BudgetVsActualChart.tsx`)
+- Horizontal grouped bar chart: planned (gray) vs actual (category color)
+- Over-budget bars turn red with glow shadow
+- Hover tooltips show exact amounts and over/under difference
+- Uses `d3.scaleBand()` + `d3.scaleLinear()`
+
+### Spending Trends Chart (`components/charts/SpendingTrendsChart.tsx`)
+- Multi-line chart with one line per expense category
+- Interactive legend: click category to toggle visibility (`visibleCategories` Set)
+- Smooth curves via `d3.curveMonotoneX`
+- Dot markers on data points with hover tooltips
+- Requires 2+ months of data (shows empty state otherwise)
+
+### Cash Flow Diagram (`components/charts/FlowDiagram.tsx`)
+- 3-column Sankey: Sources → Categories → Budget Items
+- Sources: Buffer (gray) and Income (emerald), shown when they have values
+- Gradient-colored links from source color to category color
+- Node hover highlights connected links, dims others to 0.15 opacity
+- Detailed tooltips show constituent line items on source/category nodes
+- Column headers: SOURCES / CATEGORIES / BUDGET ITEMS
+- Amount labels on bars tall enough to fit text
+- Uses `d3-sankey` with `.nodeId()` for string-based node identification
+
+### Insights Page (`app/insights/page.tsx`)
+- Multi-month data fetching: loads current + 2 previous months of budgets
+- `budgets` array (oldest→newest) for trends, `currentBudget` for bar/flow charts
+- Refresh button with loading spinner
+- Max width increased from `max-w-4xl` to `max-w-6xl`
+- Replaced "Coming Soon" placeholder cards with live charts
+
+### Data Transformation Details (`lib/chartHelpers.ts`)
+- `transformBudgetToCategoryData(budget)` — aggregates planned/actual per category
+- `transformBudgetsToTrendData(budgets)` — time series with month/year/date per budget
+- `transformBudgetToFlowData(budget)` — 3-column Sankey data:
+  - Distributes income proportionally across expense categories
+  - Includes `lineItems` on source and category nodes for hover detail
+  - Returns empty data when no income or no expenses
+- `hasTransactionData(budget)` — checks if any category has actual spending
+- `hasIncomeAndExpenses(budget)` — checks for both income and expenses (flow diagram requirement)
+
+### D3 + React Integration Pattern
+- React controls: component lifecycle, DOM structure, state (tooltips, legend)
+- D3 handles: scales, axes, paths, layout calculations
+- `useRef` for SVG elements, `useEffect` for D3 rendering, `useMemo` for data transforms
+- Responsive via `viewBox` + `preserveAspectRatio="xMidYMid meet"`
+
 ## Session Handoff Notes
 
 Last session ended after:
-1. Completed Supabase migration (Phases 1-4)
-2. Skipped Phase 5 (Edge Functions) — documented rationale above
-3. Set up Capacitor live server mode (Phase 6)
-4. Fixed all PostgreSQL numeric type issues across 10+ files
-5. Optimized Teller sync from ~60s to fast batch queries
-6. Fixed Monthly Report excluding Saving from expenses
-7. Fixed split transaction `.toFixed()` error
-8. Added previous month transactions feature (last 3 days)
-9. Build verified passing
+1. Installed D3.js and d3-sankey dependencies
+2. Created chart infrastructure (colors, helpers, types, tooltip, empty state)
+3. Implemented Budget vs Actual bar chart
+4. Implemented Spending Trends multi-line chart with interactive legend
+5. Implemented Cash Flow Sankey diagram with 3-column layout
+6. Updated insights page with multi-month fetching and all 3 charts
+7. Build verified passing
 
-The app is in a stable state with v1.4.0 changes applied.
+The app is in a stable state with v1.5.0 changes applied.

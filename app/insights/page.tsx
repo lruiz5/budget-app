@@ -1,40 +1,71 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { FaChartLine, FaChartBar, FaChartPie } from 'react-icons/fa';
+import { FaChartLine, FaChartBar, FaChartPie, FaSync } from 'react-icons/fa';
 import DashboardLayout from '@/components/DashboardLayout';
 import MonthlyReportModal from '@/components/MonthlyReportModal';
+import BudgetVsActualChart from '@/components/charts/BudgetVsActualChart';
+import SpendingTrendsChart from '@/components/charts/SpendingTrendsChart';
+import FlowDiagram from '@/components/charts/FlowDiagram';
 import { Budget } from '@/types/budget';
 import { transformDbBudgetToAppBudget } from '@/lib/budgetHelpers';
 
 export default function InsightsPage() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [budget, setBudget] = useState<Budget | null>(null);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [currentBudget, setCurrentBudget] = useState<Budget | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchCurrentBudget = useCallback(async () => {
+  const fetchMultiMonthBudgets = useCallback(async () => {
+    setIsLoading(true);
     const currentDate = new Date();
-    const month = currentDate.getMonth();
-    const year = currentDate.getFullYear();
+    const budgetsData: Budget[] = [];
 
-    try {
-      const response = await fetch(`/api/budgets?month=${month}&year=${year}`);
-      const data = await response.json();
-      const transformedBudget = transformDbBudgetToAppBudget(data);
-      setBudget(transformedBudget);
-    } catch (error) {
-      console.error('Error fetching budget:', error);
+    // Fetch last 3 months of budgets
+    for (let i = 0; i < 3; i++) {
+      let month = currentDate.getMonth() - i;
+      let year = currentDate.getFullYear();
+
+      // Handle year boundary
+      if (month < 0) {
+        month = 12 + month;
+        year -= 1;
+      }
+
+      try {
+        const response = await fetch(`/api/budgets?month=${month}&year=${year}`);
+        const data = await response.json();
+        const transformedBudget = transformDbBudgetToAppBudget(data);
+        budgetsData.push(transformedBudget);
+      } catch (error) {
+        console.error(`Error fetching budget for ${month}/${year}:`, error);
+      }
     }
+
+    setBudgets(budgetsData.reverse()); // Oldest to newest
+    setCurrentBudget(budgetsData[budgetsData.length - 1] || null);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchCurrentBudget();
-  }, [fetchCurrentBudget]);
+    fetchMultiMonthBudgets();
+  }, [fetchMultiMonthBudgets]);
 
   return (
     <DashboardLayout>
       <div className="h-full overflow-y-auto bg-surface-secondary p-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-text-primary mb-8">Insights</h1>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-3xl font-bold text-text-primary">Insights</h1>
+            <button
+              onClick={fetchMultiMonthBudgets}
+              className="flex items-center gap-2 px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-surface rounded-lg transition-colors"
+              title="Refresh data"
+            >
+              <FaSync className="text-sm" />
+              <span className="text-sm font-medium">Refresh</span>
+            </button>
+          </div>
 
           {/* Monthly Summary Card */}
           <div className="bg-surface rounded-lg shadow p-6 mb-6">
@@ -55,49 +86,71 @@ export default function InsightsPage() {
             </button>
           </div>
 
-          {/* Coming Soon Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-surface rounded-lg shadow p-6 opacity-60">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-success-light rounded-full flex items-center justify-center">
-                  <FaChartLine className="text-success text-xl" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-text-primary">Spending Trends</h2>
-                  <p className="text-text-secondary">Track your spending over time</p>
-                </div>
-              </div>
-              <div className="text-center py-8 text-text-tertiary">
-                <p className="font-medium">Coming Soon</p>
-                <p className="text-sm">Graphs showing spending patterns across months</p>
-              </div>
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="mt-4 text-text-secondary">Loading insights...</p>
             </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Budget vs Actual Chart */}
+              <div className="bg-surface rounded-lg shadow p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-success-light rounded-full flex items-center justify-center">
+                    <FaChartBar className="text-success text-xl" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-text-primary">Budget vs Actual</h2>
+                    <p className="text-text-secondary">Compare planned and actual spending by category</p>
+                  </div>
+                </div>
+                <div className="h-[400px]">
+                  <BudgetVsActualChart budget={currentBudget} />
+                </div>
+              </div>
 
-            <div className="bg-surface rounded-lg shadow p-6 opacity-60">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-accent-purple-light rounded-full flex items-center justify-center">
-                  <FaChartBar className="text-accent-purple text-xl" />
+              {/* Spending Trends Chart */}
+              <div className="bg-surface rounded-lg shadow p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-info-light rounded-full flex items-center justify-center">
+                    <FaChartLine className="text-info text-xl" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-text-primary">Spending Trends</h2>
+                    <p className="text-text-secondary">Track your spending over the last 3 months</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-text-primary">Category Analysis</h2>
-                  <p className="text-text-secondary">Deep dive into category spending</p>
+                <div className="h-[400px]">
+                  <SpendingTrendsChart budgets={budgets} />
                 </div>
               </div>
-              <div className="text-center py-8 text-text-tertiary">
-                <p className="font-medium">Coming Soon</p>
-                <p className="text-sm">Detailed breakdowns by category</p>
+
+              {/* Flow Diagram */}
+              <div className="bg-surface rounded-lg shadow p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-accent-purple-light rounded-full flex items-center justify-center">
+                    <FaChartPie className="text-accent-purple text-xl" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-text-primary">Cash Flow</h2>
+                    <p className="text-text-secondary">Visualize how income flows to expense categories</p>
+                  </div>
+                </div>
+                <div className="h-[500px]">
+                  <FlowDiagram budget={currentBudget} />
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Monthly Report Modal */}
-      {budget && (
+      {currentBudget && (
         <MonthlyReportModal
           isOpen={isReportModalOpen}
           onClose={() => setIsReportModalOpen(false)}
-          budget={budget}
+          budget={currentBudget}
         />
       )}
     </DashboardLayout>
