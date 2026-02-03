@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2026-02-03 - Budget Reset & Empty State Fix
+
+### Added
+- **Reset Budget feature** — "Reset Budget" button at bottom of budget page with two options:
+  - "Zero out all planned amounts" — keeps categories/items/transactions, sets all planned to $0.00
+  - "Replace with last month's budget" — deletes current items, copies from previous month + syncs recurring
+  - Two-step confirmation modal for safety
+- **New API endpoint** (`/api/budgets/reset`) — POST with `mode: 'zero'` or `mode: 'replace'`
+
+### Changed
+- Recurring payment items now only created when user clicks "Start Planning" (moved from GET to POST `/api/budgets/copy`)
+- Due-date auto-advance still runs on GET to keep dates current
+
+### Fixed
+- **Empty budget detection** — new months now properly show "Hey there, looks like you need a budget" prompt instead of auto-populating from recurring payments
+- **Duplicate recurring items** — copy budget now skips items linked to recurring payments (recurring sync creates them fresh with proper linking)
+
 ## [1.7.0] - 2026-01-31 - Custom Categories, Recurring Auto-Reset & UI Improvements
 
 ### Added

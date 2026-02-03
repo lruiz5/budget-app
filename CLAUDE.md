@@ -650,16 +650,41 @@ DATABASE_URL=postgresql://postgres.xxx:password@aws-0-us-east-1.pooler.supabase.
 - `app/api/teller/sync/route.ts` — merchant-based suggestions
 - `tsconfig.json` — exclude scripts directory
 
+## Recent Changes (v1.8.0)
+
+### Empty Budget Detection Fix
+- **Problem:** Recurring payment items were auto-created in GET `/api/budgets`, so new months never showed the "Hey there, looks like you need a budget" empty state
+- **Fix:** Moved recurring item creation from GET `/api/budgets` to POST `/api/budgets/copy`
+- Recurring due-date auto-advance still happens on GET (to keep dates current)
+- Recurring budget items now only created when user clicks "Start Planning for [month]"
+
+### Copy Budget: No More Duplicate Recurring Items
+- When copying from previous month, items linked to recurring payments (`recurringPaymentId`) are skipped
+- The recurring sync that runs after copying creates them fresh with proper linking
+- Prevents duplicate items (e.g., "Rent" appearing twice — once from copy, once from recurring)
+
+### Reset Budget Feature
+- **New button:** "Reset Budget" below "Add Group" (dotted red border)
+- **Modal:** Two-step flow with confirmation
+  1. Choose: "Zero out all planned amounts" or "Replace with last month's budget"
+  2. Confirm: Shows description of action with Back/Confirm buttons
+- **Zero out:** Sets all planned amounts to $0.00, keeps categories/items/transactions
+- **Replace:** Deletes current items, copies from previous month + syncs recurring payments
+
+### New Files
+- `app/api/budgets/reset/route.ts` — POST endpoint for budget reset (modes: 'zero', 'replace')
+
+### Key File Changes
+- `app/api/budgets/route.ts` — removed recurring item creation, kept due-date auto-advance
+- `app/api/budgets/copy/route.ts` — added recurring item sync, skip items with `recurringPaymentId` during copy
+- `app/page.tsx` — added Reset Budget button + modal with two-step confirmation
+
 ## Session Handoff Notes
 
 Last session ended after:
-1. Implemented custom budget categories (Add Group button, emoji picker, dynamic rendering, API, chart support)
-2. Added "Left to Budget" to Monthly Report buffer flow projection
-3. Grouped linked bank accounts by institution on settings page
-4. Expanded emoji picker from 30 to 130+ emojis in 12 searchable groups
-5. Added recurring payment auto-reset (auto-advance nextDueDate + reset fundedAmount when period passes)
-6. Updated types: CategoryType → string, Budget.categories → Record<string, BudgetCategory>
-7. DB schema updated: added emoji and categoryOrder columns to budget_categories (pushed to Supabase)
-8. Build verified passing
+1. Fixed empty budget detection (recurring items no longer auto-created on GET)
+2. Fixed duplicate items when copying budget (skip recurring-linked items, let sync create them)
+3. Added Reset Budget feature with two options and confirmation modal
+4. Build verified passing
 
-The app is in a stable state with v1.7.0 changes applied. Schema has been pushed to Supabase (`db:push`).
+The app is in a stable state with v1.8.0 changes applied.

@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { budgets, budgetCategories, budgetItems } from '@/db/schema';
+import { budgets, budgetCategories, budgetItems, recurringPayments } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
+
+// Helper to calculate monthly contribution based on frequency
+function getMonthlyContribution(amount: string | number, frequency: string): string {
+  const amt = typeof amount === 'string' ? parseFloat(amount) : amount;
+  switch (frequency) {
+    case 'monthly': return String(amt);
+    case 'quarterly': return String(amt / 3);
+    case 'semi-annually': return String(amt / 6);
+    case 'annually': return String(amt / 12);
+    default: return String(amt);
+  }
+}
 import { requireAuth, isAuthError } from '@/lib/auth';
 
 const CATEGORY_TYPES = [
@@ -107,6 +119,9 @@ export async function POST(request: NextRequest) {
 
     if (targetCategory && sourceCategory.items.length > 0) {
       for (const item of sourceCategory.items) {
+        // Skip items linked to recurring payments - the recurring sync below will handle those
+        if (item.recurringPaymentId) continue;
+
         await db.insert(budgetItems).values({
           categoryId: targetCategory.id,
           name: item.name,
@@ -114,6 +129,48 @@ export async function POST(request: NextRequest) {
           order: item.order,
         });
       }
+    }
+  }
+
+  // Sync recurring payments: create budget items for active recurring payments
+  const activeRecurring = await db.query.recurringPayments.findMany({
+    where: and(eq(recurringPayments.userId, userId), eq(recurringPayments.isActive, true)),
+  });
+
+  // Re-fetch target categories with items to check what already exists
+  const updatedTarget = await db.query.budgets.findFirst({
+    where: eq(budgets.id, targetBudget.id),
+    with: {
+      categories: {
+        with: {
+          items: true,
+        },
+      },
+    },
+  });
+
+  if (updatedTarget) {
+    for (const recurring of activeRecurring) {
+      if (!recurring.categoryType) continue;
+
+      const category = updatedTarget.categories.find(c => c.categoryType === recurring.categoryType);
+      if (!category) continue;
+
+      const existingItem = category.items.find(item => item.recurringPaymentId === recurring.id);
+      if (existingItem) continue;
+
+      const monthlyContribution = getMonthlyContribution(recurring.amount, recurring.frequency);
+      const maxOrder = category.items.length > 0
+        ? Math.max(...category.items.map(item => item.order || 0))
+        : -1;
+
+      await db.insert(budgetItems).values({
+        categoryId: category.id,
+        name: recurring.name,
+        planned: monthlyContribution,
+        order: maxOrder + 1,
+        recurringPaymentId: recurring.id,
+      });
     }
   }
 
