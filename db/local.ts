@@ -12,6 +12,9 @@ const DB_PATH = './data/budget-local';
 let pgliteClient: PGlite | null = null;
 let localDbInstance: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
+// Promise-based singleton to prevent race conditions during initialization
+let initializationPromise: Promise<ReturnType<typeof drizzle<typeof schema>>> | null = null;
+
 /**
  * Ensure the data directory exists.
  */
@@ -23,31 +26,70 @@ function ensureDataDirectory(): void {
 }
 
 /**
- * Get or create the PGlite client instance.
- * Uses singleton pattern to avoid multiple connections.
+ * Clear corrupted database files.
  */
-async function getPGliteClient(): Promise<PGlite> {
-  if (!pgliteClient) {
+function clearDatabaseFiles(): void {
+  if (fs.existsSync(DB_PATH)) {
+    fs.rmSync(DB_PATH, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Internal initialization function - only called once.
+ * If initialization fails (corrupted DB), clears and retries once.
+ */
+async function initializeLocalDb(): Promise<ReturnType<typeof drizzle<typeof schema>>> {
+  ensureDataDirectory();
+
+  try {
+    pgliteClient = new PGlite(DB_PATH);
+    await pgliteClient.waitReady;
+  } catch (error) {
+    console.warn('PGlite initialization failed, clearing database and retrying...', error);
+    // Clear corrupted database files
+    pgliteClient = null;
+    clearDatabaseFiles();
     ensureDataDirectory();
+
+    // Retry initialization
     pgliteClient = new PGlite(DB_PATH);
     await pgliteClient.waitReady;
   }
-  return pgliteClient;
+
+  const db = drizzle(pgliteClient, { schema });
+
+  // Initialize schema on first connection
+  await initializeSchema(pgliteClient);
+
+  localDbInstance = db;
+  return db;
 }
 
 /**
  * Get the local Drizzle database instance.
- * Initializes PGlite and creates schema if needed.
+ * Uses promise-based singleton to handle concurrent requests safely.
  */
 export async function getLocalDb() {
-  if (!localDbInstance) {
-    const client = await getPGliteClient();
-    localDbInstance = drizzle(client, { schema });
-
-    // Initialize schema on first connection
-    await initializeSchema(client);
+  // If already initialized, return immediately
+  if (localDbInstance) {
+    return localDbInstance;
   }
-  return localDbInstance;
+
+  // If initialization is in progress, wait for it
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+
+  // Start initialization and store the promise so concurrent callers can wait
+  initializationPromise = initializeLocalDb();
+
+  try {
+    return await initializationPromise;
+  } catch (error) {
+    // Reset on failure so retry is possible
+    initializationPromise = null;
+    throw error;
+  }
 }
 
 /**
@@ -171,6 +213,7 @@ export async function closeLocalDb(): Promise<void> {
     await pgliteClient.close();
     pgliteClient = null;
     localDbInstance = null;
+    initializationPromise = null;
   }
 }
 

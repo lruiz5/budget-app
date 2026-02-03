@@ -87,6 +87,8 @@ export default function BudgetSummary({
   const [transactionToSplit, setTransactionToSplit] =
     useState<UncategorizedTransaction | null>(null);
   const [existingSplits, setExistingSplits] = useState<ExistingSplit[]>([]);
+  const [defaultBudgetItemId, setDefaultBudgetItemId] = useState<string>('');
+  const [defaultType, setDefaultType] = useState<'income' | 'expense'>('expense');
 
   const buffer = budget.buffer || 0;
 
@@ -515,6 +517,8 @@ export default function BudgetSummary({
   const closeModal = () => {
     setIsAddModalOpen(false);
     setTransactionToEdit(null);
+    setDefaultBudgetItemId('');
+    setDefaultType('expense');
   };
 
   const openSplitModal = (txn: UncategorizedTransaction) => {
@@ -688,6 +692,21 @@ export default function BudgetSummary({
               <span>Make this recurring</span>
             </button>
           )}
+
+          {/* Add Transaction Button */}
+          <button
+            onClick={() => {
+              const isIncome = categoryName.toLowerCase() === 'income';
+              setDefaultBudgetItemId(item.id);
+              setDefaultType(isIncome ? 'income' : 'expense');
+              setTransactionToEdit(null);
+              setIsAddModalOpen(true);
+            }}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+          >
+            <FaPlus size={12} />
+            <span>Add Transaction</span>
+          </button>
         </div>
 
         {/* Activity This Month */}
@@ -1254,6 +1273,8 @@ export default function BudgetSummary({
             <button
               onClick={() => {
                 setTransactionToEdit(null);
+                setDefaultBudgetItemId('');
+                setDefaultType('expense');
                 setIsAddModalOpen(true);
               }}
               className="fixed bottom-10 right-14 w-16 h-16 bg-primary hover:bg-primary-hover text-white rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.25)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.3)] flex items-center justify-center transition-all"
@@ -1275,6 +1296,8 @@ export default function BudgetSummary({
         budgetItems={getAllBudgetItems()}
         linkedAccounts={linkedAccounts}
         transactionToEdit={transactionToEdit}
+        defaultBudgetItemId={defaultBudgetItemId}
+        defaultType={defaultType}
       />
 
       {/* Split Transaction Modal */}

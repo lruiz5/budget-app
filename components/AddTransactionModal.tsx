@@ -48,6 +48,8 @@ interface AddTransactionModalProps {
   budgetItems: { category: string; items: BudgetItem[] }[];
   linkedAccounts?: LinkedAccount[];
   transactionToEdit?: TransactionToEdit | null;
+  defaultBudgetItemId?: string;
+  defaultType?: 'income' | 'expense';
 }
 
 export default function AddTransactionModal({
@@ -59,6 +61,8 @@ export default function AddTransactionModal({
   budgetItems,
   linkedAccounts = [],
   transactionToEdit,
+  defaultBudgetItemId,
+  defaultType,
 }: AddTransactionModalProps) {
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
@@ -69,7 +73,7 @@ export default function AddTransactionModal({
 
   const isEditMode = !!transactionToEdit;
 
-  // Populate form when editing
+  // Populate form when editing or use defaults
   useEffect(() => {
     if (transactionToEdit) {
       setType(transactionToEdit.type);
@@ -79,15 +83,15 @@ export default function AddTransactionModal({
       setLinkedAccountId(transactionToEdit.linkedAccountId?.toString() || '');
       setBudgetItemId(transactionToEdit.budgetItemId?.toString() || '');
     } else {
-      // Reset form for new transaction
-      setType('expense');
+      // Reset form for new transaction, using defaults if provided
+      setType(defaultType || 'expense');
       setAmount('');
       setDate(new Date().toISOString().split('T')[0]);
       setMerchant('');
       setLinkedAccountId('');
-      setBudgetItemId('');
+      setBudgetItemId(defaultBudgetItemId || '');
     }
-  }, [transactionToEdit, isOpen]);
+  }, [transactionToEdit, isOpen, defaultBudgetItemId, defaultType]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
