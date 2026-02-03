@@ -47,6 +47,55 @@
   --sidebar-text-muted: #9ca3af;
 }
 
+/* Dark mode - use html.dark for proper specificity over :root */
+html.dark {
+  color-scheme: dark;
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+
+  /* Primary - Emerald (slightly brighter for dark mode) */
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-light: #064e3b;
+  --primary-border: #047857;
+
+  /* Semantic */
+  --success: #22c55e;
+  --success-light: #14532d;
+  --danger: #ef4444;
+  --danger-light: #7f1d1d;
+  --warning: #facc15;
+  --warning-light: #713f12;
+  --info: #3b82f6;
+  --info-light: #1e3a8a;
+
+  /* Accents */
+  --accent-orange: #fb923c;
+  --accent-orange-light: #7c2d12;
+  --accent-orange-border: #c2410c;
+  --accent-purple: #a855f7;
+  --accent-purple-light: #581c87;
+
+  /* Surfaces */
+  --surface: #1e293b;
+  --surface-secondary: #334155;
+
+  /* Borders */
+  --border: #334155;
+  --border-strong: #475569;
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #64748b;
+
+  /* Sidebar */
+  --sidebar-bg: #0f172a;
+  --sidebar-border: #1e293b;
+  --sidebar-hover: #1e293b;
+  --sidebar-text-muted: #94a3b8;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
