@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { budgets, budgetCategories, budgetItems, recurringPayments } from '@/db/schema';
+
 import { eq, and, asc } from 'drizzle-orm';
 import { requireAuth, isAuthError } from '@/lib/auth';
-
-// Helper to calculate monthly contribution based on frequency
-function getMonthlyContribution(amount: string | number, frequency: string): string {
-  const amt = typeof amount === 'string' ? parseFloat(amount) : amount;
-  switch (frequency) {
-    case 'monthly': return String(amt);
-    case 'quarterly': return String(amt / 3);
-    case 'semi-annually': return String(amt / 6);
-    case 'annually': return String(amt / 12);
-    default: return String(amt);
-  }
-}
 
 const CATEGORY_TYPES = [
   { type: 'income', name: 'Income' },
@@ -94,7 +83,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Sync recurring payments to budget items
+  // Auto-advance recurring payment due dates (don't create budget items yet - that happens on copy/start)
   if (budget) {
     const activeRecurring = await db.query.recurringPayments.findMany({
       where: and(eq(recurringPayments.userId, userId), eq(recurringPayments.isActive, true)),
@@ -129,59 +118,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let itemsCreated = false;
-
-    for (const recurring of activeRecurring) {
-      if (!recurring.categoryType) continue;
-
-      // Find the matching category in this budget
-      const category = budget.categories.find(c => c.categoryType === recurring.categoryType);
-      if (!category) continue;
-
-      // Check if a budget item for this recurring payment already exists
-      const existingItem = category.items.find(item => item.recurringPaymentId === recurring.id);
-      if (existingItem) continue;
-
-      // Create the budget item
-      const monthlyContribution = getMonthlyContribution(recurring.amount, recurring.frequency);
-      const maxOrder = category.items.length > 0
-        ? Math.max(...category.items.map(item => item.order || 0))
-        : -1;
-
-      await db.insert(budgetItems).values({
-        categoryId: category.id,
-        name: recurring.name,
-        planned: monthlyContribution,
-        order: maxOrder + 1,
-        recurringPaymentId: recurring.id,
-      });
-
-      itemsCreated = true;
-    }
-
-    // Re-fetch budget if items were created
-    if (itemsCreated) {
-      budget = await db.query.budgets.findFirst({
-        where: eq(budgets.id, budget.id),
-        with: {
-          categories: {
-            with: {
-              items: {
-                orderBy: [asc(budgetItems.order)],
-                with: {
-                  transactions: true,
-                  splitTransactions: {
-                    with: {
-                      parentTransaction: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-    }
   }
 
   return NextResponse.json(budget);

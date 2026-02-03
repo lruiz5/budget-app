@@ -93,6 +93,9 @@ function Home() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupEmoji, setNewGroupEmoji] = useState('📋');
   const [emojiSearch, setEmojiSearch] = useState('');
+  const [isResetBudgetOpen, setIsResetBudgetOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetMode, setResetMode] = useState<'zero' | 'replace' | null>(null);
 
   const handleSplitClick = (parentTransactionId: string) => {
     setSplitToEdit(parentTransactionId);
@@ -457,6 +460,86 @@ function Home() {
               >
                 + Add Group
               </button>
+
+              {/* Reset Budget Button */}
+              <button
+                onClick={() => setIsResetBudgetOpen(true)}
+                className="w-full py-3 border-2 border-dotted border-danger/40 rounded-lg text-danger/60 hover:border-danger hover:text-danger transition-colors cursor-pointer"
+              >
+                Reset Budget
+              </button>
+
+              {/* Reset Budget Modal */}
+              {isResetBudgetOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-surface rounded-xl shadow-2xl w-full max-w-md p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-text-primary">How would you like to reset your budget?</h3>
+                      <button
+                        onClick={() => { setIsResetBudgetOpen(false); setResetMode(null); }}
+                        className="text-text-tertiary hover:text-text-secondary p-1"
+                      >
+                        <FaTimes size={16} />
+                      </button>
+                    </div>
+
+                    {!resetMode ? (
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => setResetMode('zero')}
+                          className="w-full p-4 border border-border-strong rounded-lg hover:bg-surface-secondary transition-colors text-left"
+                        >
+                          <div className="font-medium text-text-primary">Zero out all planned amounts</div>
+                          <div className="text-sm text-text-secondary mt-1">Keep your categories and items, but set all planned amounts to $0.00</div>
+                        </button>
+
+                        <button
+                          onClick={() => setResetMode('replace')}
+                          className="w-full p-4 border border-border-strong rounded-lg hover:bg-surface-secondary transition-colors text-left"
+                        >
+                          <div className="font-medium text-text-primary">Replace with last month&apos;s budget</div>
+                          <div className="text-sm text-text-secondary mt-1">Delete current items and copy everything from {getPreviousMonthName(budget.month)}</div>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-text-secondary">
+                          {resetMode === 'zero'
+                            ? 'This will set all planned amounts to $0.00. Your categories, items, and transactions will be kept.'
+                            : `This will delete all current items and replace them with ${getPreviousMonthName(budget.month)}'s budget. Transactions will be kept.`}
+                        </p>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setResetMode(null)}
+                            disabled={isResetting}
+                            className="flex-1 py-2 border border-border-strong rounded-lg text-text-secondary hover:bg-surface-secondary transition-colors"
+                          >
+                            Back
+                          </button>
+                          <button
+                            disabled={isResetting}
+                            onClick={async () => {
+                              setIsResetting(true);
+                              try {
+                                const res = await fetch('/api/budgets/reset', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ budgetId: budget.id, mode: resetMode }),
+                                });
+                                if (res.ok) { refreshBudget(); setIsResetBudgetOpen(false); setResetMode(null); }
+                              } catch (e) { console.error('Reset error:', e); }
+                              setIsResetting(false);
+                            }}
+                            className="flex-1 py-2 bg-danger text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                          >
+                            {isResetting ? 'Resetting...' : 'Confirm Reset'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Add Group Modal */}
               {isAddGroupOpen && (
