@@ -1,4 +1,18 @@
-import { getLocalDb, closeLocalDb, getDbInitError, getDbPath, schema } from './local';
+import {
+  getLocalDb,
+  closeLocalDb,
+  getDbInitError,
+  getDbPath,
+  resetDbError,
+  isDbInitialized,
+  getDbStatus,
+  listBackups,
+  createBackup,
+  deleteLocalDb,
+  restoreFromBackup,
+  deleteBackup,
+  schema,
+} from './local';
 import { createCloudDb, getCloudDb } from './cloud';
 
 /**
@@ -14,7 +28,23 @@ export async function getDb() {
 }
 
 // Re-export for convenience
-export { getLocalDb, closeLocalDb, getDbInitError, getDbPath, createCloudDb, getCloudDb, schema };
+export {
+  getLocalDb,
+  closeLocalDb,
+  getDbInitError,
+  getDbPath,
+  resetDbError,
+  isDbInitialized,
+  getDbStatus,
+  listBackups,
+  createBackup,
+  deleteLocalDb,
+  restoreFromBackup,
+  deleteBackup,
+  createCloudDb,
+  getCloudDb,
+  schema,
+};
 
 // Re-export schema tables and relations for direct imports
 export * from './schema';

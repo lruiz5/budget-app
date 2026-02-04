@@ -1,9 +1,9 @@
 {
   "name": "budget-app",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -13,7 +13,10 @@
     "db:studio": "drizzle-kit studio",
     "cap:sync": "npx cap sync",
     "cap:ios": "npx cap sync ios && npx cap open ios",
-    "cap:android": "npx cap sync android && npx cap open android"
+    "cap:android": "npx cap sync android && npx cap open android",
+    "build:installer": "node installer/build-installer.js",
+    "build:installer:quick": "node installer/build-installer.js --skip-build",
+    "build:standalone": "node installer/build-installer.js --skip-inno"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.2",

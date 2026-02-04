@@ -26,10 +26,95 @@ function ensureDataDirectory(): void {
 }
 
 /**
+ * Check if a PGlite lock file (postmaster.pid) is stale.
+ * A lock file is considered stale if:
+ * - The process ID in the file doesn't exist
+ * - The file is older than a reasonable threshold (e.g., system reboot)
+ */
+function isLockFileStale(lockFilePath: string): boolean {
+  if (!fs.existsSync(lockFilePath)) {
+    return false;
+  }
+
+  try {
+    const content = fs.readFileSync(lockFilePath, 'utf-8');
+    const lines = content.split('\n');
+
+    // PGlite/PostgreSQL postmaster.pid format:
+    // Line 1: PID (or -42 for PGlite which doesn't use real PIDs)
+    // Line 2: Data directory
+    // Line 3: Start timestamp
+    // etc.
+
+    const pidLine = lines[0]?.trim();
+
+    // PGlite uses -42 as a placeholder PID, so we can't check if process exists
+    // Instead, check if the lock file is from a previous session by looking at age
+    // or just assume it's stale since we're in a new Node.js process
+
+    if (pidLine === '-42') {
+      // This is a PGlite lock file - it's safe to remove if we're starting fresh
+      // The fact that we're trying to initialize means no other process should be using it
+      console.log('Found PGlite lock file with placeholder PID, assuming stale');
+      return true;
+    }
+
+    // For real PIDs, try to check if process exists (Unix-like systems)
+    const pid = parseInt(pidLine, 10);
+    if (!isNaN(pid) && pid > 0) {
+      try {
+        // process.kill(pid, 0) returns true if process exists, throws if not
+        process.kill(pid, 0);
+        // Process exists - lock is NOT stale
+        return false;
+      } catch {
+        // Process doesn't exist - lock IS stale
+        console.log(`Lock file references non-existent process ${pid}, assuming stale`);
+        return true;
+      }
+    }
+
+    // Can't determine, assume stale to allow retry
+    return true;
+  } catch (error) {
+    console.error('Error checking lock file:', error);
+    // If we can't read it, assume it might be stale
+    return true;
+  }
+}
+
+/**
+ * Remove stale PGlite lock files that might be blocking initialization.
+ * This is safe because:
+ * 1. We only remove if the lock appears to be from a dead process
+ * 2. PGlite will create a new lock file when it starts
+ */
+function clearStaleLockFile(): boolean {
+  const lockFilePath = path.join(DB_PATH, 'postmaster.pid');
+
+  if (!fs.existsSync(lockFilePath)) {
+    return false;
+  }
+
+  if (isLockFileStale(lockFilePath)) {
+    try {
+      fs.unlinkSync(lockFilePath);
+      console.log(`Removed stale lock file: ${lockFilePath}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to remove stale lock file:', error);
+      return false;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Create a backup of the database directory.
  * Returns the backup path if successful, null if failed.
  */
-function createBackup(): string | null {
+export function createBackup(): string | null {
   if (!fs.existsSync(DB_PATH)) {
     return null;
   }
@@ -54,6 +139,9 @@ function createBackup(): string | null {
  */
 async function initializeLocalDb(): Promise<ReturnType<typeof drizzle<typeof schema>>> {
   ensureDataDirectory();
+
+  // Clear any stale lock files from crashed processes
+  clearStaleLockFile();
 
   try {
     pgliteClient = new PGlite(DB_PATH);
@@ -313,6 +401,153 @@ export async function closeLocalDb(): Promise<void> {
     localDbInstance = null;
     initializationPromise = null;
   }
+}
+
+/**
+ * Reset the database initialization error and clear stale lock files.
+ * Call this to allow retrying initialization after fixing the underlying issue.
+ */
+export function resetDbError(): void {
+  initializationError = null;
+  initializationPromise = null;
+  localDbInstance = null;
+  pgliteClient = null;
+
+  // Also clear any stale lock files that might be blocking
+  clearStaleLockFile();
+}
+
+/**
+ * Check if the database is currently initialized and healthy.
+ */
+export function isDbInitialized(): boolean {
+  return localDbInstance !== null && initializationError === null;
+}
+
+/**
+ * Get database status for debugging/display.
+ */
+export function getDbStatus(): {
+  initialized: boolean;
+  hasError: boolean;
+  errorMessage: string | null;
+  dbPath: string;
+} {
+  return {
+    initialized: localDbInstance !== null,
+    hasError: initializationError !== null,
+    errorMessage: initializationError?.message || null,
+    dbPath: DB_PATH,
+  };
+}
+
+/**
+ * List available database backups.
+ */
+export function listBackups(): { path: string; timestamp: string }[] {
+  const dir = path.dirname(DB_PATH);
+  const baseName = path.basename(DB_PATH);
+
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
+
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const backups: { path: string; timestamp: string }[] = [];
+
+  for (const entry of entries) {
+    if (entry.isDirectory() && entry.name.startsWith(`${baseName}-backup-`)) {
+      const timestamp = entry.name.replace(`${baseName}-backup-`, '');
+      backups.push({
+        path: path.join(dir, entry.name),
+        timestamp,
+      });
+    }
+  }
+
+  // Sort by timestamp descending (newest first)
+  backups.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+  return backups;
+}
+
+/**
+ * Delete the local database.
+ * Creates a backup first for safety.
+ * @returns The backup path if successful
+ */
+export async function deleteLocalDb(): Promise<string | null> {
+  // Close any existing connection first
+  await closeLocalDb();
+
+  // Create backup before deletion
+  const backupPath = createBackup();
+
+  if (!fs.existsSync(DB_PATH)) {
+    return backupPath;
+  }
+
+  try {
+    fs.rmSync(DB_PATH, { recursive: true, force: true });
+    console.log(`Database deleted: ${DB_PATH}`);
+
+    // Reset all state
+    resetDbError();
+
+    return backupPath;
+  } catch (error) {
+    console.error('Failed to delete database:', error);
+    throw new Error(`Failed to delete database: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Restore the database from a backup.
+ * @param backupPath - Path to the backup directory
+ */
+export async function restoreFromBackup(backupPath: string): Promise<void> {
+  // Close any existing connection first
+  await closeLocalDb();
+
+  if (!fs.existsSync(backupPath)) {
+    throw new Error(`Backup not found: ${backupPath}`);
+  }
+
+  // Delete current database if it exists
+  if (fs.existsSync(DB_PATH)) {
+    fs.rmSync(DB_PATH, { recursive: true, force: true });
+  }
+
+  // Copy backup to database location
+  try {
+    fs.cpSync(backupPath, DB_PATH, { recursive: true });
+    console.log(`Database restored from: ${backupPath}`);
+
+    // Reset state to allow fresh initialization
+    resetDbError();
+  } catch (error) {
+    console.error('Failed to restore database:', error);
+    throw new Error(`Failed to restore database: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Delete a specific backup.
+ * @param backupPath - Path to the backup directory to delete
+ */
+export function deleteBackup(backupPath: string): void {
+  if (!fs.existsSync(backupPath)) {
+    return;
+  }
+
+  // Safety check: only delete paths that look like backups
+  const baseName = path.basename(DB_PATH);
+  if (!path.basename(backupPath).startsWith(`${baseName}-backup-`)) {
+    throw new Error('Invalid backup path');
+  }
+
+  fs.rmSync(backupPath, { recursive: true, force: true });
+  console.log(`Backup deleted: ${backupPath}`);
 }
 
 // Export schema for use with the database

@@ -51,6 +51,9 @@ budget.db-wal
 drizzle/
 /data/
 
+# installer build output
+/dist/
+
 # Claude Code
 .claude/
 .mcp.json

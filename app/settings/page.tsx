@@ -6,6 +6,7 @@ import { FaUniversity, FaTrash, FaSync, FaFileUpload, FaUpload } from 'react-ico
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/contexts/ToastContext';
 import CsvImportModal from '@/components/csv/CsvImportModal';
+import DatabaseManagement from '@/components/DatabaseManagement';
 import { CsvAccount } from '@/types/csv';
 
 interface LinkedAccount {
@@ -382,7 +383,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Instructions */}
-          <div className="bg-primary-light border border-primary-border rounded-lg p-4 text-sm text-primary">
+          <div className="bg-primary-light border border-primary-border rounded-lg p-4 text-sm text-primary mb-6">
             <p className="font-medium mb-2">How it works:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li>Click &quot;Connect Bank&quot; to securely link your bank account via Teller</li>
@@ -392,6 +393,14 @@ export default function SettingsPage() {
               <li>Assign transactions to budget categories to track your spending</li>
             </ol>
           </div>
+
+          {/* Database Management */}
+          <DatabaseManagement
+            onDatabaseChange={() => {
+              fetchAccounts();
+              fetchCsvAccounts();
+            }}
+          />
         </div>
       </div>
 

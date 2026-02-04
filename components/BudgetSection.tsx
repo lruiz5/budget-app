@@ -24,10 +24,11 @@ import { formatCurrency } from "@/lib/formatCurrency";
 
 interface BudgetSectionProps {
   category: BudgetCategory;
+  categoryType: string;
   onRefresh: () => void;
   onTransactionClick?: (transaction: Transaction) => void;
   onSplitClick?: (parentTransactionId: string) => void;
-  onItemClick?: (item: BudgetItem, categoryName: string) => void;
+  onItemClick?: (item: BudgetItem, categoryName: string, categoryType: string) => void;
   selectedItemId?: string;
 }
 
@@ -50,6 +51,7 @@ interface SortableItemProps {
   onItemClick?: (item: BudgetItem) => void;
   isSelected?: boolean;
   showRemaining?: boolean;
+  isIncome?: boolean;
 }
 
 function SortableItem({
@@ -69,6 +71,7 @@ function SortableItem({
   onItemClick,
   isSelected = false,
   showRemaining = false,
+  isIncome = false,
 }: SortableItemProps) {
   const {
     attributes,
@@ -87,7 +90,9 @@ function SortableItem({
 
   const difference = item.planned - item.actual;
   const progressPercent = item.planned > 0 ? Math.min((item.actual / item.planned) * 100, 100) : 0;
-  const isOverBudget = item.actual > item.planned;
+  // For expenses: over budget (actual > planned) is bad (red)
+  // For income: under received (actual < planned) is bad (red)
+  const isOverBudget = isIncome ? item.actual < item.planned : item.actual > item.planned;
 
   const isEditing =
     editingNames[item.id] !== undefined || editingValues[item.id] !== undefined;
@@ -324,6 +329,7 @@ const getCategoryEmojiLocal = (categoryName: string, storedEmoji?: string | null
 
 export default function BudgetSection({
   category,
+  categoryType,
   onRefresh,
   onTransactionClick,
   onSplitClick,
@@ -563,9 +569,10 @@ export default function BudgetSection({
                       onSplitClick={onSplitClick}
                       setEditingNames={setEditingNames}
                       setEditingValues={setEditingValues}
-                      onItemClick={(item) => onItemClick?.(item, category.name)}
+                      onItemClick={(item) => onItemClick?.(item, category.name, categoryType)}
                       isSelected={selectedItemId === item.id}
                       showRemaining={showRemaining}
+                      isIncome={categoryType === 'income'}
                     />
                   ))}
                 </SortableContext>

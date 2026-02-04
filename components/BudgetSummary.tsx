@@ -21,6 +21,7 @@ import { formatCurrency } from "@/lib/formatCurrency";
 interface SelectedBudgetItem {
   item: BudgetItem;
   categoryName: string;
+  categoryType?: string;
 }
 
 interface BudgetSummaryProps {
@@ -353,6 +354,16 @@ export default function BudgetSummary({
     }
   };
 
+  // Look up a budget item name by ID for suggestion badges
+  const getBudgetItemName = (itemId: string): string | null => {
+    for (const category of Object.values(budget.categories)) {
+      for (const item of category.items) {
+        if (item.id === itemId) return item.name;
+      }
+    }
+    return null;
+  };
+
   // Get transactions with suggestions
   const transactionsWithSuggestions = filteredUncategorizedTxns.filter(
     txn => txn.suggestedBudgetItemId && getBudgetItemName(txn.suggestedBudgetItemId)
@@ -455,16 +466,6 @@ export default function BudgetSummary({
     } catch (error) {
       console.error("Error permanently deleting transaction:", error);
     }
-  };
-
-  // Look up a budget item name by ID for suggestion badges
-  const getBudgetItemName = (itemId: string): string | null => {
-    for (const category of Object.values(budget.categories)) {
-      for (const item of category.items) {
-        if (item.id === itemId) return item.name;
-      }
-    }
-    return null;
   };
 
   // Get all budget items for the dropdown
@@ -616,11 +617,14 @@ export default function BudgetSummary({
 
   // Item Detail View - shown when a budget item is selected
   if (selectedBudgetItem) {
-    const { item, categoryName } = selectedBudgetItem;
+    const { item, categoryName, categoryType } = selectedBudgetItem;
     const remaining = item.planned - item.actual;
     const progressPercent =
       item.planned > 0 ? Math.min((item.actual / item.planned) * 100, 100) : 0;
-    const isOverBudget = item.actual > item.planned;
+    // For expenses: over budget (actual > planned) is bad (red)
+    // For income: under received (actual < planned) is bad (red)
+    const isIncome = categoryType === 'income';
+    const isOverBudget = isIncome ? item.actual < item.planned : item.actual > item.planned;
 
     // Combine and sort all transactions for this item
     const itemTransactions = [
