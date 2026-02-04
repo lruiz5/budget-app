@@ -5,7 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { createTellerClient, TellerAccount } from '@/lib/teller';
 import { requireAuth, isAuthError } from '@/lib/auth';
 
-// GET - List all linked accounts from database
+// GET - List all linked Teller accounts from database
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuth();
@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
     const { userId } = authResult;
 
     const db = await getDb();
-    const accounts = await db.select().from(linkedAccounts).where(eq(linkedAccounts.userId, userId));
+    // Only return Teller accounts (not CSV accounts)
+    const accounts = await db.select().from(linkedAccounts).where(
+      and(eq(linkedAccounts.userId, userId), eq(linkedAccounts.accountSource, 'teller'))
+    );
     return NextResponse.json(accounts);
   } catch (error) {
     console.error('Error fetching linked accounts:', error);
@@ -117,13 +120,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Account not found' }, { status: 404 });
     }
 
-    // Optionally disconnect from Teller (revoke access)
-    try {
-      const tellerClient = createTellerClient(account.accessToken);
-      await tellerClient.deleteAccount(account.tellerAccountId);
-    } catch {
-      // Continue even if Teller API fails - we still want to remove from our DB
-      console.warn('Failed to disconnect account from Teller API');
+    // Optionally disconnect from Teller (revoke access) - only for Teller accounts
+    if (account.accessToken && account.tellerAccountId) {
+      try {
+        const tellerClient = createTellerClient(account.accessToken);
+        await tellerClient.deleteAccount(account.tellerAccountId);
+      } catch {
+        // Continue even if Teller API fails - we still want to remove from our DB
+        console.warn('Failed to disconnect account from Teller API');
+      }
     }
 
     // Delete from database

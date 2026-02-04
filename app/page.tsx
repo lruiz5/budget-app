@@ -96,6 +96,13 @@ function Home() {
   const [isResetBudgetOpen, setIsResetBudgetOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetMode, setResetMode] = useState<'zero' | 'replace' | null>(null);
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
+
+  // Copy from month state - default to previous month
+  const defaultSourceMonth = month === 0 ? 11 : month - 1;
+  const defaultSourceYear = month === 0 ? year - 1 : year;
+  const [copySourceMonth, setCopySourceMonth] = useState(defaultSourceMonth);
+  const [copySourceYear, setCopySourceYear] = useState(defaultSourceYear);
 
   const handleSplitClick = (parentTransactionId: string) => {
     setSplitToEdit(parentTransactionId);
@@ -297,18 +304,18 @@ function Home() {
     return getMonthName(prevMonth);
   };
 
-  // Handle copying from previous month
-  const handleCopyFromPreviousMonth = async () => {
-    const prevMonth = month === 0 ? 11 : month - 1;
-    const prevYear = month === 0 ? year - 1 : year;
+  // Handle copying from selected source month
+  const handleCopyFromMonth = async (srcMonth?: number, srcYear?: number) => {
+    const sourceMonth = srcMonth ?? copySourceMonth;
+    const sourceYear = srcYear ?? copySourceYear;
 
     try {
       const response = await fetch('/api/budgets/copy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sourceMonth: prevMonth,
-          sourceYear: prevYear,
+          sourceMonth,
+          sourceYear,
           targetMonth: month,
           targetYear: year,
         }),
@@ -358,17 +365,40 @@ function Home() {
                   Hey there, looks like you need a budget for {getMonthName(budget.month)}.
                 </h2>
 
-                {/* Subtext */}
-                <p className="text-text-secondary mb-6">
-                  We&apos;ll <span className="font-semibold">copy {getPreviousMonthName(budget.month)}&apos;s budget</span> to get you started.
+                {/* Subtext with month selector */}
+                <p className="text-text-secondary mb-4">
+                  Copy an existing budget to get started:
                 </p>
+
+                {/* Month/Year selector */}
+                <div className="flex items-center justify-center gap-2 mb-6">
+                  <select
+                    value={copySourceMonth}
+                    onChange={(e) => setCopySourceMonth(parseInt(e.target.value))}
+                    className="px-3 py-2 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'].map((name, idx) => (
+                      <option key={idx} value={idx}>{name}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={copySourceYear}
+                    onChange={(e) => setCopySourceYear(parseInt(e.target.value))}
+                    className="px-3 py-2 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {[year - 1, year, year + 1].map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* CTA Button */}
                 <button
-                  onClick={handleCopyFromPreviousMonth}
+                  onClick={() => handleCopyFromMonth()}
                   className="px-8 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-hover transition-colors"
                 >
-                  Start Planning for {getMonthName(budget.month)}
+                  Copy from {getMonthName(copySourceMonth)} {copySourceYear}
                 </button>
               </div>
             </div>
@@ -456,13 +486,21 @@ function Home() {
                 ));
               })()}
 
-              {/* Add Group Button */}
-              <button
-                onClick={() => setIsAddGroupOpen(true)}
-                className="w-full py-3 border-2 border-dotted border-border-strong rounded-lg text-text-secondary hover:border-primary hover:text-primary transition-colors cursor-pointer"
-              >
-                + Add Group
-              </button>
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsAddGroupOpen(true)}
+                  className="flex-1 py-3 border-2 border-dotted border-border-strong rounded-lg text-text-secondary hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                >
+                  + Add Group
+                </button>
+                <button
+                  onClick={() => setIsCopyModalOpen(true)}
+                  className="flex-1 py-3 border-2 border-dotted border-border-strong rounded-lg text-text-secondary hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                >
+                  📋 Copy from Month
+                </button>
+              </div>
 
               {/* Reset Budget Button */}
               <button
@@ -614,6 +652,67 @@ function Home() {
                         className="w-full py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 transition-colors"
                       >
                         Create Category
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Copy from Month Modal */}
+              {isCopyModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-surface rounded-xl shadow-2xl w-full max-w-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-text-primary">Copy from Another Month</h3>
+                      <button
+                        onClick={() => setIsCopyModalOpen(false)}
+                        className="text-text-tertiary hover:text-text-secondary p-1"
+                      >
+                        <FaTimes size={16} />
+                      </button>
+                    </div>
+
+                    <p className="text-sm text-text-secondary mb-4">
+                      This will copy all categories and budget items (with planned amounts) from the selected month.
+                    </p>
+
+                    <div className="flex gap-2 mb-6">
+                      <select
+                        value={copySourceMonth}
+                        onChange={(e) => setCopySourceMonth(parseInt(e.target.value))}
+                        className="flex-1 px-3 py-2 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        {['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'].map((name, idx) => (
+                          <option key={idx} value={idx}>{name}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={copySourceYear}
+                        onChange={(e) => setCopySourceYear(parseInt(e.target.value))}
+                        className="px-3 py-2 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        {[year - 1, year, year + 1].map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setIsCopyModalOpen(false)}
+                        className="flex-1 py-2 border border-border rounded-lg text-text-secondary hover:bg-surface-secondary transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleCopyFromMonth();
+                          setIsCopyModalOpen(false);
+                        }}
+                        className="flex-1 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+                      >
+                        Copy Budget
                       </button>
                     </div>
                   </div>

@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Script from 'next/script';
-import { FaUniversity, FaTrash, FaSync } from 'react-icons/fa';
+import { FaUniversity, FaTrash, FaSync, FaFileUpload, FaUpload } from 'react-icons/fa';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/contexts/ToastContext';
+import CsvImportModal from '@/components/csv/CsvImportModal';
+import { CsvAccount } from '@/types/csv';
 
 interface LinkedAccount {
   id: string;
@@ -41,6 +43,10 @@ export default function SettingsPage() {
   const [syncResult, setSyncResult] = useState<{ synced: number; skipped: number } | null>(null);
   const [tellerReady, setTellerReady] = useState(false);
 
+  // CSV import state
+  const [csvAccounts, setCsvAccounts] = useState<CsvAccount[]>([]);
+  const [showCsvModal, setShowCsvModal] = useState(false);
+
   const fetchAccounts = useCallback(async () => {
     try {
       const response = await fetch('/api/teller/accounts');
@@ -55,9 +61,22 @@ export default function SettingsPage() {
     }
   }, []);
 
+  const fetchCsvAccounts = useCallback(async () => {
+    try {
+      const response = await fetch('/api/csv/accounts');
+      if (response.ok) {
+        const data = await response.json();
+        setCsvAccounts(data);
+      }
+    } catch (error) {
+      console.error('Error fetching CSV accounts:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAccounts();
-  }, [fetchAccounts]);
+    fetchCsvAccounts();
+  }, [fetchAccounts, fetchCsvAccounts]);
 
   const handleConnectBank = () => {
     if (!tellerReady || !window.TellerConnect) {
@@ -117,6 +136,29 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Error deleting account:', error);
     }
+  };
+
+  const handleDeleteCsvAccount = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this CSV account? Imported transactions will remain.')) return;
+
+    try {
+      const response = await fetch(`/api/csv/accounts?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setCsvAccounts(csvAccounts.filter(a => a.id !== id));
+        toast.success('CSV account deleted');
+      }
+    } catch (error) {
+      console.error('Error deleting CSV account:', error);
+      toast.error('Failed to delete CSV account');
+    }
+  };
+
+  const handleCsvImportComplete = () => {
+    fetchCsvAccounts();
+    toast.success('CSV import completed successfully');
   };
 
   const handleSyncAll = async () => {
@@ -260,18 +302,106 @@ export default function SettingsPage() {
             )}
           </div>
 
+          {/* CSV Import Section */}
+          <div className="bg-surface rounded-lg shadow p-6 mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-text-primary">
+                CSV Import Accounts
+              </h2>
+              <button
+                onClick={() => setShowCsvModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
+              >
+                <FaFileUpload />
+                Import CSV
+              </button>
+            </div>
+
+            {csvAccounts.length === 0 ? (
+              <div className="text-center py-8 text-text-secondary">
+                <FaFileUpload className="mx-auto text-4xl mb-3 text-text-tertiary" />
+                <p>No CSV accounts yet.</p>
+                <p className="text-sm mt-1">
+                  Import transactions from your bank&apos;s CSV export.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(
+                  csvAccounts.reduce<Record<string, CsvAccount[]>>((groups, account) => {
+                    const key = account.institutionName;
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(account);
+                    return groups;
+                  }, {})
+                ).map(([institution, institutionAccounts]) => (
+                  <div key={institution} className="bg-surface-secondary rounded-lg border overflow-hidden">
+                    {/* Institution header */}
+                    <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                      <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center">
+                        <FaFileUpload className="text-primary" />
+                      </div>
+                      <h3 className="font-semibold text-text-primary">{institution}</h3>
+                    </div>
+
+                    {/* Accounts under this institution */}
+                    <div className="divide-y divide-border">
+                      {institutionAccounts.map(account => (
+                        <div key={account.id} className="flex items-center justify-between px-4 py-3">
+                          <div className="pl-13">
+                            <p className="font-medium text-text-primary">
+                              {account.accountName}
+                            </p>
+                            <p className="text-xs text-text-tertiary">
+                              Last import: {formatDate(account.lastSyncedAt)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setShowCsvModal(true)}
+                              className="p-2 text-primary hover:bg-primary-light rounded"
+                              title="Import more transactions"
+                            >
+                              <FaUpload />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCsvAccount(account.id)}
+                              className="p-2 text-danger hover:bg-danger-light rounded"
+                              title="Delete account"
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Instructions */}
           <div className="bg-primary-light border border-primary-border rounded-lg p-4 text-sm text-primary">
             <p className="font-medium mb-2">How it works:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li>Click &quot;Connect Bank&quot; to securely link your bank account via Teller</li>
               <li>Click &quot;Sync All&quot; to import your latest transactions</li>
+              <li>Or click &quot;Import CSV&quot; to upload transactions from a CSV file</li>
               <li>Imported transactions appear as &quot;Uncategorized&quot; on the main budget page</li>
               <li>Assign transactions to budget categories to track your spending</li>
             </ol>
           </div>
         </div>
       </div>
+
+      {/* CSV Import Modal */}
+      <CsvImportModal
+        isOpen={showCsvModal}
+        onClose={() => setShowCsvModal(false)}
+        onImportComplete={handleCsvImportComplete}
+        existingAccounts={csvAccounts}
+      />
     </DashboardLayout>
   );
 }

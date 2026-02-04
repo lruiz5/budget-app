@@ -59,22 +59,28 @@ export const splitTransactions = pgTable('split_transactions', {
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
 });
 
-// Linked bank accounts from Teller
+// Linked bank accounts from Teller or CSV import
 export const linkedAccounts = pgTable('linked_accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: text('user_id').notNull().default(''), // Clerk user ID
-  tellerAccountId: text('teller_account_id').notNull().unique(),
-  tellerEnrollmentId: text('teller_enrollment_id').notNull(),
-  accessToken: text('access_token').notNull(),
+  // Account source discriminator
+  accountSource: text('account_source').notNull().default('teller').$type<'teller' | 'csv'>(),
+  // Teller-specific fields (nullable for CSV accounts)
+  tellerAccountId: text('teller_account_id').unique(),
+  tellerEnrollmentId: text('teller_enrollment_id'),
+  accessToken: text('access_token'),
+  // Common fields
   institutionName: text('institution_name').notNull(),
-  institutionId: text('institution_id').notNull(),
+  institutionId: text('institution_id'),
   accountName: text('account_name').notNull(),
-  accountType: text('account_type').notNull(), // 'depository' or 'credit'
-  accountSubtype: text('account_subtype').notNull(), // 'checking', 'savings', 'credit_card', etc.
-  lastFour: text('last_four').notNull(),
+  accountType: text('account_type').notNull(), // 'depository', 'credit', or 'csv'
+  accountSubtype: text('account_subtype').notNull(), // 'checking', 'savings', 'credit_card', 'csv_import', etc.
+  lastFour: text('last_four'),
   status: text('status').notNull().$type<'open' | 'closed'>(),
   lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  // CSV-specific fields (null for Teller accounts)
+  csvColumnMapping: text('csv_column_mapping'), // JSON string of CsvColumnMapping
 });
 
 // Relations
@@ -124,6 +130,27 @@ export const splitTransactionsRelations = relations(splitTransactions, ({ one })
 
 export const linkedAccountsRelations = relations(linkedAccounts, ({ many }) => ({
   transactions: many(transactions),
+  csvImportHashes: many(csvImportHashes),
+}));
+
+// CSV import hashes for deduplication
+export const csvImportHashes = pgTable('csv_import_hashes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  linkedAccountId: uuid('linked_account_id').notNull().references(() => linkedAccounts.id, { onDelete: 'cascade' }),
+  hash: text('hash').notNull(), // SHA-256 of normalized date+amount+description
+  transactionId: uuid('transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
+});
+
+export const csvImportHashesRelations = relations(csvImportHashes, ({ one }) => ({
+  linkedAccount: one(linkedAccounts, {
+    fields: [csvImportHashes.linkedAccountId],
+    references: [linkedAccounts.id],
+  }),
+  transaction: one(transactions, {
+    fields: [csvImportHashes.transactionId],
+    references: [transactions.id],
+  }),
 }));
 
 // User onboarding tracking

@@ -124,18 +124,20 @@ async function initializeSchema(client: PGlite): Promise<void> {
     CREATE TABLE IF NOT EXISTS linked_accounts (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id TEXT NOT NULL DEFAULT '',
-      teller_account_id TEXT NOT NULL UNIQUE,
-      teller_enrollment_id TEXT NOT NULL,
-      access_token TEXT NOT NULL,
+      account_source TEXT NOT NULL DEFAULT 'teller',
+      teller_account_id TEXT UNIQUE,
+      teller_enrollment_id TEXT,
+      access_token TEXT,
       institution_name TEXT NOT NULL,
-      institution_id TEXT NOT NULL,
+      institution_id TEXT,
       account_name TEXT NOT NULL,
       account_type TEXT NOT NULL,
       account_subtype TEXT NOT NULL,
-      last_four TEXT NOT NULL,
+      last_four TEXT,
       status TEXT NOT NULL,
       last_synced_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ DEFAULT NOW()
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      csv_column_mapping TEXT
     );
 
     -- Recurring payments table
@@ -201,7 +203,40 @@ async function initializeSchema(client: PGlite): Promise<void> {
       skipped_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- CSV import hashes table (for deduplication)
+    CREATE TABLE IF NOT EXISTS csv_import_hashes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      linked_account_id UUID NOT NULL REFERENCES linked_accounts(id) ON DELETE CASCADE,
+      hash TEXT NOT NULL,
+      transaction_id UUID REFERENCES transactions(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
+
+  // Add columns to existing tables if they don't exist (for existing databases)
+  // This handles the case where the database was created before these columns were added
+  await client.exec(`
+    -- Add account_source column if it doesn't exist
+    ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS account_source TEXT NOT NULL DEFAULT 'teller';
+    ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS csv_column_mapping TEXT;
+  `).catch(() => {
+    // Ignore errors if columns already exist
+  });
+
+  // Make Teller-specific columns nullable if they aren't already (separate try/catch for each)
+  const alterCommands = [
+    'ALTER TABLE linked_accounts ALTER COLUMN teller_account_id DROP NOT NULL',
+    'ALTER TABLE linked_accounts ALTER COLUMN teller_enrollment_id DROP NOT NULL',
+    'ALTER TABLE linked_accounts ALTER COLUMN access_token DROP NOT NULL',
+    'ALTER TABLE linked_accounts ALTER COLUMN institution_id DROP NOT NULL',
+    'ALTER TABLE linked_accounts ALTER COLUMN last_four DROP NOT NULL',
+  ];
+  for (const cmd of alterCommands) {
+    await client.exec(cmd).catch(() => {
+      // Ignore errors if already nullable
+    });
+  }
 }
 
 /**

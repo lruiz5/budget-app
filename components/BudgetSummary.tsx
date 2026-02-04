@@ -215,7 +215,7 @@ export default function BudgetSummary({
   const fetchUncategorized = useCallback(async () => {
     setIsLoadingUncategorized(true);
     try {
-      const response = await fetch(`/api/teller/sync`);
+      const response = await fetch(`/api/teller/sync?month=${budget.month}&year=${budget.year}`);
       if (response.ok) {
         const data = await response.json();
         setUncategorizedTxns(data);

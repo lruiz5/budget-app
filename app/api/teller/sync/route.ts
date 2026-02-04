@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/db';
-import { linkedAccounts, transactions, splitTransactions } from '@/db/schema';
+import { linkedAccounts, transactions, splitTransactions, budgets, budgetCategories, budgetItems } from '@/db/schema';
 import { eq, and, isNull, isNotNull, notInArray, inArray, sql } from 'drizzle-orm';
 import { createTellerClient, TellerTransaction } from '@/lib/teller';
 import { requireAuth, isAuthError } from '@/lib/auth';
@@ -16,17 +16,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { accountId, startDate, endDate } = body;
 
-    // Get linked accounts to sync (scoped to user)
+    // Get linked Teller accounts to sync (scoped to user, only Teller accounts)
     let accountsToSync;
     if (accountId) {
-      // Sync specific account (verify ownership)
+      // Sync specific account (verify ownership and it's a Teller account)
       accountsToSync = await db
         .select()
         .from(linkedAccounts)
-        .where(and(eq(linkedAccounts.id, accountId), eq(linkedAccounts.userId, userId)));
+        .where(and(
+          eq(linkedAccounts.id, accountId),
+          eq(linkedAccounts.userId, userId),
+          eq(linkedAccounts.accountSource, 'teller')
+        ));
     } else {
-      // Sync all user's accounts
-      accountsToSync = await db.select().from(linkedAccounts).where(eq(linkedAccounts.userId, userId));
+      // Sync all user's Teller accounts
+      accountsToSync = await db.select().from(linkedAccounts).where(
+        and(eq(linkedAccounts.userId, userId), eq(linkedAccounts.accountSource, 'teller'))
+      );
     }
 
     if (accountsToSync.length === 0) {
@@ -41,6 +47,12 @@ export async function POST(request: NextRequest) {
     };
 
     for (const account of accountsToSync) {
+      // Skip if missing required Teller fields (shouldn't happen for Teller accounts)
+      if (!account.accessToken || !account.tellerAccountId) {
+        results.errors.push(`Account ${account.accountName}: Missing Teller credentials`);
+        continue;
+      }
+
       try {
         const tellerClient = createTellerClient(account.accessToken);
 
@@ -146,6 +158,13 @@ export async function GET(request: NextRequest) {
     if (isAuthError(authResult)) return authResult.error;
     const { userId } = authResult;
 
+    // Get month/year from query params for cross-month suggestions
+    const { searchParams } = new URL(request.url);
+    const monthParam = searchParams.get('month');
+    const yearParam = searchParams.get('year');
+    const currentMonth = monthParam !== null ? parseInt(monthParam) : new Date().getMonth();
+    const currentYear = yearParam !== null ? parseInt(yearParam) : new Date().getFullYear();
+
     const db = await getDb();
     // Get user's linked account IDs for filtering
     const userAccounts = await db
@@ -193,12 +212,16 @@ export async function GET(request: NextRequest) {
 
     if (merchantNames.length > 0) {
       // Find previously categorized transactions with matching merchants
+      // Join with budget items to get the item name and category type
       const historicalTxns = await db
         .select({
           merchant: transactions.merchant,
-          budgetItemId: transactions.budgetItemId,
+          itemName: budgetItems.name,
+          categoryType: budgetCategories.categoryType,
         })
         .from(transactions)
+        .innerJoin(budgetItems, eq(transactions.budgetItemId, budgetItems.id))
+        .innerJoin(budgetCategories, eq(budgetItems.categoryId, budgetCategories.id))
         .where(
           and(
             isNotNull(transactions.budgetItemId),
@@ -207,33 +230,64 @@ export async function GET(request: NextRequest) {
           )
         );
 
-      // Filter to user's transactions only (via linked accounts)
-      const userHistorical = historicalTxns.filter(t => {
-        // We already have userAccountIds from above - but historical txns may be manual (no linkedAccountId)
-        // For safety, just use all matches since merchant names are scoped to user's uncategorized txns
-        return t.budgetItemId !== null;
-      });
-
-      // Count frequency of each merchant -> budgetItemId pairing
+      // Count frequency of each merchant -> (itemName, categoryType) pairing
       const merchantItemCounts: Record<string, Record<string, number>> = {};
-      for (const t of userHistorical) {
+      for (const t of historicalTxns) {
         const m = t.merchant!;
+        const key = `${t.categoryType}|${t.itemName}`;
         if (!merchantItemCounts[m]) merchantItemCounts[m] = {};
-        merchantItemCounts[m][t.budgetItemId!] = (merchantItemCounts[m][t.budgetItemId!] || 0) + 1;
+        merchantItemCounts[m][key] = (merchantItemCounts[m][key] || 0) + 1;
       }
 
-      // Pick the most frequently used budget item for each merchant
+      // Pick the most frequently used (categoryType, itemName) for each merchant
+      const merchantBestItem: Record<string, { categoryType: string; itemName: string }> = {};
       for (const [merchant, counts] of Object.entries(merchantItemCounts)) {
         let maxCount = 0;
-        let bestItemId = '';
-        for (const [itemId, count] of Object.entries(counts)) {
+        let bestKey = '';
+        for (const [key, count] of Object.entries(counts)) {
           if (count > maxCount) {
             maxCount = count;
-            bestItemId = itemId;
+            bestKey = key;
           }
         }
-        if (bestItemId) {
-          merchantSuggestions[merchant] = bestItemId;
+        if (bestKey) {
+          const [categoryType, itemName] = bestKey.split('|');
+          merchantBestItem[merchant] = { categoryType, itemName };
+        }
+      }
+
+      // Now look up the current month's budget to find matching items
+      const currentBudget = await db.query.budgets.findFirst({
+        where: and(
+          eq(budgets.userId, userId),
+          eq(budgets.month, currentMonth),
+          eq(budgets.year, currentYear)
+        ),
+        with: {
+          categories: {
+            with: {
+              items: true,
+            },
+          },
+        },
+      });
+
+      if (currentBudget) {
+        // Build a lookup: (categoryType, itemName) -> current month's item ID
+        const currentItemLookup: Record<string, string> = {};
+        for (const category of currentBudget.categories) {
+          for (const item of category.items) {
+            const key = `${category.categoryType}|${item.name.toLowerCase()}`;
+            currentItemLookup[key] = item.id;
+          }
+        }
+
+        // Map merchants to current month's item IDs
+        for (const [merchant, { categoryType, itemName }] of Object.entries(merchantBestItem)) {
+          const key = `${categoryType}|${itemName.toLowerCase()}`;
+          if (currentItemLookup[key]) {
+            merchantSuggestions[merchant] = currentItemLookup[key];
+          }
         }
       }
     }
