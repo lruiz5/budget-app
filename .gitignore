@@ -52,6 +52,11 @@ drizzle/
 
 # Claude Code
 .claude/
+.mcp.json
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# Xcode
+*.xcuserstate
+xcuserdata/
