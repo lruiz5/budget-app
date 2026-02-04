@@ -6,8 +6,8 @@ This document contains context for Claude AI to continue development on this bud
 
 A zero-based budget tracking application built with Next.js, TypeScript, and Tailwind CSS. The app features bank account integration via Teller API for automatic transaction imports.
 
-**Current Version:** v1.7.0
-**Last Session:** 2026-01-31
+**Current Version:** v1.9.0
+**Last Session:** 2026-02-04
 
 ## Tech Stack
 
@@ -18,9 +18,84 @@ A zero-based budget tracking application built with Next.js, TypeScript, and Tai
 - **Database:** Supabase (PostgreSQL) — migrated from SQLite in v1.4.0
 - **Authentication:** Clerk (@clerk/nextjs)
 - **Bank Integration:** Teller API
-- **Mobile:** Capacitor (live server mode)
+- **Mobile:** Capacitor (live server mode) + Native iOS (SwiftUI)
 - **Charts:** D3.js + d3-sankey
 - **Icons:** react-icons (FaXxx from react-icons/fa only)
+
+## iOS App (SwiftUI)
+
+Native iOS app built with SwiftUI targeting iOS 17+. Located in `ios/BudgetApp/`.
+
+### Tech Stack
+- **Language:** Swift 5.9+
+- **UI Framework:** SwiftUI (iOS 17+)
+- **Architecture:** MVVM
+- **Authentication:** Clerk iOS SDK
+- **Networking:** URLSession + async/await
+
+### Project Structure
+```
+ios/BudgetApp/
+├── BudgetApp.xcodeproj
+├── BudgetApp/
+│   ├── App/
+│   │   └── BudgetAppApp.swift       # Entry point with Clerk auth
+│   ├── Models/
+│   │   ├── Budget.swift             # Budget, BudgetCategory, BudgetItem
+│   │   ├── Transaction.swift        # Transaction, SplitTransaction
+│   │   ├── LinkedAccount.swift
+│   │   └── RecurringPayment.swift
+│   ├── Services/
+│   │   ├── APIClient.swift          # Generic HTTP client
+│   │   ├── BudgetService.swift
+│   │   ├── AccountsService.swift
+│   │   ├── TransactionService.swift
+│   │   └── RecurringService.swift
+│   ├── ViewModels/
+│   │   ├── BudgetViewModel.swift
+│   │   ├── TransactionsViewModel.swift
+│   │   ├── AccountsViewModel.swift
+│   │   ├── InsightsViewModel.swift
+│   │   └── RecurringViewModel.swift
+│   ├── Views/
+│   │   ├── Budget/                  # BudgetView, CategorySection, etc.
+│   │   ├── Transactions/            # TransactionsView
+│   │   ├── Accounts/                # AccountsView
+│   │   ├── Insights/                # InsightsView
+│   │   ├── Settings/                # SettingsView, RecurringPaymentsView
+│   │   ├── Onboarding/              # SignInView
+│   │   └── Components/              # MonthYearPicker, etc.
+│   └── Utilities/
+│       ├── Constants.swift          # API base URL, Clerk keys
+│       └── Extensions.swift
+```
+
+### Key Implementation Details
+
+**Month Indexing (Critical!):**
+- Web app uses 0-indexed months (JavaScript `Date.getMonth()`: Jan=0, Feb=1)
+- Swift uses 1-indexed months (`Calendar.component(.month)`: Jan=1, Feb=2)
+- iOS app converts to 0-indexed before API calls: `selectedMonth = calendar.component(.month, from: now) - 1`
+
+**Date Parsing:**
+- Transaction `date` field: "YYYY-MM-DD" format (not ISO8601)
+- Timestamps (`createdAt`, `deletedAt`): ISO8601 with optional fractional seconds
+- Custom decoders handle both formats in Transaction.swift and Budget.swift
+
+**Actual Calculation:**
+- Backend returns transactions but NOT pre-calculated `actual` amounts
+- iOS calculates actuals client-side in `BudgetItem.calculateActual(isIncomeCategory:)`
+- For income categories: income adds, expense subtracts
+- For expense categories: expense adds, income subtracts
+- Includes both direct transactions and split transactions
+
+**PostgreSQL Numeric Handling:**
+- PostgreSQL returns numeric fields as strings
+- All amount fields use custom decoding: `Decimal(string: amountString) ?? 0`
+
+**Auth Token Timing:**
+- `BudgetAppApp.swift` uses `isAuthReady` state to prevent API calls before token is set
+- Shows "Preparing..." while fetching token after Clerk login
 
 ## Key Concepts
 
@@ -679,12 +754,34 @@ DATABASE_URL=postgresql://postgres.xxx:password@aws-0-us-east-1.pooler.supabase.
 - `app/api/budgets/copy/route.ts` — added recurring item sync, skip items with `recurringPaymentId` during copy
 - `app/page.tsx` — added Reset Budget button + modal with two-step confirmation
 
+## Recent Changes (v1.9.0)
+
+### Native iOS App (SwiftUI)
+- **New iOS app** in `ios/BudgetApp/` — full SwiftUI implementation targeting iOS 17+
+- **MVVM architecture** with ViewModels for each major view
+- **Clerk iOS SDK** integration for authentication
+- **Tab-based navigation:** Budget, Transactions, Accounts, Insights
+- **Full budget viewing** with categories, items, and transactions
+- **Month/year picker** for navigating between budget periods
+
+### Key Fixes During Development
+1. **Auth token timing race condition** — Added `isAuthReady` state to ensure token is set before API calls
+2. **0-indexed month mismatch** — Converted iOS to use 0-indexed months to match web app's JavaScript `Date.getMonth()`
+3. **Transaction date parsing** — Custom decoder for "YYYY-MM-DD" format (not full ISO8601)
+4. **Actual amount calculation** — Client-side calculation from transactions matching web app's `budgetHelpers.ts` logic
+5. **PostgreSQL numeric strings** — Custom Decimal decoding for all amount fields
+6. **ISO8601 fractional seconds** — Flexible date parsing for `createdAt` and `deletedAt` timestamps
+
+### New Files (iOS)
+- `ios/BudgetApp/` — Complete Xcode project
+- 28 Swift files covering Models, Services, ViewModels, and Views
+- See "iOS App (SwiftUI)" section above for full structure
+
 ## Session Handoff Notes
 
 Last session ended after:
-1. Fixed empty budget detection (recurring items no longer auto-created on GET)
-2. Fixed duplicate items when copying budget (skip recurring-linked items, let sync create them)
-3. Added Reset Budget feature with two options and confirmation modal
-4. Build verified passing
+1. Built complete native iOS app with SwiftUI
+2. Fixed auth token timing, month indexing, date parsing, and actual calculations
+3. App successfully loads budget data with transactions and correct spent amounts
 
-The app is in a stable state with v1.8.0 changes applied.
+The iOS app is functional for viewing budgets. Next steps would be adding edit/create functionality.

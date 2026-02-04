@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.0] - 2026-02-04 - Native iOS App (SwiftUI)
+
+### Added
+- **Native iOS app** — complete SwiftUI implementation in `ios/BudgetApp/`
+  - Targets iOS 17+ with MVVM architecture
+  - Tab-based navigation: Budget, Transactions, Accounts, Insights
+  - Full budget viewing with categories, items, and transactions
+  - Month/year picker for navigating between budget periods
+  - Clerk iOS SDK integration for authentication
+  - Settings view with recurring payments management
+
+### Technical Implementation
+- **0-indexed month handling** — iOS converts to match web app's JavaScript `Date.getMonth()` (Jan=0)
+- **Custom date parsing** — handles "YYYY-MM-DD" transaction dates and ISO8601 timestamps with fractional seconds
+- **Client-side actual calculation** — calculates spent amounts from transactions, matching web app's `budgetHelpers.ts` logic
+- **PostgreSQL numeric handling** — custom Decimal decoding for all amount fields returned as strings
+- **Auth token timing** — `isAuthReady` state prevents API calls before Clerk token is available
+
+### New Files
+- `ios/BudgetApp/` — Complete Xcode project with 28 Swift files
+  - Models: Budget, BudgetCategory, BudgetItem, Transaction, LinkedAccount, RecurringPayment
+  - Services: APIClient, BudgetService, AccountsService, TransactionService, RecurringService
+  - ViewModels: BudgetViewModel, TransactionsViewModel, AccountsViewModel, InsightsViewModel, RecurringViewModel
+  - Views: BudgetView, TransactionsView, AccountsView, InsightsView, SettingsView, and supporting components
+
 ## [1.8.0] - 2026-02-03 - Budget Reset & Empty State Fix
 
 ### Added

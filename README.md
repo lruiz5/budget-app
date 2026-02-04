@@ -4,8 +4,8 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 
 ## Project Status
 
-**Current Version:** v1.7.0 - Custom Categories & Recurring Auto-Reset
-**Last Updated:** 2026-01-31
+**Current Version:** v1.9.0 - Native iOS App (SwiftUI)
+**Last Updated:** 2026-02-04
 
 ### Tech Stack
 - Next.js 16.x (App Router)
@@ -19,6 +19,7 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - React Icons (react-icons)
 - D3.js + d3-sankey (charts)
 - Capacitor (mobile — live server mode)
+- **iOS:** SwiftUI (iOS 17+) with Clerk iOS SDK
 
 ### Features
 
@@ -301,6 +302,32 @@ TELLER_ENVIRONMENT=production
    ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## iOS App
+
+A native iOS app built with SwiftUI is available in the `ios/BudgetApp/` directory.
+
+### Requirements
+- Xcode 15+
+- iOS 17+ deployment target
+- Clerk iOS SDK (configured via Swift Package Manager)
+
+### Running the iOS App
+1. Open `ios/BudgetApp/BudgetApp.xcodeproj` in Xcode
+2. Update `Constants.swift` with your API base URL and Clerk publishable key
+3. Build and run on simulator or device
+
+### iOS Features
+- Tab-based navigation: Budget, Transactions, Accounts, Insights
+- Full budget viewing with categories, items, and transactions
+- Month/year picker for navigating between budget periods
+- Clerk authentication integration
+- Settings view with recurring payments management
+
+### Architecture
+- **MVVM pattern** with ViewModels for each major view
+- **URLSession + async/await** for networking
+- **Custom decoders** for PostgreSQL numeric strings and date formats
 
 ## Project Structure
 
