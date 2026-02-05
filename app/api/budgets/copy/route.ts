@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/db';
+import { getDb } from '@/db';
 import { budgets, budgetCategories, budgetItems, recurringPayments } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 

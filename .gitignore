@@ -65,3 +65,7 @@ drizzle/
 *.xcuserstate
 xcuserdata/
 /Examples
+/data/budget-local/base
+/data/budget-local/global
+/data/test-db
+/data/budget-local

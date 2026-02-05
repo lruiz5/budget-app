@@ -1138,7 +1138,7 @@ export default function BudgetSummary({
                                       onChange={(e) =>
                                         setSelectedBudgetItemId(e.target.value)
                                       }
-                                      className="flex-1 text-sm border rounded px-2 py-1.5"
+                                      className="flex-1 text-sm border border-border-strong rounded px-2 py-1.5 bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                                     >
                                       <option value="">Select item...</option>
                                       {getAllBudgetItems().map(
