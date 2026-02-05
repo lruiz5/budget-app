@@ -216,7 +216,7 @@ export default function Sidebar() {
 
             {/* Version info */}
             <div className="px-3 py-2">
-              <p className="text-xs text-text-tertiary">Version 1.7.0</p>
+              <p className="text-xs text-text-tertiary">Version {process.env.NEXT_PUBLIC_APP_VERSION}</p>
             </div>
           </div>
         )}

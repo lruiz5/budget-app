@@ -283,7 +283,7 @@ function RecurringPage() {
                       type="text"
                       value={formData.name}
                       onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      className="w-full px-3 py-2 bg-surface text-text-primary border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                       placeholder="e.g., Netflix, Gym Membership"
                       required
                     />
@@ -297,7 +297,7 @@ function RecurringPage() {
                       step="0.01"
                       value={formData.amount}
                       onChange={e => setFormData({ ...formData, amount: e.target.value })}
-                      className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      className="w-full px-3 py-2 bg-surface text-text-primary border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                       placeholder="0.00"
                       required
                     />
@@ -309,7 +309,7 @@ function RecurringPage() {
                     <select
                       value={formData.frequency}
                       onChange={e => setFormData({ ...formData, frequency: e.target.value as RecurringFrequency })}
-                      className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      className="w-full px-3 py-2 bg-surface text-text-primary border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                     >
                       {Object.entries(frequencyLabels).map(([value, label]) => (
                         <option key={value} value={value}>{label}</option>
@@ -329,7 +329,7 @@ function RecurringPage() {
                       type="date"
                       value={formData.nextDueDate}
                       onChange={e => setFormData({ ...formData, nextDueDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      className="w-full px-3 py-2 bg-surface text-text-primary border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                       required
                     />
                   </div>
@@ -340,7 +340,7 @@ function RecurringPage() {
                     <select
                       value={formData.categoryType}
                       onChange={e => setFormData({ ...formData, categoryType: e.target.value as CategoryType | '' })}
-                      className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      className="w-full px-3 py-2 bg-surface text-text-primary border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                     >
                       <option value="">Select a category...</option>
                       {Object.entries(availableCategories)
