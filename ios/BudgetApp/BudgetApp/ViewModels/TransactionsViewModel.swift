@@ -4,11 +4,28 @@ import Combine
 @MainActor
 class TransactionsViewModel: ObservableObject {
     @Published var transactions: [Transaction] = []
+    @Published var deletedTransactions: [Transaction] = []
     @Published var isLoading = false
+    @Published var isLoadingDeleted = false
     @Published var error: String?
+    
+    // Keep uncategorized and categorized transactions separate
+    @Published var uncategorizedTransactions: [Transaction] = []
+    @Published var categorizedTransactions: [Transaction] = []
 
     private let transactionService = TransactionService.shared
     private let accountsService = AccountsService.shared
+    private let sharedDate = SharedDateViewModel.shared
+    
+    var selectedMonth: Int {
+        get { sharedDate.selectedMonth }
+        set { sharedDate.selectedMonth = newValue }
+    }
+    
+    var selectedYear: Int {
+        get { sharedDate.selectedYear }
+        set { sharedDate.selectedYear = newValue }
+    }
 
     // MARK: - Load Transactions
 
@@ -16,14 +33,33 @@ class TransactionsViewModel: ObservableObject {
         isLoading = true
         error = nil
 
-        let now = Date()
-        let calendar = Calendar.current
-        // Web app uses 0-indexed months (January=0), so subtract 1
-        let month = calendar.component(.month, from: now) - 1
-        let year = calendar.component(.year, from: now)
+        let month = selectedMonth
+        let year = selectedYear
 
         do {
-            transactions = try await accountsService.getUncategorizedTransactions(month: month, year: year)
+            // Load all uncategorized transactions from Teller sync endpoint
+            let allUncategorized = try await accountsService.getUncategorizedTransactions(month: month, year: year)
+            
+            // Filter to ±7 days around the current month (matching web app behavior)
+            uncategorizedTransactions = filterTransactionsToDateRange(allUncategorized, month: month, year: year)
+            
+            // Load budget to get all categorized transactions
+            let budget = try await BudgetService.shared.getBudget(month: month, year: year)
+            
+            // Extract all transactions from budget items
+            var categorized: [Transaction] = []
+            for category in budget.categories.values {
+                for item in category.items {
+                    categorized.append(contentsOf: item.transactions)
+                }
+            }
+            
+            // Filter out deleted transactions and any that are in the uncategorized list
+            let uncategorizedIds = Set(uncategorizedTransactions.map { $0.id })
+            categorizedTransactions = categorized.filter { !uncategorizedIds.contains($0.id) && !$0.isDeleted }
+            
+            // For backward compatibility, combine both lists
+            transactions = uncategorizedTransactions + categorizedTransactions
         } catch let apiError as APIError {
             error = apiError.errorDescription
         } catch {
@@ -31,6 +67,60 @@ class TransactionsViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+    
+    // Filter transactions to ±7 days around the given month
+    private func filterTransactionsToDateRange(_ transactions: [Transaction], month: Int, year: Int) -> [Transaction] {
+        let calendar = Calendar.current
+        
+        // First day of current month (month is 0-indexed)
+        var monthStartComponents = DateComponents()
+        monthStartComponents.year = year
+        monthStartComponents.month = month + 1 // DateComponents uses 1-indexed months
+        monthStartComponents.day = 1
+        guard let monthStart = calendar.date(from: monthStartComponents) else {
+            return transactions
+        }
+        
+        // Last day of current month
+        guard let monthEnd = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart) else {
+            return transactions
+        }
+        
+        // 7 days before month start (start of day)
+        guard var rangeStart = calendar.date(byAdding: .day, value: -7, to: monthStart) else {
+            return transactions
+        }
+        rangeStart = calendar.startOfDay(for: rangeStart)
+        
+        // 7 days after month end (end of day)
+        guard var rangeEnd = calendar.date(byAdding: .day, value: 7, to: monthEnd) else {
+            return transactions
+        }
+        // Set to end of day (23:59:59)
+        rangeEnd = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: rangeEnd) ?? rangeEnd
+        
+        return transactions.filter { txn in
+            let txnDate = calendar.startOfDay(for: txn.date)
+            return txnDate >= rangeStart && txnDate <= rangeEnd
+        }
+    }
+
+    // MARK: - Load Deleted Transactions
+
+    func loadDeletedTransactions() async {
+        isLoadingDeleted = true
+
+        let month = selectedMonth
+        let year = selectedYear
+
+        do {
+            deletedTransactions = try await transactionService.getDeletedTransactions(month: month, year: year)
+        } catch {
+            deletedTransactions = []
+        }
+
+        isLoadingDeleted = false
     }
 
     // MARK: - Create Transaction
@@ -88,6 +178,7 @@ class TransactionsViewModel: ObservableObject {
         do {
             _ = try await transactionService.restoreTransaction(id: id)
             await loadTransactions()
+            await loadDeletedTransactions()
         } catch {
             self.error = error.localizedDescription
         }

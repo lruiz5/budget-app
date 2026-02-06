@@ -3,15 +3,18 @@ import SwiftUI
 struct BudgetItemDetail: View {
     let item: BudgetItem
     let onUpdate: () -> Void
+    let onUpdatePlanned: (Int, Decimal) async -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var editedPlanned: String
     @State private var isEditing = false
+    @State private var isSaving = false
     @State private var showAddTransaction = false
 
-    init(item: BudgetItem, onUpdate: @escaping () -> Void) {
+    init(item: BudgetItem, onUpdate: @escaping () -> Void, onUpdatePlanned: @escaping (Int, Decimal) async -> Void) {
         self.item = item
         self.onUpdate = onUpdate
+        self.onUpdatePlanned = onUpdatePlanned
         self._editedPlanned = State(initialValue: String(describing: item.planned))
     }
 
@@ -114,11 +117,17 @@ struct BudgetItemDetail: View {
                         .textFieldStyle(.roundedBorder)
 
                     Button("Save") {
-                        // TODO: Call API to update
-                        isEditing = false
-                        onUpdate()
+                        guard let newPlanned = Decimal(string: editedPlanned) else { return }
+                        isSaving = true
+                        Task {
+                            await onUpdatePlanned(item.id, newPlanned)
+                            isSaving = false
+                            isEditing = false
+                            onUpdate()
+                        }
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(isSaving)
 
                     Button("Cancel") {
                         editedPlanned = String(describing: item.planned)
@@ -229,6 +238,7 @@ struct BudgetItemDetail: View {
             recurringPaymentId: nil,
             transactions: []
         ),
-        onUpdate: {}
+        onUpdate: {},
+        onUpdatePlanned: { _, _ in }
     )
 }

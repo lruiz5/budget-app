@@ -4,10 +4,14 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 
 ## Project Status
 
-**Current Version:** v1.9.0 - Native iOS App (SwiftUI)
+**Web App Version:** v1.9.0
+**iOS App Version:** v0.1.1 (pre-release)
 **Last Updated:** 2026-02-04
 
+**Note:** iOS app uses 0.x.x versioning until first App Store release (v1.0.0). See `ios/BudgetApp/CHANGELOG.md` for iOS-specific changes.
+
 ### Tech Stack
+
 - Next.js 16.x (App Router)
 - TypeScript
 - Tailwind CSS
@@ -18,12 +22,12 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - Teller API (bank integration)
 - React Icons (react-icons)
 - D3.js + d3-sankey (charts)
-- Capacitor (mobile — live server mode)
 - **iOS:** SwiftUI (iOS 17+) with Clerk iOS SDK
 
 ### Features
 
 #### User Authentication
+
 - Sign in / Sign up via Clerk
 - Multi-user support - each user sees only their own data
 - Secure route protection - all pages require authentication
@@ -31,6 +35,7 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - MFA support (configurable in Clerk dashboard)
 
 #### Interactive Onboarding
+
 - 6-step guided setup for new users
 - Teaches zero-based budgeting concepts before hands-on setup
 - Interactive steps: set buffer, create budget items, add first transaction
@@ -40,6 +45,7 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - Revisitable via "Getting Started" link in sidebar
 
 #### Dashboard Layout
+
 - Collapsible sidebar navigation (auto-collapses on tablet)
 - Three main sections: Budget, Accounts, Insights
 - Tablet responsive (768px+) with toggle drawer for summary sidebar
@@ -47,6 +53,7 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - Monthly Summary accessible from sidebar sub-menu
 
 #### Zero-Based Budgeting
+
 - Every dollar of income is assigned to a category
 - Starting balance (buffer) tracks money carried over from previous month
 - Real-time budget summary showing planned vs actual spending
@@ -54,13 +61,16 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - Empty state display when navigating to months without a budget
 
 #### Budget Header
+
 - Clean month/year display as the main heading
 - "Left to budget" or "Over budget" status indicator
 - Previous/next month navigation with `<` `>` buttons
 - Displays "Budget is balanced" when fully allocated
 
 #### Budget Categories
+
 8 default categories with emoji indicators:
+
 - 💰 Income (separate tracking)
 - 🤲 Giving
 - 🏠 Household
@@ -71,6 +81,7 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - 💵 Saving
 
 **Custom Categories:**
+
 - Create custom categories via "Add Group" button with name and emoji
 - 130+ emojis organized in 12 searchable groups
 - Custom categories appear between defaults and Saving
@@ -79,6 +90,7 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - Supported in all charts and monthly report
 
 #### Category Features
+
 - Collapsible sections with expand/collapse all
 - Checkmark indicator (✓) when category is fully fulfilled (planned = actual)
 - Add/remove budget items within each category
@@ -92,7 +104,9 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - Click any budget item to view details in sidebar
 
 #### Budget Item Detail View
+
 Click any budget item to see a detailed sidebar view:
+
 - Circular progress indicator showing percentage spent
 - Remaining balance prominently displayed
 - Item name and category
@@ -103,7 +117,9 @@ Click any budget item to see a detailed sidebar view:
 - Income transactions displayed in green
 
 #### Recurring Payments
+
 Accessible via sidebar navigation:
+
 - Create and manage recurring bills and subscriptions
 - Support for multiple frequencies: Monthly, Quarterly, Semi-Annually, Annually
 - Automatic monthly contribution calculation for non-monthly payments
@@ -116,11 +132,13 @@ Accessible via sidebar navigation:
 - **Auto-reset** — due dates auto-advance and funded amounts reset when payment period passes
 
 #### Buffer Section
+
 - 💼 Buffer tracks money carried over from previous month
 - Editable amount with inline editing
 - Clean white card styling matching other sections
 
 #### Bank Integration (Teller)
+
 - Connect bank accounts via Teller Connect
 - Automatic transaction import from linked accounts
 - Support for multiple bank accounts
@@ -129,6 +147,7 @@ Accessible via sidebar navigation:
 - Last synced timestamp for each account
 
 #### Transaction Management
+
 - **New Transactions Tab**: View and categorize imported bank transactions
 - **Tracked Transactions Tab**: View all categorized transactions including split portions
 - **Deleted Transactions Tab**: View and restore soft-deleted transactions
@@ -139,6 +158,7 @@ Accessible via sidebar navigation:
 - Click on any transaction to edit or delete
 
 #### Split Transactions
+
 - Split a single transaction across multiple budget categories
 - Example: Split a $45.50 Target charge into Household ($5.50), Pet Care ($25.00), and Grocery ($15.00)
 - Visual balance indicator ensures splits equal the original amount
@@ -153,9 +173,11 @@ Accessible via sidebar navigation:
 - Modify amounts, change budget items, add/remove splits, then save to update
 
 #### Monthly Report
+
 Comprehensive end-of-month budget review accessed via Insights > Monthly Summary:
 
 **Overall Summary:**
+
 - Total Income with trend vs previous month
 - Total Expenses with trend vs previous month
 - Net Savings calculation
@@ -163,34 +185,40 @@ Comprehensive end-of-month budget review accessed via Insights > Monthly Summary
 - Planned vs Actual comparison
 
 **Buffer Flow:**
+
 - Total Underspent (sum of all under-budget items)
 - Total Overspent (sum of all over-budget items)
 - Left to Budget (unallocated money)
 - Projected Next Month Buffer = Underspent - Overspent + Left to Budget
 
 **Category Breakdown:**
+
 - Each category with planned, actual, and difference
 - Progress bar showing utilization percentage
 - Over/Under budget indicator
 - Month-over-month trend comparison
 
 **Top Spending Items:**
+
 - Top 10 spending items ranked by amount
 - Shows category, planned, actual, and percentage of total spending
 - Empty state message when no spending recorded
 
 **Potential Reallocation:**
+
 - Categories under 50% utilized highlighted
 - Suggestions for next month's budget adjustments
 - Hidden for new users with no spending data
 
 #### Insights & Charts
+
 - **Budget vs Actual** — horizontal grouped bar chart per category
 - **Spending Trends** — multi-line chart over last 3 months with interactive legend
 - **Cash Flow (Sankey)** — 3-column flow diagram: Sources → Categories → Budget Items
 - Multi-month data fetching for trend analysis
 
 #### Data Persistence
+
 - All budget data stored in Supabase PostgreSQL
 - Multi-month support - create and manage budgets for different months/years
 - Soft delete for transactions (recoverable)
@@ -198,21 +226,22 @@ Comprehensive end-of-month budget review accessed via Insights > Monthly Summary
 
 ### Pages
 
-| Route | Page | Description |
-|-------|------|-------------|
-| `/` | Budget | Main budget view with categories, transactions, and summary |
-| `/recurring` | Recurring | Manage recurring payments and subscriptions |
-| `/settings` | Accounts | Bank account management and Teller integration |
-| `/insights` | Insights | Interactive charts (Budget vs Actual, Spending Trends, Cash Flow) and Monthly Summary |
-| `/onboarding` | Onboarding | Interactive 6-step guided setup for new users |
-| `/sign-in` | Sign In | Clerk authentication - sign in page |
-| `/sign-up` | Sign Up | Clerk authentication - sign up page |
+| Route         | Page       | Description                                                                           |
+| ------------- | ---------- | ------------------------------------------------------------------------------------- |
+| `/`           | Budget     | Main budget view with categories, transactions, and summary                           |
+| `/recurring`  | Recurring  | Manage recurring payments and subscriptions                                           |
+| `/settings`   | Accounts   | Bank account management and Teller integration                                        |
+| `/insights`   | Insights   | Interactive charts (Budget vs Actual, Spending Trends, Cash Flow) and Monthly Summary |
+| `/onboarding` | Onboarding | Interactive 6-step guided setup for new users                                         |
+| `/sign-in`    | Sign In    | Clerk authentication - sign in page                                                   |
+| `/sign-up`    | Sign Up    | Clerk authentication - sign up page                                                   |
 
 ### Database
 
 The app uses Supabase PostgreSQL with Drizzle ORM for type-safe database operations.
 
 **Database Commands:**
+
 ```bash
 npm run db:push      # Push schema changes to database
 npm run db:studio    # Open Drizzle Studio to view/edit data
@@ -221,6 +250,7 @@ npm run db:migrate   # Run migrations
 ```
 
 **Database Schema:**
+
 - **budgets** - Monthly budget containers (userId, month, year, buffer amount)
 - **budget_categories** - Categories within each budget (Income, Giving, etc.)
 - **budget_items** - Individual line items (e.g., "Gas", "Groceries"), with optional link to recurring payments
@@ -255,6 +285,7 @@ cp .env.example .env.local
 Then fill in your credentials:
 
 **Authentication (Clerk):**
+
 ```env
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
@@ -263,11 +294,13 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 ```
 
 **Database (Supabase):**
+
 ```env
 DATABASE_URL=postgresql://postgres.xxx:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres
 ```
 
 **Bank Integration (Teller):**
+
 ```env
 TELLER_APP_ID=your_teller_app_id
 NEXT_PUBLIC_TELLER_APP_ID=your_teller_app_id
@@ -281,17 +314,21 @@ TELLER_ENVIRONMENT=production
 ## Getting Started
 
 1. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 2. **Set up environment variables:**
+
    ```bash
    cp .env.example .env.local
    ```
+
    Then edit `.env.local` and fill in your Clerk and Teller credentials.
 
 3. **Set up the database:**
+
    ```bash
    npm run db:push
    ```
@@ -308,16 +345,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 A native iOS app built with SwiftUI is available in the `ios/BudgetApp/` directory.
 
 ### Requirements
+
 - Xcode 15+
 - iOS 17+ deployment target
 - Clerk iOS SDK (configured via Swift Package Manager)
 
 ### Running the iOS App
+
 1. Open `ios/BudgetApp/BudgetApp.xcodeproj` in Xcode
 2. Update `Constants.swift` with your API base URL and Clerk publishable key
 3. Build and run on simulator or device
 
 ### iOS Features
+
 - Tab-based navigation: Budget, Transactions, Accounts, Insights
 - Full budget viewing with categories, items, and transactions
 - Month/year picker for navigating between budget periods
@@ -325,6 +365,7 @@ A native iOS app built with SwiftUI is available in the `ios/BudgetApp/` directo
 - Settings view with recurring payments management
 
 ### Architecture
+
 - **MVVM pattern** with ViewModels for each major view
 - **URLSession + async/await** for networking
 - **Custom decoders** for PostgreSQL numeric strings and date formats
@@ -405,20 +446,24 @@ budget-app/
 ## API Endpoints
 
 ### Budgets
+
 - `GET /api/budgets?month=X&year=Y` - Get or create budget for month/year
 - `PUT /api/budgets` - Update budget (buffer amount)
 
 ### Budget Items
+
 - `POST /api/budget-items` - Create new budget item
 - `PUT /api/budget-items` - Update budget item
 - `DELETE /api/budget-items?id=X` - Delete budget item
 - `POST /api/budget-items/reorder` - Reorder items via drag-and-drop
 
 ### Budget Categories
+
 - `POST /api/budget-categories` - Create custom category (name, emoji, budgetId)
 - `DELETE /api/budget-categories?id=X` - Delete custom category (cascade deletes items/transactions)
 
 ### Transactions
+
 - `POST /api/transactions` - Create transaction
 - `PUT /api/transactions` - Update transaction
 - `DELETE /api/transactions?id=X` - Soft delete transaction
@@ -426,18 +471,21 @@ budget-app/
 - `POST /api/transactions/split` - Split transaction across categories
 
 ### Onboarding
+
 - `GET /api/onboarding` - Check onboarding status
 - `POST /api/onboarding` - Initialize onboarding record
 - `PUT /api/onboarding` - Update current step
 - `PATCH /api/onboarding` - Complete or skip onboarding
 
 ### Recurring Payments
+
 - `GET /api/recurring-payments` - Get all active recurring payments
 - `POST /api/recurring-payments` - Create recurring payment (optionally link to budget item)
 - `PUT /api/recurring-payments` - Update recurring payment
 - `DELETE /api/recurring-payments?id=X` - Delete recurring payment and unlink budget items
 
 ### Teller Integration
+
 - `GET /api/teller/accounts` - Get linked accounts
 - `POST /api/teller/accounts` - Link new account
 - `DELETE /api/teller/accounts?id=X` - Unlink account

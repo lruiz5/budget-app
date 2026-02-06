@@ -34,11 +34,13 @@ actor APIClient {
         var urlComponents = URLComponents(url: baseURL.appendingPathComponent(endpoint), resolvingAgainstBaseURL: true)!
 
         if let params = queryParams {
-            urlComponents.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
+            // Sort params by key to ensure consistent URL ordering
+            urlComponents.queryItems = params.sorted(by: { $0.key < $1.key }).map { URLQueryItem(name: $0.key, value: $0.value) }
         }
 
         var request = URLRequest(url: urlComponents.url!)
         request.httpMethod = "GET"
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         addHeaders(to: &request)
 
         return try await performRequest(request)
