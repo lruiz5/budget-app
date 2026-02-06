@@ -7,6 +7,8 @@ import { eq, and, asc } from 'drizzle-orm';
 function getMonthlyContribution(amount: string | number, frequency: string): string {
   const amt = typeof amount === 'string' ? parseFloat(amount) : amount;
   switch (frequency) {
+    case 'weekly': return String(amt * 4);        // 4 payments per month
+    case 'bi-weekly': return String(amt * 2);     // 2 payments per month
     case 'monthly': return String(amt);
     case 'quarterly': return String(amt / 3);
     case 'semi-annually': return String(amt / 6);

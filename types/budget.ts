@@ -75,17 +75,18 @@ export type RecurringFrequency = 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly
 export interface RecurringPayment {
   id: string;
   name: string;
-  amount: number; // Total amount due
+  amount: number; // Per-occurrence amount (e.g., per paycheck for bi-weekly)
   frequency: RecurringFrequency;
   nextDueDate: string; // ISO date string
-  fundedAmount: number; // Amount saved toward this payment
+  fundedAmount: number; // Amount saved/received toward this payment
   categoryType?: CategoryType | null;
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
   // Computed fields
   monthlyContribution: number; // amount / months in cycle
-  percentFunded: number; // (fundedAmount / amount) * 100
+  displayTarget: number; // Target amount for progress display (monthly equivalent for income, cycle total for expenses)
+  percentFunded: number; // (fundedAmount / displayTarget) * 100
   isFullyFunded: boolean;
   daysUntilDue: number;
   isPaid: boolean; // True when payment conditions are met

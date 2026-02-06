@@ -9,7 +9,72 @@ import * as schema from './schema';
 // - In browser (future static build): will use IndexedDB
 const DB_PATH = process.env.PGLITE_DB_LOCATION || './data/budget-local';
 
-// Track initialization state
+// Use global state in development to persist across HMR (Hot Module Reload)
+// This prevents multiple PGlite instances from being created and corrupting the database
+declare global {
+  // eslint-disable-next-line no-var
+  var __pgliteClient: PGlite | null | undefined;
+  // eslint-disable-next-line no-var
+  var __localDbInstance: ReturnType<typeof drizzle<typeof schema>> | null | undefined;
+  // eslint-disable-next-line no-var
+  var __initializationPromise: Promise<ReturnType<typeof drizzle<typeof schema>>> | null | undefined;
+  // eslint-disable-next-line no-var
+  var __initializationError: Error | null | undefined;
+}
+
+// In development, use global state to survive HMR
+// In production, use module-level state
+const isDev = process.env.NODE_ENV !== 'production';
+
+function getPgliteClient(): PGlite | null {
+  return isDev ? (globalThis.__pgliteClient ?? null) : pgliteClient;
+}
+
+function setPgliteClient(client: PGlite | null): void {
+  if (isDev) {
+    globalThis.__pgliteClient = client;
+  } else {
+    pgliteClient = client;
+  }
+}
+
+function getLocalDbInstanceInternal(): ReturnType<typeof drizzle<typeof schema>> | null {
+  return isDev ? (globalThis.__localDbInstance ?? null) : localDbInstance;
+}
+
+function setLocalDbInstance(instance: ReturnType<typeof drizzle<typeof schema>> | null): void {
+  if (isDev) {
+    globalThis.__localDbInstance = instance;
+  } else {
+    localDbInstance = instance;
+  }
+}
+
+function getInitPromise(): Promise<ReturnType<typeof drizzle<typeof schema>>> | null {
+  return isDev ? (globalThis.__initializationPromise ?? null) : initializationPromise;
+}
+
+function setInitPromise(promise: Promise<ReturnType<typeof drizzle<typeof schema>>> | null): void {
+  if (isDev) {
+    globalThis.__initializationPromise = promise;
+  } else {
+    initializationPromise = promise;
+  }
+}
+
+function getInitError(): Error | null {
+  return isDev ? (globalThis.__initializationError ?? null) : initializationError;
+}
+
+function setInitError(error: Error | null): void {
+  if (isDev) {
+    globalThis.__initializationError = error;
+  } else {
+    initializationError = error;
+  }
+}
+
+// Track initialization state (module-level for production)
 let pgliteClient: PGlite | null = null;
 let localDbInstance: ReturnType<typeof drizzle<typeof schema>> | null = null;
 let initializationPromise: Promise<ReturnType<typeof drizzle<typeof schema>>> | null = null;
@@ -143,9 +208,11 @@ async function initializeLocalDb(): Promise<ReturnType<typeof drizzle<typeof sch
   // Clear any stale lock files from crashed processes
   clearStaleLockFile();
 
+  let client: PGlite;
   try {
-    pgliteClient = new PGlite(DB_PATH);
-    await pgliteClient.waitReady;
+    client = new PGlite(DB_PATH);
+    await client.waitReady;
+    setPgliteClient(client);
   } catch (error) {
     // Create a backup before reporting the error
     const backupPath = createBackup();
@@ -163,16 +230,16 @@ async function initializeLocalDb(): Promise<ReturnType<typeof drizzle<typeof sch
       `4. Set PGLITE_DB_LOCATION in .env to use a different location`
     );
 
-    initializationError = fullError;
-    pgliteClient = null;
+    setInitError(fullError);
+    setPgliteClient(null);
     throw fullError;
   }
 
-  const db = drizzle(pgliteClient, { schema });
+  const db = drizzle(client, { schema });
 
   // Initialize schema on first connection
   try {
-    await initializeSchema(pgliteClient);
+    await initializeSchema(client);
   } catch (schemaError) {
     // Schema initialization failed - this is recoverable, don't destroy data
     const errorMessage = schemaError instanceof Error ? schemaError.message : String(schemaError);
@@ -183,15 +250,15 @@ async function initializeLocalDb(): Promise<ReturnType<typeof drizzle<typeof sch
       `This may be a migration issue. Please check the console for details.`
     );
 
-    initializationError = fullError;
+    setInitError(fullError);
     // Close the client since we can't use it properly
-    await pgliteClient.close();
-    pgliteClient = null;
+    await client.close();
+    setPgliteClient(null);
     throw fullError;
   }
 
-  localDbInstance = db;
-  initializationError = null;
+  setLocalDbInstance(db);
+  setInitError(null);
   return db;
 }
 
@@ -201,29 +268,33 @@ async function initializeLocalDb(): Promise<ReturnType<typeof drizzle<typeof sch
  */
 export async function getLocalDb() {
   // If already initialized, return immediately
-  if (localDbInstance) {
-    return localDbInstance;
+  const existingDb = getLocalDbInstanceInternal();
+  if (existingDb) {
+    return existingDb;
   }
 
   // If there was a previous initialization error, throw it immediately
   // This prevents repeated failed attempts while showing the user the error
-  if (initializationError) {
-    throw initializationError;
+  const existingError = getInitError();
+  if (existingError) {
+    throw existingError;
   }
 
   // If initialization is in progress, wait for it
-  if (initializationPromise) {
-    return initializationPromise;
+  const existingPromise = getInitPromise();
+  if (existingPromise) {
+    return existingPromise;
   }
 
   // Start initialization and store the promise so concurrent callers can wait
-  initializationPromise = initializeLocalDb();
+  const newPromise = initializeLocalDb();
+  setInitPromise(newPromise);
 
   try {
-    return await initializationPromise;
+    return await newPromise;
   } catch (error) {
     // Keep the error for future calls, but reset promise so state is clear
-    initializationPromise = null;
+    setInitPromise(null);
     throw error;
   }
 }
@@ -233,7 +304,7 @@ export async function getLocalDb() {
  * Useful for displaying error state in the UI.
  */
 export function getDbInitError(): Error | null {
-  return initializationError;
+  return getInitError();
 }
 
 /**
@@ -395,11 +466,12 @@ async function initializeSchema(client: PGlite): Promise<void> {
  * Call this when shutting down the app.
  */
 export async function closeLocalDb(): Promise<void> {
-  if (pgliteClient) {
-    await pgliteClient.close();
-    pgliteClient = null;
-    localDbInstance = null;
-    initializationPromise = null;
+  const client = getPgliteClient();
+  if (client) {
+    await client.close();
+    setPgliteClient(null);
+    setLocalDbInstance(null);
+    setInitPromise(null);
   }
 }
 
@@ -408,10 +480,10 @@ export async function closeLocalDb(): Promise<void> {
  * Call this to allow retrying initialization after fixing the underlying issue.
  */
 export function resetDbError(): void {
-  initializationError = null;
-  initializationPromise = null;
-  localDbInstance = null;
-  pgliteClient = null;
+  setInitError(null);
+  setInitPromise(null);
+  setLocalDbInstance(null);
+  setPgliteClient(null);
 
   // Also clear any stale lock files that might be blocking
   clearStaleLockFile();
@@ -421,7 +493,7 @@ export function resetDbError(): void {
  * Check if the database is currently initialized and healthy.
  */
 export function isDbInitialized(): boolean {
-  return localDbInstance !== null && initializationError === null;
+  return getLocalDbInstanceInternal() !== null && getInitError() === null;
 }
 
 /**
@@ -433,10 +505,11 @@ export function getDbStatus(): {
   errorMessage: string | null;
   dbPath: string;
 } {
+  const error = getInitError();
   return {
-    initialized: localDbInstance !== null,
-    hasError: initializationError !== null,
-    errorMessage: initializationError?.message || null,
+    initialized: getLocalDbInstanceInternal() !== null,
+    hasError: error !== null,
+    errorMessage: error?.message || null,
     dbPath: DB_PATH,
   };
 }

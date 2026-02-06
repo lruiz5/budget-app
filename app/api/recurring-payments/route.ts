@@ -5,7 +5,7 @@ import { eq, desc, and, isNull } from 'drizzle-orm';
 import { RecurringPayment, RecurringFrequency, CategoryType } from '@/types/budget';
 import { requireAuth, isAuthError } from '@/lib/auth';
 
-// Helper to calculate months in a frequency cycle
+// Helper to calculate months in a frequency cycle (for expense accumulation)
 function getMonthsInCycle(frequency: RecurringFrequency): number {
   switch (frequency) {
     case 'monthly': return 1;
@@ -13,6 +13,21 @@ function getMonthsInCycle(frequency: RecurringFrequency): number {
     case 'semi-annually': return 6;
     case 'annually': return 12;
     default: return 1;
+  }
+}
+
+// Helper to calculate the monthly equivalent amount
+// For income: how much you expect per month (e.g., bi-weekly $1,937 → monthly $3,875)
+// For expenses: how much to set aside per month (e.g., quarterly $600 → monthly $200)
+function getMonthlyEquivalent(amount: number, frequency: RecurringFrequency): number {
+  switch (frequency) {
+    case 'weekly': return amount * 4;
+    case 'bi-weekly': return amount * 2;
+    case 'monthly': return amount;
+    case 'quarterly': return amount / 3;
+    case 'semi-annually': return amount / 6;
+    case 'annually': return amount / 12;
+    default: return amount;
   }
 }
 
@@ -31,28 +46,42 @@ function getDaysUntilDue(nextDueDate: string): number {
 function transformToRecurringPayment(
   record: typeof recurringPayments.$inferSelect,
   calculatedFundedAmount?: number,
-  isMonthly?: boolean
+  isMonthly?: boolean,
+  isIncome?: boolean
 ): RecurringPayment {
-  const monthsInCycle = getMonthsInCycle(record.frequency as RecurringFrequency);
+  const frequency = record.frequency as RecurringFrequency;
+  const monthsInCycle = getMonthsInCycle(frequency);
   const amountNum = parseFloat(String(record.amount));
-  const monthlyContribution = amountNum / monthsInCycle;
 
   // Use calculated funded amount from transactions if provided, otherwise use DB value
   const fundedAmount = calculatedFundedAmount !== undefined ? calculatedFundedAmount : parseFloat(String(record.fundedAmount));
 
-  // For monthly: progress is against the monthly amount (same as total)
-  // For non-monthly: progress is against the TOTAL amount (cumulative across months)
-  const targetAmount = isMonthly ? monthlyContribution : amountNum;
-  const percentFunded = targetAmount > 0 ? (fundedAmount / targetAmount) * 100 : 0;
+  let monthlyContribution: number;
+  let displayTarget: number;
 
-  // isPaid: for monthly, funded >= amount; for non-monthly, cumulative funded >= total amount
-  const isPaid = fundedAmount >= targetAmount;
+  if (isIncome) {
+    // Income: target is the monthly equivalent (e.g., bi-weekly $1,937 → $3,875/month)
+    // Income is received, not accumulated — each month is independent
+    monthlyContribution = getMonthlyEquivalent(amountNum, frequency);
+    displayTarget = monthlyContribution;
+  } else if (isMonthly) {
+    // Monthly expense: target is the per-month amount
+    monthlyContribution = amountNum / monthsInCycle; // = amountNum
+    displayTarget = monthlyContribution;
+  } else {
+    // Non-monthly expense: accumulate toward the total cycle amount
+    monthlyContribution = amountNum / monthsInCycle;
+    displayTarget = amountNum;
+  }
+
+  const percentFunded = displayTarget > 0 ? (fundedAmount / displayTarget) * 100 : 0;
+  const isPaid = fundedAmount >= displayTarget;
 
   return {
     id: record.id,
     name: record.name,
     amount: amountNum,
-    frequency: record.frequency as RecurringFrequency,
+    frequency: frequency,
     nextDueDate: record.nextDueDate,
     fundedAmount: fundedAmount,
     categoryType: record.categoryType as CategoryType | null,
@@ -60,6 +89,7 @@ function transformToRecurringPayment(
     createdAt: record.createdAt || undefined,
     updatedAt: record.updatedAt || undefined,
     monthlyContribution,
+    displayTarget,
     percentFunded: Math.min(percentFunded, 100),
     isFullyFunded: isPaid,
     daysUntilDue: getDaysUntilDue(record.nextDueDate),
@@ -86,6 +116,7 @@ export async function GET(request: NextRequest) {
   // Calculate funded amount from actual transactions on linked budget items
   const transformed = await Promise.all(payments.map(async (p) => {
     const isMonthly = p.frequency === 'monthly';
+    const isIncome = p.categoryType === 'income';
 
     // Find budget items linked to this recurring payment
     const linkedItems = await db.query.budgetItems.findMany({
@@ -105,8 +136,9 @@ export async function GET(request: NextRequest) {
 
     let fundedAmount = 0;
 
-    if (isMonthly) {
-      // For monthly: only count current month's transactions
+    if (isMonthly || isIncome) {
+      // For monthly payments OR income: only count current month's transactions
+      // Income is received each month independently — no accumulation across months
       for (const item of linkedItems) {
         if (item.category?.budget?.month === currentMonth &&
             item.category?.budget?.year === currentYear) {
@@ -117,7 +149,7 @@ export async function GET(request: NextRequest) {
         }
       }
     } else {
-      // For non-monthly: sum transactions across ALL budget items (all months)
+      // For non-monthly expenses: sum transactions across ALL budget items (all months)
       // This accumulates contributions toward the total payment amount
       for (const item of linkedItems) {
         const txnTotal = item.transactions.reduce((sum, t) => sum + Math.abs(parseFloat(String(t.amount))), 0);
@@ -126,7 +158,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return transformToRecurringPayment(p, fundedAmount, isMonthly);
+    return transformToRecurringPayment(p, fundedAmount, isMonthly, isIncome);
   }));
 
   // Sort by days until due (ascending - soonest first)

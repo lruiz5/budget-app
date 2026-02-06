@@ -339,7 +339,6 @@ function RecurringPage() {
                     >
                       <option value="">Select a category...</option>
                       {Object.entries(availableCategories)
-                        .filter(([key]) => key !== 'income') // Exclude income for recurring payments
                         .map(([value, label]) => (
                           <option key={value} value={value}>{label}</option>
                         ))}
@@ -426,14 +425,14 @@ function RecurringPage() {
                           <span className="text-sm font-medium">Paid</span>
                         </div>
                         <span className="text-sm text-text-secondary">
-                          {fmtCurrency(payment.fundedAmount)} of {fmtCurrency(payment.amount)}
+                          {fmtCurrency(payment.fundedAmount)} of {fmtCurrency(payment.displayTarget)}
                         </span>
                       </div>
                     ) : (
                       <>
                         <div className="flex items-center justify-between text-sm mb-1">
                           <span className="text-text-secondary">
-                            {fmtCurrency(payment.fundedAmount)} of {fmtCurrency(payment.amount)}
+                            {fmtCurrency(payment.fundedAmount)} of {fmtCurrency(payment.displayTarget)}
                           </span>
                           <span className="font-medium text-text-secondary">
                             {payment.percentFunded.toFixed(0)}% funded
