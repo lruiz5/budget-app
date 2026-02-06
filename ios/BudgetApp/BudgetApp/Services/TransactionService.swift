@@ -66,7 +66,7 @@ actor TransactionService {
 
 struct CreateTransactionRequest: Encodable {
     let budgetItemId: Int
-    let date: Date
+    let date: String
     let description: String
     let amount: String
     let type: String
@@ -74,7 +74,10 @@ struct CreateTransactionRequest: Encodable {
 
     init(budgetItemId: Int, date: Date, description: String, amount: Decimal, type: TransactionType, merchant: String? = nil) {
         self.budgetItemId = budgetItemId
-        self.date = date
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        self.date = formatter.string(from: date)
         self.description = description
         self.amount = String(describing: amount)
         self.type = type.rawValue

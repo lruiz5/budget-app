@@ -86,9 +86,10 @@ class BudgetViewModel: ObservableObject {
         guard let budget = budget else { return }
 
         do {
-            self.budget = try await budgetService.updateBudget(
+            _ = try await budgetService.updateBudget(
                 BudgetUpdateRequest(id: budget.id, buffer: String(describing: newBuffer))
             )
+            await loadBudget()
         } catch {
             self.error = error.localizedDescription
         }

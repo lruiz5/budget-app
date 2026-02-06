@@ -4,18 +4,37 @@ struct BudgetItemDetail: View {
     let item: BudgetItem
     let onUpdate: () -> Void
     let onUpdatePlanned: (Int, Decimal) async -> Void
+    let onUpdateName: (Int, String) async -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var editedPlanned: String
-    @State private var isEditing = false
+    @State private var editedName: String
+    @State private var isEditingPlanned = false
+    @State private var isEditingName = false
     @State private var isSaving = false
-    @State private var showAddTransaction = false
+    @State private var activeSheet: ActiveSheet?
+    @State private var transactions: [Transaction]
 
-    init(item: BudgetItem, onUpdate: @escaping () -> Void, onUpdatePlanned: @escaping (Int, Decimal) async -> Void) {
+    enum ActiveSheet: Identifiable {
+        case addTransaction
+        case editTransaction(Transaction)
+
+        var id: String {
+            switch self {
+            case .addTransaction: return "add"
+            case .editTransaction(let t): return "edit-\(t.id)"
+            }
+        }
+    }
+
+    init(item: BudgetItem, onUpdate: @escaping () -> Void, onUpdatePlanned: @escaping (Int, Decimal) async -> Void, onUpdateName: @escaping (Int, String) async -> Void) {
         self.item = item
         self.onUpdate = onUpdate
         self.onUpdatePlanned = onUpdatePlanned
+        self.onUpdateName = onUpdateName
         self._editedPlanned = State(initialValue: String(describing: item.planned))
+        self._editedName = State(initialValue: item.name)
+        self._transactions = State(initialValue: item.transactions)
     }
 
     var body: some View {
@@ -24,6 +43,9 @@ struct BudgetItemDetail: View {
                 VStack(spacing: 24) {
                     // Progress Ring
                     progressSection
+
+                    // Item Name
+                    nameSection
 
                     // Planned Amount
                     plannedSection
@@ -40,8 +62,35 @@ struct BudgetItemDetail: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .sheet(isPresented: $showAddTransaction) {
-                AddTransactionSheet(onSave: onUpdate)
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .addTransaction:
+                    AddTransactionSheet(
+                        preSelectedBudgetItemId: item.id,
+                        onTransactionCreated: { transaction in
+                            transactions.append(transaction)
+                        },
+                        onSave: onUpdate
+                    )
+                case .editTransaction(let transaction):
+                    EditTransactionSheet(
+                        transaction: transaction,
+                        onUpdate: onUpdate,
+                        onTransactionUpdated: { updated in
+                            if let idx = transactions.firstIndex(where: { $0.id == updated.id }) {
+                                // If re-categorized away from this item, remove it
+                                if updated.budgetItemId != item.id {
+                                    transactions.remove(at: idx)
+                                } else {
+                                    transactions[idx] = updated
+                                }
+                            }
+                        },
+                        onTransactionDeleted: { id in
+                            transactions.removeAll { $0.id == id }
+                        }
+                    )
+                }
             }
         }
     }
@@ -103,6 +152,57 @@ struct BudgetItemDetail: View {
         .cornerRadius(12)
     }
 
+    // MARK: - Name Section
+
+    private var nameSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Item Name")
+                .font(.headline)
+
+            HStack {
+                if isEditingName {
+                    TextField("Item Name", text: $editedName)
+                        .textFieldStyle(.roundedBorder)
+                        .autocapitalization(.words)
+
+                    Button("Save") {
+                        let trimmed = editedName.trimmingCharacters(in: .whitespaces)
+                        guard !trimmed.isEmpty else { return }
+                        isSaving = true
+                        Task {
+                            await onUpdateName(item.id, trimmed)
+                            isSaving = false
+                            isEditingName = false
+                            onUpdate()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isSaving || editedName.trimmingCharacters(in: .whitespaces).isEmpty)
+
+                    Button("Cancel") {
+                        editedName = item.name
+                        isEditingName = false
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    Text(item.name)
+                        .font(.title3)
+                        .fontWeight(.medium)
+
+                    Spacer()
+
+                    Button("Edit") {
+                        isEditingName = true
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+
     // MARK: - Planned Section
 
     private var plannedSection: some View {
@@ -111,7 +211,7 @@ struct BudgetItemDetail: View {
                 .font(.headline)
 
             HStack {
-                if isEditing {
+                if isEditingPlanned {
                     TextField("Amount", text: $editedPlanned)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.roundedBorder)
@@ -122,7 +222,7 @@ struct BudgetItemDetail: View {
                         Task {
                             await onUpdatePlanned(item.id, newPlanned)
                             isSaving = false
-                            isEditing = false
+                            isEditingPlanned = false
                             onUpdate()
                         }
                     }
@@ -131,7 +231,7 @@ struct BudgetItemDetail: View {
 
                     Button("Cancel") {
                         editedPlanned = String(describing: item.planned)
-                        isEditing = false
+                        isEditingPlanned = false
                     }
                     .buttonStyle(.bordered)
                 } else {
@@ -142,7 +242,7 @@ struct BudgetItemDetail: View {
                     Spacer()
 
                     Button("Edit") {
-                        isEditing = true
+                        isEditingPlanned = true
                     }
                     .buttonStyle(.bordered)
                 }
@@ -164,42 +264,52 @@ struct BudgetItemDetail: View {
                 Spacer()
 
                 Button {
-                    showAddTransaction = true
+                    activeSheet = .addTransaction
                 } label: {
                     Label("Add", systemImage: "plus")
                         .font(.subheadline)
                 }
             }
 
-            if item.transactions.isEmpty {
+            if transactions.isEmpty {
                 Text("No transactions yet")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
-                ForEach(item.transactions.sorted(by: { $0.date > $1.date })) { transaction in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(transaction.merchant ?? transaction.description)
+                let sorted = transactions.sorted(by: { $0.date > $1.date })
+                ForEach(sorted) { transaction in
+                    Button {
+                        activeSheet = .editTransaction(transaction)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(transaction.merchant ?? transaction.description)
+                                    .font(.body)
+                                    .lineLimit(1)
+
+                                Text(formatDate(transaction.date))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Text(transaction.displayAmount)
                                 .font(.body)
-                                .lineLimit(1)
+                                .fontWeight(.medium)
+                                .foregroundStyle(transaction.type == .income ? .green : .primary)
 
-                            Text(formatDate(transaction.date))
+                            Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.tertiary)
                         }
-
-                        Spacer()
-
-                        Text(transaction.displayAmount)
-                            .font(.body)
-                            .fontWeight(.medium)
-                            .foregroundStyle(transaction.type == .income ? .green : .primary)
                     }
+                    .buttonStyle(.plain)
                     .padding(.vertical, 8)
 
-                    if transaction.id != item.transactions.last?.id {
+                    if transaction.id != sorted.last?.id {
                         Divider()
                     }
                 }
@@ -239,6 +349,7 @@ struct BudgetItemDetail: View {
             transactions: []
         ),
         onUpdate: {},
-        onUpdatePlanned: { _, _ in }
+        onUpdatePlanned: { _, _ in },
+        onUpdateName: { _, _ in }
     )
 }

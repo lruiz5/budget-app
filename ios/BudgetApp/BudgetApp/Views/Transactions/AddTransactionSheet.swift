@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AddTransactionSheet: View {
+    var preSelectedBudgetItemId: Int? = nil
+    var onTransactionCreated: ((Transaction) -> Void)? = nil
     let onSave: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -11,6 +13,7 @@ struct AddTransactionSheet: View {
     @State private var merchant = ""
     @State private var selectedBudgetItemId: Int?
     @State private var isSaving = false
+    @State private var error: String?
 
     @StateObject private var budgetVM = BudgetViewModel()
 
@@ -30,7 +33,7 @@ struct AddTransactionSheet: View {
                             .keyboardType(.decimalPad)
                     }
 
-                    TextField("Description", text: $description)
+                    TextField("Description (optional)", text: $description)
 
                     TextField("Merchant (optional)", text: $merchant)
 
@@ -46,19 +49,23 @@ struct AddTransactionSheet: View {
                         }
                     } else if let budget = budgetVM.budget {
                         ForEach(budget.sortedCategoryKeys, id: \.self) { key in
-                            if let category = budget.categories[key] {
-                                ForEach(category.items) { item in
-                                    Button {
-                                        selectedBudgetItemId = item.id
-                                    } label: {
-                                        HStack {
-                                            Text(category.emoji ?? "📦")
-                                            Text(item.name)
-                                                .foregroundStyle(.primary)
-                                            Spacer()
-                                            if selectedBudgetItemId == item.id {
-                                                Image(systemName: "checkmark")
-                                                    .foregroundStyle(.green)
+                            if let category = budget.categories[key], !category.items.isEmpty {
+                                Section(category.displayName) {
+                                    ForEach(category.items) { item in
+                                        Button {
+                                            selectedBudgetItemId = item.id
+                                        } label: {
+                                            HStack {
+                                                Text(item.name)
+                                                    .foregroundStyle(.primary)
+                                                Spacer()
+                                                Text(formatCurrency(item.remaining))
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                if selectedBudgetItemId == item.id {
+                                                    Image(systemName: "checkmark")
+                                                        .foregroundStyle(.green)
+                                                }
                                             }
                                         }
                                     }
@@ -84,12 +91,32 @@ struct AddTransactionSheet: View {
             .task {
                 await budgetVM.loadBudget()
             }
+            .onAppear {
+                if let preSelected = preSelectedBudgetItemId {
+                    selectedBudgetItemId = preSelected
+                }
+            }
+            .alert("Error", isPresented: Binding(
+                get: { error != nil },
+                set: { if !$0 { error = nil } }
+            )) {
+                Button("OK") { error = nil }
+            } message: {
+                if let error {
+                    Text(error)
+                }
+            }
         }
     }
 
     private func saveTransaction() {
         guard let budgetItemId = selectedBudgetItemId,
               let amountDecimal = Decimal(string: amount) else { return }
+
+        // Use merchant as description fallback, matching web behavior
+        let finalDescription = description.isEmpty
+            ? (merchant.isEmpty ? "Manual transaction" : merchant)
+            : description
 
         isSaving = true
 
@@ -98,21 +125,29 @@ struct AddTransactionSheet: View {
                 let request = CreateTransactionRequest(
                     budgetItemId: budgetItemId,
                     date: selectedDate,
-                    description: description,
+                    description: finalDescription,
                     amount: amountDecimal,
                     type: transactionType,
                     merchant: merchant.isEmpty ? nil : merchant
                 )
-                _ = try await TransactionService.shared.createTransaction(request)
+                let created = try await TransactionService.shared.createTransaction(request)
                 await MainActor.run {
+                    onTransactionCreated?(created)
                     onSave()
                     dismiss()
                 }
             } catch {
-                // Handle error
+                self.error = error.localizedDescription
                 isSaving = false
             }
         }
+    }
+
+    private func formatCurrency(_ value: Decimal) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        return formatter.string(from: value as NSNumber) ?? "$0.00"
     }
 }
 

@@ -6,6 +6,7 @@ struct CategorySection: View {
     let onAddItem: () -> Void
     let onDeleteItem: ((Int) -> Void)?
     let onReorderItems: (([Int]) -> Void)?
+    var onUpdatePlanned: ((Int, Decimal) -> Void)?
 
     @State private var isExpanded = true
     @State private var orderedItems: [BudgetItem] = []
@@ -23,7 +24,7 @@ struct CategorySection: View {
         Section {
             if isExpanded {
                 ForEach(orderedItems) { item in
-                    BudgetItemRow(item: item)
+                    BudgetItemRow(item: item, onQuickEditPlanned: onUpdatePlanned)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             onItemTap(item)
@@ -35,6 +36,7 @@ struct CategorySection: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                .tint(.red)
                             }
                         }
                         .listRowSeparator(.hidden)
@@ -110,6 +112,11 @@ struct CategorySection: View {
 
 struct BudgetItemRow: View {
     let item: BudgetItem
+    var onQuickEditPlanned: ((Int, Decimal) -> Void)?
+
+    @State private var isEditingPlanned = false
+    @State private var editedPlannedText = ""
+    @FocusState private var isFieldFocused: Bool
 
     private var progress: Double {
         guard item.planned > 0 else { return 0 }
@@ -131,15 +138,44 @@ struct BudgetItemRow: View {
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(formatCurrency(item.actual))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(item.isOverBudget ? .red : .primary)
+                if isEditingPlanned {
+                    // Inline planned amount editing
+                    HStack(spacing: 4) {
+                        Text("$")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("0.00", text: $editedPlannedText)
+                            .keyboardType(.decimalPad)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .frame(width: 80)
+                            .textFieldStyle(.roundedBorder)
+                            .focused($isFieldFocused)
+                            .onSubmit { commitPlannedEdit() }
+                    }
+                } else {
+                    // Amount display — wrapped in Button to capture tap before row's onTapGesture
+                    Button {
+                        if onQuickEditPlanned != nil {
+                            editedPlannedText = "\(item.planned)"
+                            isEditingPlanned = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                isFieldFocused = true
+                            }
+                        }
+                    } label: {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(formatCurrency(item.actual))
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(item.isOverBudget ? .red : .primary)
 
-                    Text(formatCurrency(item.remaining))
-                        .font(.caption)
-                        .foregroundStyle(item.isOverBudget ? .red : .secondary)
+                            Text(formatCurrency(item.remaining))
+                                .font(.caption)
+                                .foregroundStyle(item.isOverBudget ? .red : .secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 
@@ -157,6 +193,20 @@ struct BudgetItemRow: View {
             .clipShape(Capsule())
         }
         .padding(.vertical, 4)
+        .onChange(of: isFieldFocused) { _, focused in
+            if !focused && isEditingPlanned {
+                commitPlannedEdit()
+            }
+        }
+    }
+
+    private func commitPlannedEdit() {
+        guard let newValue = editedPlannedText.toDecimal(), newValue >= 0 else {
+            isEditingPlanned = false
+            return
+        }
+        onQuickEditPlanned?(item.id, newValue)
+        isEditingPlanned = false
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
@@ -184,7 +234,8 @@ struct BudgetItemRow: View {
             onItemTap: { _ in },
             onAddItem: { },
             onDeleteItem: nil,
-            onReorderItems: nil
+            onReorderItems: nil,
+            onUpdatePlanned: nil
         )
     }
 }

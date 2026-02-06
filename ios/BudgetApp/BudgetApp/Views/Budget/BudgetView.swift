@@ -1,10 +1,22 @@
 import SwiftUI
 
+// MARK: - Sheet Enum (single .sheet pattern to avoid SwiftUI multi-sheet bug)
+
+enum BudgetActiveSheet: Identifiable {
+    case itemDetail(BudgetItem)
+    case addItem(categoryId: Int)
+
+    var id: String {
+        switch self {
+        case .itemDetail(let item): return "detail-\(item.id)"
+        case .addItem(let catId): return "add-\(catId)"
+        }
+    }
+}
+
 struct BudgetView: View {
     @StateObject private var viewModel = BudgetViewModel()
-    @State private var selectedItem: BudgetItem?
-    @State private var showAddItem = false
-    @State private var selectedCategoryId: Int?
+    @State private var activeSheet: BudgetActiveSheet?
 
     var body: some View {
         Group {
@@ -41,15 +53,22 @@ struct BudgetView: View {
         .task {
             await viewModel.loadBudget()
         }
-        .sheet(item: $selectedItem) { item in
-            BudgetItemDetail(item: item, onUpdate: {
-                Task { await viewModel.loadBudget() }
-            }, onUpdatePlanned: { id, planned in
-                await viewModel.updateItem(id: id, name: nil, planned: planned)
-            })
-        }
-        .sheet(isPresented: $showAddItem) {
-            if let categoryId = selectedCategoryId {
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .itemDetail(let item):
+                BudgetItemDetail(
+                    item: item,
+                    onUpdate: {
+                        Task { await viewModel.loadBudget() }
+                    },
+                    onUpdatePlanned: { id, planned in
+                        await viewModel.updateItem(id: id, name: nil, planned: planned)
+                    },
+                    onUpdateName: { id, name in
+                        await viewModel.updateItem(id: id, name: name, planned: nil)
+                    }
+                )
+            case .addItem(let categoryId):
                 AddBudgetItemSheet(categoryId: categoryId, onSave: {
                     Task { await viewModel.loadBudget() }
                 })
@@ -64,7 +83,9 @@ struct BudgetView: View {
         List {
             // Summary Section
             Section {
-                BudgetSummaryCard(budget: budget)
+                BudgetSummaryCard(budget: budget, onUpdateBuffer: { newBuffer in
+                    Task { await viewModel.updateBuffer(newBuffer) }
+                })
             }
 
             // Categories
@@ -72,17 +93,19 @@ struct BudgetView: View {
                 CategorySection(
                     category: category,
                     onItemTap: { item in
-                        selectedItem = item
+                        activeSheet = .itemDetail(item)
                     },
                     onAddItem: {
-                        selectedCategoryId = category.id
-                        showAddItem = true
+                        activeSheet = .addItem(categoryId: category.id)
                     },
                     onDeleteItem: { itemId in
                         Task { await viewModel.deleteItem(id: itemId) }
                     },
                     onReorderItems: { itemIds in
                         Task { await viewModel.reorderItems(itemIds: itemIds) }
+                    },
+                    onUpdatePlanned: { id, planned in
+                        Task { await viewModel.updateItem(id: id, name: nil, planned: planned) }
                     }
                 )
             }
@@ -144,6 +167,11 @@ struct BudgetView: View {
 
 struct BudgetSummaryCard: View {
     let budget: Budget
+    var onUpdateBuffer: ((Decimal) -> Void)?
+
+    @State private var isEditingBuffer = false
+    @State private var editedBufferText = ""
+    @FocusState private var isBufferFocused: Bool
 
     private var totalPlanned: Decimal {
         budget.categories.values.reduce(0) { $0 + $1.planned }
@@ -155,13 +183,41 @@ struct BudgetSummaryCard: View {
 
     var body: some View {
         HStack {
+            // Buffer (tappable to edit)
             VStack(alignment: .leading) {
                 Text("Buffer")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(formatCurrency(budget.buffer))
-                    .font(.title2)
-                    .fontWeight(.semibold)
+
+                if isEditingBuffer {
+                    HStack(spacing: 2) {
+                        Text("$")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                        TextField("0.00", text: $editedBufferText)
+                            .keyboardType(.decimalPad)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .frame(width: 80)
+                            .textFieldStyle(.roundedBorder)
+                            .focused($isBufferFocused)
+                            .onSubmit { commitBufferEdit() }
+                    }
+                } else {
+                    Text(formatCurrency(budget.buffer))
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if !isEditingBuffer && onUpdateBuffer != nil {
+                    editedBufferText = "\(budget.buffer)"
+                    isEditingBuffer = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isBufferFocused = true
+                    }
+                }
             }
 
             Spacer()
@@ -187,6 +243,20 @@ struct BudgetSummaryCard: View {
             }
         }
         .padding(.vertical, 4)
+        .onChange(of: isBufferFocused) { _, focused in
+            if !focused && isEditingBuffer {
+                commitBufferEdit()
+            }
+        }
+    }
+
+    private func commitBufferEdit() {
+        guard let newValue = editedBufferText.toDecimal(), newValue >= 0 else {
+            isEditingBuffer = false
+            return
+        }
+        onUpdateBuffer?(newValue)
+        isEditingBuffer = false
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
