@@ -60,10 +60,9 @@ actor BudgetService {
         try await api.delete("/api/budget-items", queryParams: ["id": String(id)])
     }
 
-    func reorderBudgetItems(categoryId: Int, itemIds: [Int]) async throws -> SuccessResponse {
+    func reorderBudgetItems(items: [ReorderItem]) async throws -> SuccessResponse {
         try await api.put("/api/budget-items/reorder", body: ReorderItemsRequest(
-            categoryId: categoryId,
-            itemIds: itemIds
+            items: items
         ))
     }
 
@@ -119,8 +118,12 @@ struct UpdateBudgetItemRequest: Encodable {
 }
 
 struct ReorderItemsRequest: Encodable {
-    let categoryId: Int
-    let itemIds: [Int]
+    let items: [ReorderItem]
+}
+
+struct ReorderItem: Encodable {
+    let id: Int
+    let order: Int
 }
 
 struct CreateCategoryRequest: Encodable {

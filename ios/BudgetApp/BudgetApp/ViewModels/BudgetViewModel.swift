@@ -7,27 +7,35 @@ class BudgetViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
-    @Published var selectedMonth: Int
-    @Published var selectedYear: Int
-
     private let budgetService = BudgetService.shared
-
-    init() {
-        let now = Date()
-        let calendar = Calendar.current
-        // Web app uses 0-indexed months (January=0), so subtract 1 from Swift's 1-indexed months
-        self.selectedMonth = calendar.component(.month, from: now) - 1
-        self.selectedYear = calendar.component(.year, from: now)
+    private let sharedDate = SharedDateViewModel.shared
+    
+    var selectedMonth: Int {
+        get { sharedDate.selectedMonth }
+        set { sharedDate.selectedMonth = newValue }
+    }
+    
+    var selectedYear: Int {
+        get { sharedDate.selectedYear }
+        set { sharedDate.selectedYear = newValue }
     }
 
     // MARK: - Load Budget
 
     func loadBudget() async {
+        await loadBudgetForMonth(month: selectedMonth, year: selectedYear)
+    }
+
+    func loadBudgetForMonth(month: Int, year: Int) async {
         isLoading = true
         error = nil
 
+        // Update the selected month/year to match what we're loading
+        selectedMonth = month
+        selectedYear = year
+
         do {
-            budget = try await budgetService.getBudget(month: selectedMonth, year: selectedYear)
+            budget = try await budgetService.getBudget(month: month, year: year)
         } catch let apiError as APIError {
             error = apiError.errorDescription
         } catch {
@@ -103,6 +111,18 @@ class BudgetViewModel: ObservableObject {
     func deleteItem(id: Int) async {
         do {
             _ = try await budgetService.deleteBudgetItem(id: id)
+            await loadBudget()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func reorderItems(itemIds: [Int]) async {
+        let reorderItems = itemIds.enumerated().map { index, id in
+            ReorderItem(id: id, order: index)
+        }
+        do {
+            _ = try await budgetService.reorderBudgetItems(items: reorderItems)
             await loadBudget()
         } catch {
             self.error = error.localizedDescription

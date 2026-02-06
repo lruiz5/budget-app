@@ -38,8 +38,14 @@ struct RecurringPaymentsView: View {
                 await viewModel.loadPayments()
             }
             .sheet(isPresented: $showAddPayment) {
-                AddRecurringPaymentSheet(onSave: {
-                    Task { await viewModel.loadPayments() }
+                AddRecurringPaymentSheet(onSave: { name, amount, frequency, dueDate, categoryType in
+                    await viewModel.createPayment(
+                        name: name,
+                        amount: amount,
+                        frequency: frequency,
+                        nextDueDate: dueDate,
+                        categoryType: categoryType
+                    )
                 })
             }
             .sheet(item: $selectedPayment) { payment in
@@ -56,20 +62,29 @@ struct RecurringPaymentsView: View {
         List {
             // Upcoming Section
             if !viewModel.upcomingPayments.isEmpty {
-                Section("Upcoming (60 days)") {
+                Section("Upcoming (30 days)") {
                     ForEach(viewModel.upcomingPayments) { payment in
                         RecurringPaymentRow(payment: payment)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 selectedPayment = payment
                             }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    Task {
+                                        await viewModel.deletePayment(id: payment.id)
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                     }
                 }
             }
 
-            // All Payments Section
-            Section("All Payments") {
-                ForEach(viewModel.payments) { payment in
+            // Other Payments Section
+            Section(viewModel.upcomingPayments.isEmpty ? "All Payments" : "Other Payments") {
+                ForEach(viewModel.payments.filter { p in !viewModel.upcomingPayments.contains(where: { $0.id == p.id }) }) { payment in
                     RecurringPaymentRow(payment: payment)
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -173,7 +188,7 @@ struct RecurringPaymentRow: View {
 // MARK: - Add Recurring Payment Sheet
 
 struct AddRecurringPaymentSheet: View {
-    let onSave: () -> Void
+    let onSave: (String, Decimal, PaymentFrequency, Date, String?) async -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
@@ -181,6 +196,7 @@ struct AddRecurringPaymentSheet: View {
     @State private var frequency: PaymentFrequency = .monthly
     @State private var nextDueDate = Date()
     @State private var categoryType = ""
+    @State private var isSaving = false
 
     var body: some View {
         NavigationStack {
@@ -213,11 +229,21 @@ struct AddRecurringPaymentSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        // TODO: Call API to create
-                        onSave()
-                        dismiss()
+                        guard let amountDecimal = Decimal(string: amount) else { return }
+                        isSaving = true
+                        Task {
+                            await onSave(
+                                name,
+                                amountDecimal,
+                                frequency,
+                                nextDueDate,
+                                categoryType.isEmpty ? nil : categoryType
+                            )
+                            isSaving = false
+                            dismiss()
+                        }
                     }
-                    .disabled(name.isEmpty || amount.isEmpty)
+                    .disabled(name.isEmpty || amount.isEmpty || isSaving)
                 }
             }
         }

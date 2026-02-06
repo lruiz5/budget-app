@@ -18,15 +18,21 @@ struct BudgetView: View {
                 emptyBudgetView
             }
         }
+        .id("\(viewModel.selectedMonth)-\(viewModel.selectedYear)")
         .toolbar {
             ToolbarItem(placement: .principal) {
                 MonthYearPicker(
                     month: $viewModel.selectedMonth,
                     year: $viewModel.selectedYear,
-                    onChange: {
-                        Task { await viewModel.loadBudget() }
+                    onChange: { month, year in
+                        Task {
+                            await viewModel.loadBudgetForMonth(month: month, year: year)
+                        }
                     }
                 )
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                EditButton()
             }
         }
         .refreshable {
@@ -38,6 +44,8 @@ struct BudgetView: View {
         .sheet(item: $selectedItem) { item in
             BudgetItemDetail(item: item, onUpdate: {
                 Task { await viewModel.loadBudget() }
+            }, onUpdatePlanned: { id, planned in
+                await viewModel.updateItem(id: id, name: nil, planned: planned)
             })
         }
         .sheet(isPresented: $showAddItem) {
@@ -69,6 +77,12 @@ struct BudgetView: View {
                     onAddItem: {
                         selectedCategoryId = category.id
                         showAddItem = true
+                    },
+                    onDeleteItem: { itemId in
+                        Task { await viewModel.deleteItem(id: itemId) }
+                    },
+                    onReorderItems: { itemIds in
+                        Task { await viewModel.reorderItems(itemIds: itemIds) }
                     }
                 )
             }

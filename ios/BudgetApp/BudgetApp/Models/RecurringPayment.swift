@@ -2,7 +2,6 @@ import Foundation
 
 struct RecurringPayment: Codable, Identifiable {
     let id: Int
-    let userId: String
     let name: String
     var amount: Decimal
     let frequency: PaymentFrequency
@@ -10,7 +9,7 @@ struct RecurringPayment: Codable, Identifiable {
     var fundedAmount: Decimal
     let categoryType: String?
     let isActive: Bool
-    let createdAt: Date
+    let createdAt: Date?
 
     var monthlyContribution: Decimal {
         switch frequency {
@@ -39,24 +38,45 @@ struct RecurringPayment: Codable, Identifiable {
     }
 
     var isUpcoming: Bool {
-        daysUntilDue <= 60 && daysUntilDue >= 0
+        daysUntilDue <= 30 && daysUntilDue >= 0
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, userId, name, amount, frequency, nextDueDate, fundedAmount
+        case id, name, amount, frequency, nextDueDate, fundedAmount
         case categoryType, isActive, createdAt
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
-        userId = try container.decode(String.self, forKey: .userId)
         name = try container.decode(String.self, forKey: .name)
         frequency = try container.decode(PaymentFrequency.self, forKey: .frequency)
-        nextDueDate = try container.decode(Date.self, forKey: .nextDueDate)
         categoryType = try container.decodeIfPresent(String.self, forKey: .categoryType)
         isActive = try container.decode(Bool.self, forKey: .isActive)
-        createdAt = try container.decode(Date.self, forKey: .createdAt)
+
+        // Parse nextDueDate - API returns as "YYYY-MM-DD" string
+        if let dateString = try? container.decode(String.self, forKey: .nextDueDate) {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            nextDueDate = formatter.date(from: dateString) ?? Date()
+        } else {
+            nextDueDate = try container.decode(Date.self, forKey: .nextDueDate)
+        }
+
+        // Parse createdAt - may be absent or ISO8601
+        if let createdString = try? container.decode(String.self, forKey: .createdAt) {
+            let isoFormatter = ISO8601DateFormatter()
+            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = isoFormatter.date(from: createdString) {
+                createdAt = date
+            } else {
+                isoFormatter.formatOptions = [.withInternetDateTime]
+                createdAt = isoFormatter.date(from: createdString)
+            }
+        } else {
+            createdAt = nil
+        }
 
         // Handle numeric strings from PostgreSQL
         if let amountString = try? container.decode(String.self, forKey: .amount) {

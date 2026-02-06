@@ -60,3 +60,4 @@ drizzle/
 # Xcode
 *.xcuserstate
 xcuserdata/
+.blackboxcli/

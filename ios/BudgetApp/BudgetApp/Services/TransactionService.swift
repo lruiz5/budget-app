@@ -35,6 +35,14 @@ actor TransactionService {
         try await api.patch("/api/transactions", body: RestoreTransactionRequest(id: id))
     }
 
+    func getDeletedTransactions(month: Int, year: Int) async throws -> [Transaction] {
+        try await api.get("/api/transactions", queryParams: [
+            "deleted": "true",
+            "month": String(month),
+            "year": String(year)
+        ])
+    }
+
     // MARK: - Split Transactions
 
     func getSplits(parentTransactionId: Int) async throws -> [SplitTransaction] {
@@ -77,16 +85,40 @@ struct CreateTransactionRequest: Encodable {
 struct UpdateTransactionRequest: Encodable {
     let id: Int
     let budgetItemId: Int?
-    let date: Date?
+    let date: String?
     let description: String?
     let amount: String?
     let type: String?
     let merchant: String?
 
+    enum CodingKeys: String, CodingKey {
+        case id, budgetItemId, date, description, amount, type, merchant
+    }
+
+    // Custom encoding to OMIT nil fields (not encode as null)
+    // The API checks `if (field !== undefined)` — null would still trigger updates
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(budgetItemId, forKey: .budgetItemId)
+        try container.encodeIfPresent(date, forKey: .date)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encodeIfPresent(amount, forKey: .amount)
+        try container.encodeIfPresent(type, forKey: .type)
+        try container.encodeIfPresent(merchant, forKey: .merchant)
+    }
+
     init(id: Int, budgetItemId: Int? = nil, date: Date? = nil, description: String? = nil, amount: Decimal? = nil, type: TransactionType? = nil, merchant: String? = nil) {
         self.id = id
         self.budgetItemId = budgetItemId
-        self.date = date
+        if let date = date {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            self.date = formatter.string(from: date)
+        } else {
+            self.date = nil
+        }
         self.description = description
         self.amount = amount.map { String(describing: $0) }
         self.type = type?.rawValue

@@ -60,10 +60,17 @@ struct BudgetTab: View {
 }
 
 struct TransactionsTab: View {
+    @StateObject private var viewModel = TransactionsViewModel()
+    
     var body: some View {
         NavigationStack {
-            TransactionsView()
+            TransactionsView(viewModel: viewModel)
                 .navigationTitle("Transactions")
+                .onAppear {
+                    Task {
+                        await viewModel.loadTransactions()
+                    }
+                }
         }
     }
 }

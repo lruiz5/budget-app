@@ -1,10 +1,11 @@
 import SwiftUI
 
 struct TransactionsView: View {
-    @StateObject private var viewModel = TransactionsViewModel()
+    @ObservedObject var viewModel: TransactionsViewModel
     @State private var selectedFilter: TransactionFilter = .uncategorized
     @State private var showAddTransaction = false
     @State private var selectedTransaction: Transaction?
+    @State private var transactionToCategorize: Transaction?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -18,11 +19,11 @@ struct TransactionsView: View {
             .padding()
 
             // Transaction List
-            if viewModel.isLoading {
+            if isCurrentTabLoading {
                 Spacer()
                 ProgressView("Loading transactions...")
                 Spacer()
-            } else if filteredTransactions.isEmpty {
+            } else if currentTransactions.isEmpty {
                 emptyStateView
             } else {
                 transactionList
@@ -39,9 +40,14 @@ struct TransactionsView: View {
         }
         .refreshable {
             await viewModel.loadTransactions()
+            if selectedFilter == .deleted {
+                await viewModel.loadDeletedTransactions()
+            }
         }
-        .task {
-            await viewModel.loadTransactions()
+        .onChange(of: selectedFilter) { _, newValue in
+            if newValue == .deleted && viewModel.deletedTransactions.isEmpty && !viewModel.isLoadingDeleted {
+                Task { await viewModel.loadDeletedTransactions() }
+            }
         }
         .sheet(isPresented: $showAddTransaction) {
             AddTransactionSheet(onSave: {
@@ -49,20 +55,43 @@ struct TransactionsView: View {
             })
         }
         .sheet(item: $selectedTransaction) { transaction in
-            TransactionDetailSheet(transaction: transaction, onUpdate: {
-                Task { await viewModel.loadTransactions() }
+            EditTransactionSheet(transaction: transaction, onUpdate: {
+                Task {
+                    await viewModel.loadTransactions()
+                    if selectedFilter == .deleted {
+                        await viewModel.loadDeletedTransactions()
+                    }
+                }
             })
+        }
+        .sheet(item: $transactionToCategorize) { transaction in
+            CategorizeTransactionSheet(transaction: transaction) { budgetItemId in
+                await viewModel.categorizeTransaction(transactionId: transaction.id, budgetItemId: budgetItemId)
+            }
         }
     }
 
-    // MARK: - Filtered Transactions
+    // MARK: - Current Tab Data
 
-    private var filteredTransactions: [Transaction] {
+    private var isCurrentTabLoading: Bool {
+        switch selectedFilter {
+        case .uncategorized, .tracked:
+            return viewModel.isLoading
+        case .deleted:
+            return viewModel.isLoadingDeleted
+        }
+    }
+
+    private var currentTransactions: [Transaction] {
         switch selectedFilter {
         case .uncategorized:
-            return viewModel.transactions.filter { $0.budgetItemId == nil && !$0.isDeleted }
-        case .all:
-            return viewModel.transactions.filter { !$0.isDeleted }
+            // Only show uncategorized transactions from Teller sync (±7 days)
+            return viewModel.uncategorizedTransactions.filter { $0.budgetItemId == nil && !$0.isDeleted }
+        case .tracked:
+            // Show all categorized transactions (no date filtering)
+            return viewModel.categorizedTransactions.filter { $0.budgetItemId != nil }
+        case .deleted:
+            return viewModel.deletedTransactions
         }
     }
 
@@ -78,13 +107,48 @@ struct TransactionsView: View {
                             .onTapGesture {
                                 selectedTransaction = transaction
                             }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    Task {
-                                        await viewModel.deleteTransaction(id: transaction.id)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                if selectedFilter == .deleted {
+                                    Button {
+                                        Task {
+                                            await viewModel.restoreTransaction(id: transaction.id)
+                                        }
+                                    } label: {
+                                        Label("Restore", systemImage: "arrow.uturn.backward")
                                     }
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    .tint(.green)
+                                } else {
+                                    Button(role: .destructive) {
+                                        Task {
+                                            await viewModel.deleteTransaction(id: transaction.id)
+                                        }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                if selectedFilter == .uncategorized {
+                                    if let suggestedId = transaction.suggestedBudgetItemId {
+                                        Button {
+                                            Task {
+                                                await viewModel.categorizeTransaction(
+                                                    transactionId: transaction.id,
+                                                    budgetItemId: suggestedId
+                                                )
+                                            }
+                                        } label: {
+                                            Label("Quick Assign", systemImage: "sparkles")
+                                        }
+                                        .tint(.blue)
+                                    }
+
+                                    Button {
+                                        transactionToCategorize = transaction
+                                    } label: {
+                                        Label("Categorize", systemImage: "folder")
+                                    }
+                                    .tint(.orange)
                                 }
                             }
                     }
@@ -95,7 +159,7 @@ struct TransactionsView: View {
     }
 
     private var groupedByDate: [(key: Date, value: [Transaction])] {
-        let grouped = Dictionary(grouping: filteredTransactions) { transaction in
+        let grouped = Dictionary(grouping: currentTransactions) { transaction in
             Calendar.current.startOfDay(for: transaction.date)
         }
         return grouped.sorted { $0.key > $1.key }
@@ -105,14 +169,33 @@ struct TransactionsView: View {
 
     private var emptyStateView: some View {
         ContentUnavailableView {
-            Label(
-                selectedFilter == .uncategorized ? "All Categorized" : "No Transactions",
-                systemImage: selectedFilter == .uncategorized ? "checkmark.circle" : "list.bullet"
-            )
+            Label(emptyStateTitle, systemImage: emptyStateIcon)
         } description: {
-            Text(selectedFilter == .uncategorized
-                 ? "All your transactions have been categorized"
-                 : "No transactions yet this month")
+            Text(emptyStateMessage)
+        }
+    }
+
+    private var emptyStateTitle: String {
+        switch selectedFilter {
+        case .uncategorized: return "All Categorized"
+        case .tracked: return "No Tracked Transactions"
+        case .deleted: return "No Deleted Transactions"
+        }
+    }
+
+    private var emptyStateIcon: String {
+        switch selectedFilter {
+        case .uncategorized: return "checkmark.circle"
+        case .tracked: return "list.bullet"
+        case .deleted: return "trash.slash"
+        }
+    }
+
+    private var emptyStateMessage: String {
+        switch selectedFilter {
+        case .uncategorized: return "All your transactions have been categorized"
+        case .tracked: return "No transactions assigned to budget items yet"
+        case .deleted: return "No deleted transactions this month"
         }
     }
 
@@ -127,12 +210,14 @@ struct TransactionsView: View {
 
 enum TransactionFilter: CaseIterable {
     case uncategorized
-    case all
+    case tracked
+    case deleted
 
     var title: String {
         switch self {
-        case .uncategorized: return "Uncategorized"
-        case .all: return "All"
+        case .uncategorized: return "New"
+        case .tracked: return "Tracked"
+        case .deleted: return "Deleted"
         }
     }
 }
@@ -149,12 +234,16 @@ struct TransactionRow: View {
                     .font(.body)
                     .lineLimit(1)
 
-                if transaction.isSplit {
+                if transaction.isDeleted {
+                    Label("Deleted", systemImage: "trash")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                } else if transaction.isSplit {
                     Label("Split", systemImage: "arrow.triangle.branch")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                } else if let _ = transaction.suggestedBudgetItemId {
-                    Text("Suggested category available")
+                } else if transaction.budgetItemId == nil, transaction.suggestedBudgetItemId != nil {
+                    Text("Swipe right to categorize")
                         .font(.caption)
                         .foregroundStyle(.blue)
                 }
@@ -171,28 +260,82 @@ struct TransactionRow: View {
     }
 }
 
-// MARK: - Transaction Detail Sheet
+// MARK: - Categorize Transaction Sheet
 
-struct TransactionDetailSheet: View {
+struct CategorizeTransactionSheet: View {
     let transaction: Transaction
-    let onUpdate: () -> Void
+    let onCategorize: (Int) async -> Void
+
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var budgetVM = BudgetViewModel()
+    @State private var isSaving = false
 
     var body: some View {
         NavigationStack {
-            Text("Transaction Detail")
-                .navigationTitle("Transaction")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Done") { dismiss() }
+            Group {
+                if budgetVM.isLoading {
+                    ProgressView("Loading categories...")
+                } else if let budget = budgetVM.budget {
+                    List {
+                        ForEach(budget.sortedCategoryKeys, id: \.self) { key in
+                            if let category = budget.categories[key] {
+                                Section(category.displayName) {
+                                    ForEach(category.items) { item in
+                                        Button {
+                                            isSaving = true
+                                            Task {
+                                                await onCategorize(item.id)
+                                                dismiss()
+                                            }
+                                        } label: {
+                                            HStack {
+                                                Text(item.name)
+                                                    .foregroundStyle(.primary)
+                                                Spacer()
+                                                VStack(alignment: .trailing, spacing: 2) {
+                                                    Text(formatCurrency(item.remaining))
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                    Text("remaining")
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.tertiary)
+                                                }
+                                            }
+                                        }
+                                        .disabled(isSaving)
+                                    }
+                                }
+                            }
+                        }
                     }
+                    .listStyle(.insetGrouped)
+                } else {
+                    ContentUnavailableView("No Budget", systemImage: "dollarsign.circle")
                 }
+            }
+            .navigationTitle("Categorize")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .task {
+                await budgetVM.loadBudget()
+            }
         }
+    }
+
+    private func formatCurrency(_ value: Decimal) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        return formatter.string(from: value as NSNumber) ?? "$0.00"
     }
 }
 
 #Preview {
     NavigationStack {
-        TransactionsView()
+        TransactionsView(viewModel: TransactionsViewModel())
     }
 }

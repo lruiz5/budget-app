@@ -4,8 +4,11 @@ struct CategorySection: View {
     let category: BudgetCategory
     let onItemTap: (BudgetItem) -> Void
     let onAddItem: () -> Void
+    let onDeleteItem: ((Int) -> Void)?
+    let onReorderItems: (([Int]) -> Void)?
 
     @State private var isExpanded = true
+    @State private var orderedItems: [BudgetItem] = []
 
     private var progress: Double {
         guard category.planned > 0 else { return 0 }
@@ -19,12 +22,25 @@ struct CategorySection: View {
     var body: some View {
         Section {
             if isExpanded {
-                ForEach(category.items.sorted(by: { $0.order < $1.order })) { item in
+                ForEach(orderedItems) { item in
                     BudgetItemRow(item: item)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             onItemTap(item)
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if let onDeleteItem {
+                                Button(role: .destructive) {
+                                    onDeleteItem(item.id)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                }
+                .onMove { source, destination in
+                    orderedItems.move(fromOffsets: source, toOffset: destination)
+                    onReorderItems?(orderedItems.map { $0.id })
                 }
 
                 Button {
@@ -37,6 +53,12 @@ struct CategorySection: View {
             }
         } header: {
             categoryHeader
+        }
+        .onAppear {
+            orderedItems = category.items.sorted { $0.order < $1.order }
+        }
+        .onChange(of: category.items.map(\.id)) { _, _ in
+            orderedItems = category.items.sorted { $0.order < $1.order }
         }
     }
 
@@ -149,7 +171,9 @@ struct BudgetItemRow: View {
                 actual: 320
             ),
             onItemTap: { _ in },
-            onAddItem: { }
+            onAddItem: { },
+            onDeleteItem: nil,
+            onReorderItems: nil
         )
     }
 }
