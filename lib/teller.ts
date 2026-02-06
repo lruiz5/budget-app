@@ -68,12 +68,16 @@ class TellerClient {
   constructor(config: TellerClientConfig) {
     this.accessToken = config.accessToken;
 
-    // Load certificates for mTLS
-    const certPath = path.resolve(process.env.TELLER_CERTIFICATE_PATH || './certificates/certificate.pem');
-    const keyPath = path.resolve(process.env.TELLER_PRIVATE_KEY_PATH || './certificates/private_key.pem');
-
-    this.cert = fs.readFileSync(certPath);
-    this.key = fs.readFileSync(keyPath);
+    // Prefer base64-encoded env vars (for Vercel/serverless), fall back to file paths (for local dev)
+    if (process.env.TELLER_CERTIFICATE_BASE64 && process.env.TELLER_PRIVATE_KEY_BASE64) {
+      this.cert = Buffer.from(process.env.TELLER_CERTIFICATE_BASE64, 'base64');
+      this.key = Buffer.from(process.env.TELLER_PRIVATE_KEY_BASE64, 'base64');
+    } else {
+      const certPath = path.resolve(process.env.TELLER_CERTIFICATE_PATH || './certificates/certificate.pem');
+      const keyPath = path.resolve(process.env.TELLER_PRIVATE_KEY_PATH || './certificates/private_key.pem');
+      this.cert = fs.readFileSync(certPath);
+      this.key = fs.readFileSync(keyPath);
+    }
   }
 
   private request<T>(endpoint: string, method: string = 'GET'): Promise<T> {

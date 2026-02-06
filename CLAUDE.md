@@ -8,7 +8,7 @@ A zero-based budget tracking application built with Next.js, TypeScript, and Tai
 
 **Web App Version:** v1.9.0
 **iOS App Version:** v0.1.1 (pre-release)
-**Last Session:** 2026-02-04
+**Last Session:** 2026-02-06
 
 **Versioning Strategy:**
 - Web App and iOS App are versioned independently
@@ -887,19 +887,28 @@ DATABASE_URL=postgresql://postgres.xxx:password@aws-0-us-east-1.pooler.supabase.
 - 28 Swift files covering Models, Services, ViewModels, and Views
 - See "iOS App (SwiftUI)" section above for full structure
 
+## Common Issues & Solutions (Teller)
+
+### Teller Certificates Not Found on Vercel
+
+- **Problem:** `ENOENT: no such file or directory, open '/var/task/certificates/certificate.pem'`
+- **Cause:** Certificates are in `.gitignore` and don't deploy to Vercel
+- **Fix:** `lib/teller.ts` now supports base64-encoded env vars (`TELLER_CERTIFICATE_BASE64`, `TELLER_PRIVATE_KEY_BASE64`)
+- Falls back to file paths (`TELLER_CERTIFICATE_PATH`, `TELLER_PRIVATE_KEY_PATH`) for local dev
+- To generate base64 values: `base64 -i certificates/certificate.pem`
+
 ## Session Handoff Notes
 
 Last session ended after:
 
-1. Restructured versioning to separate Web App (v1.9.0) and iOS App (v0.1.1)
-2. Created iOS-specific CHANGELOG at `ios/BudgetApp/CHANGELOG.md`
-3. iOS app is in pre-release (0.x.x) until first App Store publish (v1.0.0)
-4. Fixed iOS month navigation bug (v0.1.1)
-5. Removed Capacitor dependencies (using native iOS instead)
+1. Fixed Teller certificate loading for Vercel deployment
+2. `lib/teller.ts` now reads certs from base64 env vars (serverless) or file paths (local dev)
+3. Updated `.env.example` with both certificate loading options
 
 **Current State:**
 - Web App: v1.9.0 - Stable, production-ready
 - iOS App: v0.1.1 - Pre-release, read-only mode (view budgets, navigate months)
+- Teller sync: Fixed cert loading for Vercel via `TELLER_CERTIFICATE_BASE64` / `TELLER_PRIVATE_KEY_BASE64` env vars
 
 **Next Steps for iOS:**
 - Add create/edit functionality for transactions and budget items
