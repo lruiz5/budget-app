@@ -37,8 +37,14 @@ class BudgetViewModel: ObservableObject {
         do {
             budget = try await budgetService.getBudget(month: month, year: year)
         } catch let apiError as APIError {
+            #if DEBUG
+            print("❌ BudgetVM load failed (APIError): \(apiError.errorDescription ?? "unknown")")
+            #endif
             error = apiError.errorDescription
         } catch {
+            #if DEBUG
+            print("❌ BudgetVM load failed: \(error)")
+            #endif
             self.error = error.localizedDescription
         }
 

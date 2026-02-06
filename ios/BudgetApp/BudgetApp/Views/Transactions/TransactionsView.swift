@@ -1,11 +1,25 @@
 import SwiftUI
 
+// MARK: - Active Sheet Enum (single .sheet pattern to avoid SwiftUI multi-sheet bugs)
+
+enum TransactionActiveSheet: Identifiable {
+    case addTransaction
+    case editTransaction(Transaction)
+    case categorizeTransaction(Transaction)
+
+    var id: String {
+        switch self {
+        case .addTransaction: return "add"
+        case .editTransaction(let t): return "edit-\(t.id)"
+        case .categorizeTransaction(let t): return "categorize-\(t.id)"
+        }
+    }
+}
+
 struct TransactionsView: View {
     @ObservedObject var viewModel: TransactionsViewModel
     @State private var selectedFilter: TransactionFilter = .uncategorized
-    @State private var showAddTransaction = false
-    @State private var selectedTransaction: Transaction?
-    @State private var transactionToCategorize: Transaction?
+    @State private var activeSheet: TransactionActiveSheet?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,7 +46,7 @@ struct TransactionsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showAddTransaction = true
+                    activeSheet = .addTransaction
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -49,24 +63,25 @@ struct TransactionsView: View {
                 Task { await viewModel.loadDeletedTransactions() }
             }
         }
-        .sheet(isPresented: $showAddTransaction) {
-            AddTransactionSheet(onSave: {
-                Task { await viewModel.loadTransactions() }
-            })
-        }
-        .sheet(item: $selectedTransaction) { transaction in
-            EditTransactionSheet(transaction: transaction, onUpdate: {
-                Task {
-                    await viewModel.loadTransactions()
-                    if selectedFilter == .deleted {
-                        await viewModel.loadDeletedTransactions()
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .addTransaction:
+                AddTransactionSheet(onSave: {
+                    Task { await viewModel.loadTransactions() }
+                })
+            case .editTransaction(let transaction):
+                EditTransactionSheet(transaction: transaction, onUpdate: {
+                    Task {
+                        await viewModel.loadTransactions()
+                        if selectedFilter == .deleted {
+                            await viewModel.loadDeletedTransactions()
+                        }
                     }
+                })
+            case .categorizeTransaction(let transaction):
+                CategorizeTransactionSheet(transaction: transaction) { budgetItemId in
+                    await viewModel.categorizeTransaction(transactionId: transaction.id, budgetItemId: budgetItemId)
                 }
-            })
-        }
-        .sheet(item: $transactionToCategorize) { transaction in
-            CategorizeTransactionSheet(transaction: transaction) { budgetItemId in
-                await viewModel.categorizeTransaction(transactionId: transaction.id, budgetItemId: budgetItemId)
             }
         }
     }
@@ -105,7 +120,7 @@ struct TransactionsView: View {
                         TransactionRow(transaction: transaction)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                selectedTransaction = transaction
+                                activeSheet = .editTransaction(transaction)
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 if selectedFilter == .deleted {
@@ -144,7 +159,7 @@ struct TransactionsView: View {
                                     }
 
                                     Button {
-                                        transactionToCategorize = transaction
+                                        activeSheet = .categorizeTransaction(transaction)
                                     } label: {
                                         Label("Categorize", systemImage: "folder")
                                     }
@@ -309,6 +324,16 @@ struct CategorizeTransactionSheet: View {
                         }
                     }
                     .listStyle(.insetGrouped)
+                } else if let error = budgetVM.error {
+                    ContentUnavailableView {
+                        Label("Failed to Load", systemImage: "exclamationmark.triangle")
+                    } description: {
+                        Text(error)
+                    } actions: {
+                        Button("Retry") {
+                            Task { await budgetVM.loadBudget() }
+                        }
+                    }
                 } else {
                     ContentUnavailableView("No Budget", systemImage: "dollarsign.circle")
                 }

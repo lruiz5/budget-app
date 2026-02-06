@@ -6,6 +6,42 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.2.0] - 2026-02-06 - Auth Fix, Transaction Categorization & Budget UI
+
+### Fixed
+
+- **Auth token expiration** — API calls failed with 404 (HTML redirect) after ~60s because Clerk tokens were fetched once at launch. Replaced static `authToken` in `APIClient` with `tokenProvider` closure that fetches a fresh JWT before each request. Clerk SDK caches internally.
+- **Empty categories in transaction sheets** — Multiple `.sheet` modifiers on `TransactionsView` caused a known SwiftUI bug where sheets wouldn't fire `.task` or had stale state. Consolidated into single `.sheet(item:)` with `TransactionActiveSheet` enum.
+- **No error visibility in sheets** — `CategorizeTransactionSheet` and `EditTransactionSheet` silently showed empty when budget failed to load. Added error display with retry buttons.
+
+### Added
+
+- **"Left to Budget" sticky banner** — bottom banner on budget page shows allocation status:
+  - Orange: "$X left to budget" (unassigned money)
+  - Green: "Every dollar is assigned!" (balanced)
+  - Red: "Over budgeted by $X" (over-allocated)
+  - Formula: `buffer + incomePlanned - expensePlanned`
+- **Debug logging** in `BudgetViewModel` catch blocks for easier troubleshooting
+
+### Changed
+
+- **Budget summary card** — removed redundant Income display (duplicated by Income category), now shows Buffer / Planned / Actual in a single row
+- **Progress bar as divider** — removed default List separators between budget items, replaced with full-width 2px progress bar (green/red Capsule) acting as visual divider
+- **Auth flow** — `BudgetAppApp.swift` sets token provider instead of static token; `SettingsView` sign-out no longer needs to clear token
+
+### Files Modified
+
+- `Services/APIClient.swift` — `tokenProvider` closure pattern
+- `BudgetAppApp.swift` — `setTokenProvider` instead of `setAuthToken`
+- `Views/Transactions/TransactionsView.swift` — single `.sheet(item:)` with `TransactionActiveSheet` enum, error+retry in categorize sheet
+- `Views/Transactions/EditTransactionSheet.swift` — error+retry in Category section
+- `Views/Budget/BudgetView.swift` — simplified summary card, `LeftToBudgetBanner` component
+- `Views/Budget/CategorySection.swift` — `.listRowSeparator(.hidden)`, full-width progress bar in `BudgetItemRow`
+- `Views/Settings/SettingsView.swift` — removed `setAuthToken(nil)` on sign-out
+- `ViewModels/BudgetViewModel.swift` — debug logging in catch blocks
+
+---
+
 ## [0.1.1] - 2026-02-04 - Month Navigation Fix
 
 ### Fixed
@@ -102,9 +138,9 @@ All notable changes to the Budget App iOS application.
 
 ### Known Issues
 
-- Read-only mode: Cannot create or edit data (view-only)
-- No error messages displayed to user
-- No loading states on data refresh
-- No pull-to-refresh on list views
+- Cannot create budget items or transactions from app
+- No split transaction support
+- No recurring payment management
+- No bank account linking
 - No search/filter functionality
-- No transaction categorization from app
+- No custom category creation
