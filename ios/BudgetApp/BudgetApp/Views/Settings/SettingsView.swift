@@ -73,7 +73,6 @@ struct SettingsView: View {
                 Button("Sign Out", role: .destructive) {
                     Task {
                         try? await clerk.signOut()
-                        await APIClient.shared.setAuthToken(nil)
                         await MainActor.run {
                             dismiss()
                         }

@@ -37,6 +37,7 @@ struct CategorySection: View {
                                 }
                             }
                         }
+                        .listRowSeparator(.hidden)
                 }
                 .onMove { source, destination in
                     orderedItems.move(fromOffsets: source, toOffset: destination)
@@ -116,8 +117,8 @@ struct BudgetItemRow: View {
     }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(spacing: 8) {
+            HStack {
                 HStack(spacing: 4) {
                     Text(item.name)
                         .font(.body)
@@ -128,22 +129,32 @@ struct BudgetItemRow: View {
                     }
                 }
 
-                ProgressView(value: progress)
-                    .tint(item.isOverBudget ? .red : .green)
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(formatCurrency(item.actual))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(item.isOverBudget ? .red : .primary)
+
+                    Text(formatCurrency(item.remaining))
+                        .font(.caption)
+                        .foregroundStyle(item.isOverBudget ? .red : .secondary)
+                }
             }
 
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(formatCurrency(item.actual))
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(item.isOverBudget ? .red : .primary)
-
-                Text(formatCurrency(item.remaining))
-                    .font(.caption)
-                    .foregroundStyle(item.isOverBudget ? .red : .secondary)
+            // Full-width progress bar as visual divider
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color(.systemGray5))
+                    Rectangle()
+                        .fill(item.isOverBudget ? Color.red : Color.green)
+                        .frame(width: geometry.size.width * progress)
+                }
             }
+            .frame(height: 2)
+            .clipShape(Capsule())
         }
         .padding(.vertical, 4)
     }

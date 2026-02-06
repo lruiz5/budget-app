@@ -10,7 +10,7 @@ actor APIClient {
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
 
-    private var authToken: String?
+    private var tokenProvider: (@Sendable () async -> String?)?
 
     private init() {
         self.baseURL = URL(string: Constants.API.baseURL)!
@@ -24,8 +24,10 @@ actor APIClient {
 
     // MARK: - Auth Token Management
 
-    func setAuthToken(_ token: String?) {
-        self.authToken = token
+    /// Sets a closure that provides a fresh auth token for each request.
+    /// Clerk tokens are short-lived (~60s), so this ensures every request uses a valid token.
+    func setTokenProvider(_ provider: @escaping @Sendable () async -> String?) {
+        self.tokenProvider = provider
     }
 
     // MARK: - Generic Request Methods
@@ -92,13 +94,16 @@ actor APIClient {
     private func addHeaders(to request: inout URLRequest) {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue("application/json", forHTTPHeaderField: "Accept")
-
-        if let token = authToken {
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
     }
 
     private func performRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
+        var request = request
+
+        // Fetch a fresh token for each request (Clerk tokens expire after ~60s)
+        if let provider = tokenProvider, let token = await provider() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
         #if DEBUG
         print("🌐 \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
         if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {

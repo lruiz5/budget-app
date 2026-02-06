@@ -88,6 +88,9 @@ struct BudgetView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .safeAreaInset(edge: .bottom) {
+            LeftToBudgetBanner(budget: budget)
+        }
     }
 
     // MARK: - Empty State
@@ -150,58 +153,124 @@ struct BudgetSummaryCard: View {
         budget.categories.values.reduce(0) { $0 + $1.actual }
     }
 
-    private var incomeCategory: BudgetCategory? {
-        budget.categories.values.first { $0.categoryType.lowercased() == "income" }
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Buffer")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(formatCurrency(budget.buffer))
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing) {
-                    Text("Income")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(formatCurrency(incomeCategory?.actual ?? 0))
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.green)
-                }
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Buffer")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(formatCurrency(budget.buffer))
+                    .font(.title2)
+                    .fontWeight(.semibold)
             }
 
-            Divider()
+            Spacer()
 
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Planned")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(formatCurrency(totalPlanned))
-                        .font(.headline)
-                }
+            VStack(alignment: .trailing) {
+                Text("Planned")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(formatCurrency(totalPlanned))
+                    .font(.title2)
+                    .fontWeight(.semibold)
+            }
 
-                Spacer()
+            Spacer()
 
-                VStack(alignment: .trailing) {
-                    Text("Actual")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(formatCurrency(totalActual))
-                        .font(.headline)
-                }
+            VStack(alignment: .trailing) {
+                Text("Actual")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(formatCurrency(totalActual))
+                    .font(.title2)
+                    .fontWeight(.semibold)
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private func formatCurrency(_ value: Decimal) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        return formatter.string(from: value as NSNumber) ?? "$0.00"
+    }
+}
+
+// MARK: - Left to Budget Banner
+
+struct LeftToBudgetBanner: View {
+    let budget: Budget
+
+    private var incomePlanned: Decimal {
+        budget.categories.values
+            .first { $0.categoryType.lowercased() == "income" }?.planned ?? 0
+    }
+
+    private var expensePlanned: Decimal {
+        budget.categories.values
+            .filter { $0.categoryType.lowercased() != "income" }
+            .reduce(0) { $0 + $1.planned }
+    }
+
+    private var leftToBudget: Decimal {
+        budget.buffer + incomePlanned - expensePlanned
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: iconName)
+                .font(.subheadline)
+
+            Text(bannerText)
+                .font(.subheadline)
+                .fontWeight(.medium)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .background(backgroundColor)
+        .foregroundStyle(foregroundColor)
+    }
+
+    private var iconName: String {
+        if leftToBudget > 0 {
+            return "exclamationmark.circle.fill"
+        } else if leftToBudget == 0 {
+            return "checkmark.circle.fill"
+        } else {
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var bannerText: String {
+        if leftToBudget > 0 {
+            return "\(formatCurrency(leftToBudget)) left to budget"
+        } else if leftToBudget == 0 {
+            return "Every dollar is assigned!"
+        } else {
+            return "Over budgeted by \(formatCurrency(abs(leftToBudget)))"
+        }
+    }
+
+    private var backgroundColor: Color {
+        if leftToBudget > 0 {
+            return Color.orange.opacity(0.15)
+        } else if leftToBudget == 0 {
+            return Color.green.opacity(0.15)
+        } else {
+            return Color.red.opacity(0.15)
+        }
+    }
+
+    private var foregroundColor: Color {
+        if leftToBudget > 0 {
+            return .orange
+        } else if leftToBudget == 0 {
+            return .green
+        } else {
+            return .red
+        }
     }
 
     private func formatCurrency(_ value: Decimal) -> String {

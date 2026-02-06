@@ -57,6 +57,15 @@ struct EditTransactionSheet: View {
                             ProgressView()
                             Spacer()
                         }
+                    } else if let error = budgetVM.error {
+                        VStack(spacing: 8) {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                            Button("Retry") {
+                                Task { await budgetVM.loadBudget() }
+                            }
+                        }
                     } else if let budget = budgetVM.budget {
                         // "None" option to uncategorize
                         Button {

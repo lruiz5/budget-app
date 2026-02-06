@@ -20,9 +20,11 @@ struct BudgetAppApp: App {
                     // User is signed in but auth token not yet set
                     ProgressView("Preparing...")
                         .task {
-                            // Set up API client with session token before showing ContentView
-                            if let token = try? await clerk.session?.getToken()?.jwt {
-                                await APIClient.shared.setAuthToken(token)
+                            // Set up token provider that fetches a fresh Clerk token per request.
+                            // Clerk tokens are short-lived (~60s), so this prevents expiration issues
+                            // when navigating between tabs or staying on a screen for a while.
+                            await APIClient.shared.setTokenProvider {
+                                try? await Clerk.shared.session?.getToken()?.jwt
                             }
                             isAuthReady = true
                         }
