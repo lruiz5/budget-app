@@ -2,9 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## Versioning Strategy
+
+- **Web App**: Versioned independently (currently v1.9.0)
+- **iOS App**: Versioned independently in `ios/BudgetApp/CHANGELOG.md` (currently v0.1.1, pre-release)
+- **Project**: Overall version tracks major milestones (currently v1.9.0)
+
+**Note:** iOS app uses 0.x.x versioning until first App Store release (v1.0.0).
+
+---
+
 ## [1.9.0] - 2026-02-04 - Native iOS App (SwiftUI)
 
 ### Added
+
 - **Native iOS app** — complete SwiftUI implementation in `ios/BudgetApp/`
   - Targets iOS 17+ with MVVM architecture
   - Tab-based navigation: Budget, Transactions, Accounts, Insights
@@ -14,6 +25,7 @@ All notable changes to this project will be documented in this file.
   - Settings view with recurring payments management
 
 ### Technical Implementation
+
 - **0-indexed month handling** — iOS converts to match web app's JavaScript `Date.getMonth()` (Jan=0)
 - **Custom date parsing** — handles "YYYY-MM-DD" transaction dates and ISO8601 timestamps with fractional seconds
 - **Client-side actual calculation** — calculates spent amounts from transactions, matching web app's `budgetHelpers.ts` logic
@@ -21,6 +33,7 @@ All notable changes to this project will be documented in this file.
 - **Auth token timing** — `isAuthReady` state prevents API calls before Clerk token is available
 
 ### New Files
+
 - `ios/BudgetApp/` — Complete Xcode project with 28 Swift files
   - Models: Budget, BudgetCategory, BudgetItem, Transaction, LinkedAccount, RecurringPayment
   - Services: APIClient, BudgetService, AccountsService, TransactionService, RecurringService
@@ -30,6 +43,7 @@ All notable changes to this project will be documented in this file.
 ## [1.8.0] - 2026-02-03 - Budget Reset & Empty State Fix
 
 ### Added
+
 - **Reset Budget feature** — "Reset Budget" button at bottom of budget page with two options:
   - "Zero out all planned amounts" — keeps categories/items/transactions, sets all planned to $0.00
   - "Replace with last month's budget" — deletes current items, copies from previous month + syncs recurring
@@ -37,16 +51,19 @@ All notable changes to this project will be documented in this file.
 - **New API endpoint** (`/api/budgets/reset`) — POST with `mode: 'zero'` or `mode: 'replace'`
 
 ### Changed
+
 - Recurring payment items now only created when user clicks "Start Planning" (moved from GET to POST `/api/budgets/copy`)
 - Due-date auto-advance still runs on GET to keep dates current
 
 ### Fixed
+
 - **Empty budget detection** — new months now properly show "Hey there, looks like you need a budget" prompt instead of auto-populating from recurring payments
 - **Duplicate recurring items** — copy budget now skips items linked to recurring payments (recurring sync creates them fresh with proper linking)
 
 ## [1.7.0] - 2026-01-31 - Custom Categories, Recurring Auto-Reset & UI Improvements
 
 ### Added
+
 - **Custom budget categories** — "Add Group" button creates user-defined categories with name and emoji
   - Slugified category keys for DB storage
   - Hash-based color assignment for charts
@@ -61,6 +78,7 @@ All notable changes to this project will be documented in this file.
 - **Budget category API** (`/api/budget-categories`) — POST to create, DELETE to remove custom categories
 
 ### Changed
+
 - `CategoryType` changed from fixed 8-value union to `string` to support custom categories
 - `Budget.categories` changed from fixed object shape to `Record<string, BudgetCategory>`
 - Budget page renders categories dynamically (income first, defaults, custom, saving last)
@@ -70,11 +88,13 @@ All notable changes to this project will be documented in this file.
 - DB schema: added `emoji` (text, nullable) and `categoryOrder` (integer) columns to `budget_categories`
 
 ### Fixed
+
 - Copy budget now creates custom categories in target budget when they don't exist
 
 ## [1.6.0] - 2026-01-31 - Tablet Responsiveness & Deployment Prep
 
 ### Added
+
 - **Mobile block screen** — full-screen overlay on screens < 768px with message to use a tablet or larger device
 - **Sidebar auto-collapse** — sidebar defaults to collapsed on screens < 1024px with `matchMedia` resize listener
 - **Summary sidebar toggle drawer** — floating action button on tablet (768–1024px) to open/close the summary sidebar as an overlay drawer
@@ -82,12 +102,14 @@ All notable changes to this project will be documented in this file.
 - **Month/year persistence** — selected month/year carries across page navigations via URL search params
 
 ### Changed
+
 - Responsive padding on insights, recurring, and settings pages (`p-4 lg:p-8`)
 - DashboardLayout hides main content below 768px, shows MobileBlockScreen instead
 - Transaction list shows all transactions grouped by month, limited to ±7 days of budget month boundaries
 - Uncategorized transaction count matches filtered results
 
 ### Fixed
+
 - **Buffer projection formula** — removed income variance (planned income adjusted on the fly) and removed current buffer double-counting; projection is now `underspent - overspent`
 - **Split transaction actuals** — `budgetHelpers.ts` now checks `parentTransaction.type` to correctly handle income vs expense splits
 - **Vercel build error** — excluded `scripts/` from `tsconfig.json` to prevent `better-sqlite3` import errors from old migration scripts
@@ -95,6 +117,7 @@ All notable changes to this project will be documented in this file.
 ## [1.5.0] - 2026-01-30 - Interactive Insights Charts
 
 ### Added
+
 - **D3.js charts** on Insights page — three interactive visualizations powered by D3.js and d3-sankey
 - **Budget vs Actual** — horizontal grouped bar chart comparing planned vs actual spending per category, with over-budget highlighting in red
 - **Spending Trends** — multi-line chart tracking spending by category over the last 3 months, with clickable legend to toggle category visibility
@@ -103,40 +126,46 @@ All notable changes to this project will be documented in this file.
 - **Multi-month data fetching** — insights page loads current + 2 previous months for trend analysis
 
 ### Changed
+
 - Insights page max width increased from `max-w-4xl` to `max-w-6xl`
 - Replaced "Coming Soon" placeholder cards with live interactive charts
 - Added refresh button with loading spinner to insights page
 
-## [1.4.0] - 2026-01-29 - Supabase Migration & Mobile Prep
+## [1.4.0] - 2026-01-29 - Supabase Migration
 
 ### Added
+
 - **Supabase PostgreSQL** — migrated from SQLite to Supabase for multi-device sync
-- **Capacitor** — live server mode for future iOS/Android builds
 - **Previous month transactions** — sidebar "New" tab shows last 3 days of previous month with month headings
 - **Data migration script** (`scripts/migrate-data.ts`) — migrates all 7 tables with FK ordering and sequence resets
 
 ### Changed
+
 - **Database driver:** `better-sqlite3` → `postgres` via `drizzle-orm/postgres-js`
 - **Schema:** All tables converted from `sqliteTable` to `pgTable` with PostgreSQL types
 - **Teller sync optimized** — batch queries replace N+1 pattern (~60s → fast)
 - **Numeric handling:** All `numeric` column reads wrapped with `parseFloat(String())` across 10+ files
 
 ### Fixed
+
 - **Monthly Report** — Saving category no longer counted as expense in totals
 - **Split transaction edit** — `.toFixed()` error fixed for PostgreSQL numeric strings
 - **Claim data endpoint** — `.changes` replaced with `.returning().length` for PostgreSQL
 
 ### Architecture Decision
+
 - **Phase 5 (Edge Functions) skipped** — Next.js API routes connect directly to Supabase PostgreSQL via Drizzle ORM. No functional benefit to migrating to Deno-based Edge Functions. See CLAUDE.md for full rationale.
 
 ## [1.3.1] - 2026-01-29 - Build Fix
 
 ### Fixed
+
 - **Production build failure** — wrapped `useSearchParams()` in Suspense boundary on `/recurring` page (required by Next.js for static prerendering)
 
 ## [1.3.0] - 2026-01-29 - Onboarding & Empty States (Final SQLite Release)
 
 ### Added
+
 - **Interactive onboarding** — 6-step guided setup for new users at `/onboarding`
   - Welcome → Concepts → Set Buffer → Create Budget Items → Add Transaction → Complete
   - Suggested budget items as clickable pill badges (Rent $1,200, Groceries $400, etc.)
@@ -155,32 +184,38 @@ All notable changes to this project will be documented in this file.
 - `.env.example` file for easier setup
 
 ### Changed
+
 - Sign-up now redirects to `/onboarding` instead of `/`
 - Main page (`/`) checks onboarding status and redirects if incomplete
 
 ## [1.2.0] - 2026-01-28 - Auth Page Theming & UI Polish
 
 ### Added
+
 - **Currency formatting** — `lib/formatCurrency.ts` utility for consistent `$x,xxx.xx` display
 - **Total Savings rows** in Budget Summary sidebar (Planned and Actual sections)
 - **Animated auth background** — diagonal scrolling "BUDGET APP" text on sign-in/sign-up pages
 - **Clerk component theming** — Emerald design system applied to auth forms
 
 ### Changed
+
 - Progress bar color changed from `bg-primary-light` to `bg-success` (green) with glow shadows
 - Over-budget items use `bg-danger` with matching glow
 
 ### Fixed
+
 - Split transaction ownership verification (parent has null `budgetItemId` after splitting)
 
 ## [1.1.0] - 2026-01-27 - UI Overhaul & Design System
 
 ### Added
+
 - **Outfit font** via `next/font/google`
 - **Emerald design system** — semantic CSS color tokens in `globals.css` mapped to Tailwind
 - **`DESIGN_SYSTEM.md`** — comprehensive design token documentation
 
 ### Changed
+
 - Unified all icons to `react-icons/fa`
 - Global `cursor: pointer` on interactive elements
 - Summary/Transactions tab icons wrapped in circles with badge positioning
@@ -188,6 +223,7 @@ All notable changes to this project will be documented in this file.
 ## [1.0.0] - 2026-01-26 - User Authentication
 
 ### Added
+
 - **Clerk authentication** — sign-in, sign-up, route protection
 - **Multi-user support** — `userId` columns on budgets, linked_accounts, recurring_payments
 - **UserButton** in sidebar footer for account management
@@ -196,11 +232,13 @@ All notable changes to this project will be documented in this file.
 - `lib/auth.ts` — `requireAuth()` and `isAuthError()` helpers
 
 ### Changed
+
 - All 11 API route files updated with auth checks and userId scoping
 
 ## [0.9.0] - Split Transaction Editing
 
 ### Added
+
 - **Edit existing splits** by clicking any split transaction
 - Editable from Item Detail View, Tracked Transactions tab, and BudgetSection dropdown
 - `ExistingSplit` interface in SplitTransactionModal
@@ -208,6 +246,7 @@ All notable changes to this project will be documented in this file.
 ## [0.8.0] - Recurring Payments & Budget Item Detail
 
 ### Added
+
 - **Recurring payments** — full CRUD at `/recurring` with multiple frequencies
 - **Budget item detail view** — click any item to see details in sidebar
 - **Buffer Flow** in Monthly Report (Insights > Monthly Summary)

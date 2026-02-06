@@ -1,15 +1,16 @@
-# Budget App: Supabase + Capacitor Migration Plan
+# Budget App: Supabase Migration Plan (Completed)
 
 ## Overview
-Migrate from SQLite to Supabase (PostgreSQL) for multi-device sync, then add Capacitor for iOS/Android. All API logic will move to Supabase Edge Functions.
+This document tracks the migration from SQLite to Supabase (PostgreSQL) for multi-device sync. The migration was completed in v1.4.0.
 
-**Architecture:**
-- Web + Mobile → Supabase Edge Functions → PostgreSQL
-- Teller bank sync: server-side only (via Edge Functions)
+**Final Architecture:**
+- Web App → Next.js API Routes (Vercel) → Supabase PostgreSQL
+- iOS App → Next.js API Routes (Vercel) → Supabase PostgreSQL
+- Teller bank sync: server-side only (via Next.js API routes)
 
 ---
 
-## Phase 1: Supabase Project Setup
+## Phase 1: Supabase Project Setup (Completed)
 
 ### Tasks
 1. Create Supabase project at supabase.com
@@ -27,7 +28,7 @@ Migrate from SQLite to Supabase (PostgreSQL) for multi-device sync, then add Cap
 
 ---
 
-## Phase 2: Update Dependencies
+## Phase 2: Update Dependencies (Completed)
 
 ### Files to modify
 - `package.json`
@@ -49,7 +50,7 @@ npm uninstall better-sqlite3 @types/better-sqlite3
 
 ---
 
-## Phase 3: Convert Database Layer to PostgreSQL
+## Phase 3: Convert Database Layer to PostgreSQL (Completed)
 
 ### Files to modify
 1. `drizzle.config.ts` - Change dialect to `postgresql`
@@ -88,7 +89,7 @@ npm run db:push  # Push schema to Supabase
 
 ---
 
-## Phase 4: Migrate Existing Data
+## Phase 4: Migrate Existing Data (Completed)
 
 ### Create migration script
 - `scripts/migrate-data.ts` (new file)
@@ -114,226 +115,35 @@ npm run db:push  # Push schema to Supabase
 
 ---
 
-## Phase 5: Migrate API Routes to Supabase Edge Functions
+## Phase 5: Edge Functions (Skipped)
 
-### Current API routes to migrate (11 files, 26 handlers)
+**Decision:** Phase 5 (migrating API routes to Supabase Edge Functions) was intentionally skipped.
 
-| Route | Methods | Edge Function |
-|-------|---------|---------------|
-| `/api/budgets` | GET, PUT | `budgets` |
-| `/api/budgets/copy` | POST | `budgets-copy` |
-| `/api/budget-items` | POST, PUT, DELETE | `budget-items` |
-| `/api/budget-items/reorder` | PUT | `budget-items-reorder` |
-| `/api/transactions` | GET, POST, PUT, DELETE, PATCH | `transactions` |
-| `/api/transactions/split` | GET, POST, DELETE | `transactions-split` |
-| `/api/recurring-payments` | GET, POST, PUT, DELETE | `recurring-payments` |
-| `/api/recurring-payments/contribute` | POST | `recurring-payments-contribute` |
-| `/api/recurring-payments/reset` | POST | `recurring-payments-reset` |
-| `/api/teller/accounts` | GET, POST, DELETE | `teller-accounts` |
-| `/api/teller/sync` | GET, POST | `teller-sync` |
-
-### Edge Functions directory structure
-```
-supabase/
-  functions/
-    budgets/index.ts
-    budget-items/index.ts
-    transactions/index.ts
-    recurring-payments/index.ts
-    teller-accounts/index.ts
-    teller-sync/index.ts
-    _shared/
-      db.ts          # Shared database connection
-      cors.ts        # CORS headers
-```
-
-### Key considerations
-- Edge Functions use Deno, not Node.js
-- Drizzle ORM works with Deno
-- Teller certificates: store as Supabase secrets, load at runtime
-- Each function handles multiple HTTP methods via request.method
-
-### Create Supabase client helper
-- `lib/supabase.ts` (new file)
-
-```typescript
-import { createClient } from '@supabase/supabase-js';
-
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-```
-
-### Update frontend to call Edge Functions
-Replace all `fetch('/api/...')` calls with Supabase function invocations:
-```typescript
-// FROM:
-const res = await fetch('/api/budgets?month=1&year=2026');
-
-// TO:
-const { data, error } = await supabase.functions.invoke('budgets', {
-  body: { month: 1, year: 2026 }
-});
-```
-
-### Files requiring fetch updates
-- `app/page.tsx`
-- `components/BudgetSection.tsx`
-- `components/BudgetSummary.tsx`
-- `components/AddTransactionModal.tsx`
-- `components/SplitTransactionModal.tsx`
-- `app/recurring/page.tsx`
-- `app/settings/page.tsx`
-- `app/insights/page.tsx`
-- `lib/budgetHelpers.ts`
-
-### Verification
-```bash
-supabase functions serve  # Test locally
-supabase functions deploy # Deploy all functions
-# Test each endpoint via app
-```
+**Rationale:**
+- Next.js API routes already work with PostgreSQL — no functional reason to migrate
+- Edge Functions use Deno runtime, requiring significant code rewriting
+- Teller API integration (certificates, mTLS) would need special handling in Deno
+- Current architecture works for both web and mobile
+- Skipping avoids introducing complexity with no user-facing benefit
 
 ---
 
-## Phase 6: Add Capacitor
+## Mobile App (Native iOS — v1.9.0)
 
-### Install Capacitor
-```bash
-npm install @capacitor/core @capacitor/cli
-npx cap init "Budget App" com.yourname.budgetapp
-```
+Instead of using Capacitor to wrap the web app, a native iOS app was built with SwiftUI.
 
-### Create capacitor.config.ts
-```typescript
-import type { CapacitorConfig } from '@capacitor/cli';
+**See:** `ios/BudgetApp/` directory for the complete native iOS implementation.
 
-const config: CapacitorConfig = {
-  appId: 'com.yourname.budgetapp',
-  appName: 'Budget App',
-  webDir: 'out',
-  ios: { contentInset: 'automatic' },
-  android: {}
-};
-
-export default config;
-```
-
-### Update Next.js for static export
-In `next.config.ts`:
-```typescript
-const nextConfig: NextConfig = {
-  output: 'export',
-  images: { unoptimized: true },
-  trailingSlash: true,
-};
-```
-
-### Verification
-```bash
-npm run build  # Creates /out directory
-npx cap sync   # Copies to native projects
-```
+**iOS App Details:**
+- SwiftUI targeting iOS 17+
+- MVVM architecture
+- Clerk iOS SDK for authentication
+- URLSession + async/await for networking
+- Tab-based navigation: Budget, Transactions, Accounts, Insights
 
 ---
 
-## Phase 7: Configure iOS & Android
-
-### Add platforms
-```bash
-npm install @capacitor/ios @capacitor/android
-npx cap add ios
-npx cap add android
-```
-
-### iOS setup
-- Opens Xcode project in `ios/` directory
-- Set bundle ID, minimum iOS version (14.0+)
-- Configure signing for App Store
-
-### Android setup
-- Opens Android Studio project in `android/` directory
-- Set applicationId, minSdk (22+)
-- Configure signing for Play Store
-
-### Add npm scripts to package.json
-```json
-{
-  "scripts": {
-    "cap:sync": "npx cap sync",
-    "cap:ios": "npm run build && npx cap sync ios && npx cap open ios",
-    "cap:android": "npm run build && npx cap sync android && npx cap open android"
-  }
-}
-```
-
-### Verification
-```bash
-npm run cap:ios     # Build and open Xcode
-npm run cap:android # Build and open Android Studio
-# Run on simulator/emulator
-```
-
----
-
-## Phase 8: Mobile UI Adjustments
-
-### Safe area handling
-In `app/globals.css`:
-```css
-:root {
-  --safe-area-top: env(safe-area-inset-top);
-  --safe-area-bottom: env(safe-area-inset-bottom);
-}
-
-body {
-  padding-top: var(--safe-area-top);
-  padding-bottom: var(--safe-area-bottom);
-}
-```
-
-### Optional Capacitor plugins
-```bash
-npm install @capacitor/keyboard @capacitor/status-bar @capacitor/splash-screen
-npx cap sync
-```
-
-### Touch target sizing
-Ensure buttons/interactive elements are at least 44x44px for mobile.
-
-### Verification
-- Test on physical device or simulator with notch
-- Verify keyboard doesn't obscure inputs
-- Check status bar appearance
-
----
-
-## Summary: Files to Modify/Create
-
-### Modify
-- `package.json` - Dependencies
-- `drizzle.config.ts` - PostgreSQL dialect
-- `db/index.ts` - PostgreSQL client
-- `db/schema.ts` - PostgreSQL types
-- `next.config.ts` - Static export
-- `app/globals.css` - Safe areas
-- All components with fetch calls (listed in Phase 5)
-
-### Create
-- `.env.local` - Environment variables
-- `capacitor.config.ts` - Capacitor config
-- `lib/supabase.ts` - Supabase client
-- `scripts/migrate-data.ts` - Data migration
-- `supabase/functions/` - All Edge Functions
-
-### Delete (after migration complete)
-- `budget.db` - SQLite database file
-- `app/api/` - API routes (replaced by Edge Functions)
-
----
-
-## Actual Migration Status
+## Final Migration Status
 
 | Phase | Status | Notes |
 |-------|--------|-------|
@@ -341,19 +151,13 @@ Ensure buttons/interactive elements are at least 44x44px for mobile.
 | Phase 2: Dependencies | ✅ Done | `postgres` added, `better-sqlite3` removed |
 | Phase 3: PostgreSQL Schema | ✅ Done | All tables converted, numeric type fixes applied |
 | Phase 4: Data Migration | ✅ Done | `scripts/migrate-data.ts` — all 7 tables migrated |
-| Phase 5: Edge Functions | ⏭️ Skipped | Not needed — Next.js API routes work directly with Supabase PostgreSQL via Drizzle. Deno conversion would add complexity with no benefit. Teller mTLS certs would need special handling. |
-| Phase 6: Capacitor | ✅ Done | Live server mode (wraps deployed URL, no static export) |
-| Phase 7: iOS/Android | ⏳ Deferred | `@capacitor/ios` and `@capacitor/android` not yet installed |
-| Phase 8: Mobile UI | ⏳ Deferred | Waiting on Phase 7 |
+| Phase 5: Edge Functions | ⏭️ Skipped | Not needed — Next.js API routes work directly with Supabase PostgreSQL |
+| Mobile App | ✅ Done | Native iOS app built with SwiftUI (v1.9.0) |
 
 ## Verification Checklist
 
 - [x] Supabase project created with all tables
 - [x] Existing data migrated successfully
-- [x] ~~Edge Functions deployed~~ Skipped — using Next.js API routes directly
 - [x] Web app works with new backend
-- [ ] iOS app builds and runs (Phase 7 deferred)
-- [ ] Android app builds and runs (Phase 7 deferred)
 - [x] Bank sync works (via Next.js API routes → Supabase)
-- [ ] All CRUD operations work on mobile (pending Phase 7)
-- [ ] UI looks correct on mobile (pending Phase 8)
+- [x] iOS app built and functional (native SwiftUI)
