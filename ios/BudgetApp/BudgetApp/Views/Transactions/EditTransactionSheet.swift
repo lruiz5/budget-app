@@ -3,6 +3,8 @@ import SwiftUI
 struct EditTransactionSheet: View {
     let transaction: Transaction
     let onUpdate: () -> Void
+    var onTransactionUpdated: ((Transaction) -> Void)? = nil
+    var onTransactionDeleted: ((Int) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var editedDescription: String
@@ -16,9 +18,11 @@ struct EditTransactionSheet: View {
 
     @StateObject private var budgetVM = BudgetViewModel()
 
-    init(transaction: Transaction, onUpdate: @escaping () -> Void) {
+    init(transaction: Transaction, onUpdate: @escaping () -> Void, onTransactionUpdated: ((Transaction) -> Void)? = nil, onTransactionDeleted: ((Int) -> Void)? = nil) {
         self.transaction = transaction
         self.onUpdate = onUpdate
+        self.onTransactionUpdated = onTransactionUpdated
+        self.onTransactionDeleted = onTransactionDeleted
         self._editedDescription = State(initialValue: transaction.description)
         self._editedAmount = State(initialValue: "\(transaction.amount)")
         self._selectedDate = State(initialValue: transaction.date)
@@ -137,6 +141,7 @@ struct EditTransactionSheet: View {
                 Button("Delete", role: .destructive) {
                     Task {
                         _ = try? await TransactionService.shared.deleteTransaction(id: transaction.id)
+                        onTransactionDeleted?(transaction.id)
                         onUpdate()
                         dismiss()
                     }
@@ -163,8 +168,9 @@ struct EditTransactionSheet: View {
                     type: transactionType,
                     merchant: editedMerchant.isEmpty ? nil : editedMerchant
                 )
-                _ = try await TransactionService.shared.updateTransaction(request)
+                let updated = try await TransactionService.shared.updateTransaction(request)
                 await MainActor.run {
+                    onTransactionUpdated?(updated)
                     onUpdate()
                     dismiss()
                 }

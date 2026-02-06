@@ -134,7 +134,7 @@ Auth (Clerk), multi-user, onboarding (6-step), full budget CRUD, custom categori
 
 ## Working Features (iOS)
 
-Auth (Clerk), budget viewing with categories/items, month navigation, transaction viewing + categorization + editing, accounts viewing, pull-to-refresh, sticky "Left to Budget" banner, progress bar dividers
+Auth (Clerk), budget viewing with categories/items, month navigation, transaction viewing + categorization + editing, transaction creation (from item detail or transactions tab), budget item detail (progress ring, edit name/planned, view/add/edit transactions), accounts viewing, pull-to-refresh, sticky "Left to Budget" banner, progress bar dividers
 
 ## Common Issues
 
@@ -165,11 +165,9 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 **Web:** v1.9.0 — stable, production-ready on Vercel
 
-**iOS:** v0.2.0 — pre-release. Has viewing + transaction categorization + budget UI improvements. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.3.0 — pre-release. Budget item CRUD, transaction creation/editing from item detail, planned amount editing. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 
 **Next iOS work:**
-- Budget item creation/editing + planned amount editing
-- Transaction creation
 - Split transaction support
 - Recurring payment management
 - Bank account linking (Teller)

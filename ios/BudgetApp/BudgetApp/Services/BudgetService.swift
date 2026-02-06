@@ -18,7 +18,7 @@ actor BudgetService {
         ])
     }
 
-    func updateBudget(_ budget: BudgetUpdateRequest) async throws -> Budget {
+    func updateBudget(_ budget: BudgetUpdateRequest) async throws -> SuccessResponse {
         try await api.put("/api/budgets", body: budget)
     }
 
