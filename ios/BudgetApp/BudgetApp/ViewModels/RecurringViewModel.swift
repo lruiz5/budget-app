@@ -51,14 +51,15 @@ class RecurringViewModel: ObservableObject {
 
     // MARK: - Update Payment
 
-    func updatePayment(id: Int, name: String?, amount: Decimal?, frequency: PaymentFrequency?, nextDueDate: Date?) async {
+    func updatePayment(id: Int, name: String?, amount: Decimal?, frequency: PaymentFrequency?, nextDueDate: Date?, categoryType: String? = nil) async {
         do {
             let request = UpdateRecurringRequest(
                 id: id,
                 name: name,
                 amount: amount,
                 frequency: frequency,
-                nextDueDate: nextDueDate
+                nextDueDate: nextDueDate,
+                categoryType: categoryType
             )
             let updated = try await recurringService.updateRecurringPayment(request)
 

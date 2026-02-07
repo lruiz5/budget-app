@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate splits sum to parent amount
-    const splitTotal = splits.reduce((sum, s) => sum + s.amount, 0);
+    const splitTotal = splits.reduce((sum, s) => sum + parseFloat(String(s.amount)), 0);
     const parentAmount = parseFloat(String(parentTxn.amount));
     if (Math.abs(splitTotal - parentAmount) > 0.01) {
       return NextResponse.json({

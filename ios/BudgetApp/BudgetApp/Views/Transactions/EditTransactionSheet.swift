@@ -15,6 +15,7 @@ struct EditTransactionSheet: View {
     @State private var selectedBudgetItemId: Int?
     @State private var isSaving = false
     @State private var showDeleteConfirmation = false
+    @State private var showUnsplitConfirmation = false
 
     @StateObject private var budgetVM = BudgetViewModel()
 
@@ -54,52 +55,83 @@ struct EditTransactionSheet: View {
                     DatePicker("Date", selection: $selectedDate, displayedComponents: .date)
                 }
 
-                Section("Category") {
-                    if budgetVM.isLoading {
-                        HStack {
-                            Spacer()
-                            ProgressView()
-                            Spacer()
-                        }
-                    } else if let error = budgetVM.error {
-                        VStack(spacing: 8) {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                            Button("Retry") {
-                                Task { await budgetVM.loadBudget() }
-                            }
-                        }
-                    } else if let budget = budgetVM.budget {
-                        // "None" option to uncategorize
-                        Button {
-                            selectedBudgetItemId = nil
-                        } label: {
-                            HStack {
-                                Text("Uncategorized")
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                if selectedBudgetItemId == nil {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.green)
+                if transaction.isSplit {
+                    Section("Split Transaction") {
+                        Label("This transaction is split across multiple budget items", systemImage: "arrow.triangle.branch")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        if let splits = transaction.splits {
+                            ForEach(splits) { split in
+                                HStack {
+                                    Text(split.description ?? "Split")
+                                    Spacer()
+                                    Text(formatCurrency(split.amount))
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
+                    }
 
-                        ForEach(budget.sortedCategoryKeys, id: \.self) { key in
-                            if let category = budget.categories[key] {
-                                ForEach(category.items) { item in
-                                    Button {
-                                        selectedBudgetItemId = item.id
-                                    } label: {
-                                        HStack {
-                                            Text(category.categoryEmoji)
-                                            Text(item.name)
-                                                .foregroundStyle(.primary)
-                                            Spacer()
-                                            if selectedBudgetItemId == item.id {
-                                                Image(systemName: "checkmark")
-                                                    .foregroundStyle(.green)
+                    Section {
+                        Button(role: .destructive) {
+                            showUnsplitConfirmation = true
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Label("Remove Splits", systemImage: "arrow.uturn.backward")
+                                Spacer()
+                            }
+                        }
+                    }
+                } else {
+                    Section("Category") {
+                        if budgetVM.isLoading {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                        } else if let error = budgetVM.error {
+                            VStack(spacing: 8) {
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                Button("Retry") {
+                                    Task { await budgetVM.loadBudget() }
+                                }
+                            }
+                        } else if let budget = budgetVM.budget {
+                            // "None" option to uncategorize
+                            Button {
+                                selectedBudgetItemId = nil
+                            } label: {
+                                HStack {
+                                    Text("Uncategorized")
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    if selectedBudgetItemId == nil {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.green)
+                                    }
+                                }
+                            }
+
+                            ForEach(budget.sortedCategoryKeys, id: \.self) { key in
+                                if let category = budget.categories[key] {
+                                    ForEach(category.items) { item in
+                                        Button {
+                                            selectedBudgetItemId = item.id
+                                        } label: {
+                                            HStack {
+                                                Text(category.categoryEmoji)
+                                                Text(item.name)
+                                                    .foregroundStyle(.primary)
+                                                Spacer()
+                                                if selectedBudgetItemId == item.id {
+                                                    Image(systemName: "checkmark")
+                                                        .foregroundStyle(.green)
+                                                }
                                             }
                                         }
                                     }
@@ -137,6 +169,18 @@ struct EditTransactionSheet: View {
             .task {
                 await budgetVM.loadBudget()
             }
+            .confirmationDialog("Remove Splits", isPresented: $showUnsplitConfirmation) {
+                Button("Remove Splits", role: .destructive) {
+                    Task {
+                        _ = try? await TransactionService.shared.deleteSplits(parentTransactionId: transaction.id)
+                        onUpdate()
+                        dismiss()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will remove all splits and return the transaction to uncategorized.")
+            }
             .confirmationDialog("Delete Transaction", isPresented: $showDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
                     Task {
@@ -151,6 +195,13 @@ struct EditTransactionSheet: View {
                 Text("Are you sure you want to delete this transaction?")
             }
         }
+    }
+
+    private func formatCurrency(_ value: Decimal) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        return formatter.string(from: value as NSNumber) ?? "$0.00"
     }
 
     private func saveTransaction() {

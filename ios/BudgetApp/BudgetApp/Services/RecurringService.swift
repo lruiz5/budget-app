@@ -12,37 +12,47 @@ actor RecurringService {
     // MARK: - CRUD
 
     func getRecurringPayments() async throws -> [RecurringPayment] {
-        try await api.get("/api/recurring-payments")
+        try await api.get(Constants.API.Endpoints.recurringPayments)
     }
 
     func createRecurringPayment(_ request: CreateRecurringRequest) async throws -> RecurringPayment {
-        try await api.post("/api/recurring-payments", body: request)
+        try await api.post(Constants.API.Endpoints.recurringPayments, body: request)
     }
 
     func updateRecurringPayment(_ request: UpdateRecurringRequest) async throws -> RecurringPayment {
-        try await api.put("/api/recurring-payments", body: request)
+        try await api.put(Constants.API.Endpoints.recurringPayments, body: request)
     }
 
     func deleteRecurringPayment(id: Int) async throws -> SuccessResponse {
-        try await api.delete("/api/recurring-payments", queryParams: ["id": String(id)])
+        try await api.delete(Constants.API.Endpoints.recurringPayments, queryParams: ["id": String(id)])
     }
 
     // MARK: - Contribute
 
     func contribute(paymentId: Int, amount: Decimal) async throws -> RecurringPayment {
-        try await api.post("/api/recurring-payments/contribute", body: ContributeRequest(
-            paymentId: paymentId,
-            amount: String(describing: amount)
-        ))
+        let response: RecurringPaymentResponse = try await api.post(
+            Constants.API.Endpoints.recurringContribute,
+            body: ContributeRequest(id: paymentId, amount: String(describing: amount))
+        )
+        return response.payment
     }
 
     // MARK: - Reset
 
     func resetFunding(paymentId: Int) async throws -> RecurringPayment {
-        try await api.post("/api/recurring-payments/reset", body: ResetFundingRequest(
-            paymentId: paymentId
-        ))
+        let response: RecurringPaymentResponse = try await api.post(
+            Constants.API.Endpoints.recurringReset,
+            body: ResetFundingRequest(id: paymentId)
+        )
+        return response.payment
     }
+}
+
+// MARK: - Response Wrapper
+
+struct RecurringPaymentResponse: Decodable {
+    let success: Bool
+    let payment: RecurringPayment
 }
 
 // MARK: - Request Types
@@ -51,7 +61,7 @@ struct CreateRecurringRequest: Encodable {
     let name: String
     let amount: String
     let frequency: String
-    let nextDueDate: Date
+    let nextDueDate: String
     let categoryType: String?
     let budgetItemId: Int?
 
@@ -59,7 +69,10 @@ struct CreateRecurringRequest: Encodable {
         self.name = name
         self.amount = String(describing: amount)
         self.frequency = frequency.rawValue
-        self.nextDueDate = nextDueDate
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        self.nextDueDate = formatter.string(from: nextDueDate)
         self.categoryType = categoryType
         self.budgetItemId = budgetItemId
     }
@@ -70,7 +83,7 @@ struct UpdateRecurringRequest: Encodable {
     let name: String?
     let amount: String?
     let frequency: String?
-    let nextDueDate: Date?
+    let nextDueDate: String?
     let categoryType: String?
     let isActive: Bool?
 
@@ -79,17 +92,39 @@ struct UpdateRecurringRequest: Encodable {
         self.name = name
         self.amount = amount.map { String(describing: $0) }
         self.frequency = frequency?.rawValue
-        self.nextDueDate = nextDueDate
+        if let nextDueDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            self.nextDueDate = formatter.string(from: nextDueDate)
+        } else {
+            self.nextDueDate = nil
+        }
         self.categoryType = categoryType
         self.isActive = isActive
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(name, forKey: .name)
+        try container.encodeIfPresent(amount, forKey: .amount)
+        try container.encodeIfPresent(frequency, forKey: .frequency)
+        try container.encodeIfPresent(nextDueDate, forKey: .nextDueDate)
+        try container.encodeIfPresent(categoryType, forKey: .categoryType)
+        try container.encodeIfPresent(isActive, forKey: .isActive)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, amount, frequency, nextDueDate, categoryType, isActive
     }
 }
 
 struct ContributeRequest: Encodable {
-    let paymentId: Int
+    let id: Int
     let amount: String
 }
 
 struct ResetFundingRequest: Encodable {
-    let paymentId: Int
+    let id: Int
 }

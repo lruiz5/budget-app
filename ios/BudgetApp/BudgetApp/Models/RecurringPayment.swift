@@ -107,4 +107,13 @@ enum PaymentFrequency: String, Codable, CaseIterable {
         case .annually: return "Annually"
         }
     }
+
+    var monthsInCycle: Int {
+        switch self {
+        case .monthly: return 1
+        case .quarterly: return 3
+        case .semiAnnually: return 6
+        case .annually: return 12
+        }
+    }
 }

@@ -271,13 +271,16 @@ struct BudgetItemDetail: View {
                 }
             }
 
-            if transactions.isEmpty {
+            let splitTxns = item.splitTransactions ?? []
+
+            if transactions.isEmpty && splitTxns.isEmpty {
                 Text("No transactions yet")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
+                // Direct transactions
                 let sorted = transactions.sorted(by: { $0.date > $1.date })
                 ForEach(sorted) { transaction in
                     Button {
@@ -309,7 +312,35 @@ struct BudgetItemDetail: View {
                     .buttonStyle(.plain)
                     .padding(.vertical, 8)
 
-                    if transaction.id != sorted.last?.id {
+                    if transaction.id != sorted.last?.id || !splitTxns.isEmpty {
+                        Divider()
+                    }
+                }
+
+                // Split transactions
+                ForEach(splitTxns) { split in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 4) {
+                                Text(split.description ?? "Split")
+                                    .font(.body)
+                                    .lineLimit(1)
+
+                                Text("(split)")
+                                    .font(.caption)
+                                    .foregroundStyle(.purple)
+                            }
+                        }
+
+                        Spacer()
+
+                        Text(formatCurrency(split.amount))
+                            .font(.body)
+                            .fontWeight(.medium)
+                    }
+                    .padding(.vertical, 8)
+
+                    if split.id != splitTxns.last?.id {
                         Divider()
                     }
                 }

@@ -118,6 +118,14 @@ struct SplitTransaction: Codable, Identifiable {
     var amount: Decimal
     let description: String?
 
+    init(id: Int, parentTransactionId: Int, budgetItemId: Int, amount: Decimal, description: String? = nil) {
+        self.id = id
+        self.parentTransactionId = parentTransactionId
+        self.budgetItemId = budgetItemId
+        self.amount = amount
+        self.description = description
+    }
+
     enum CodingKeys: String, CodingKey {
         case id, parentTransactionId, budgetItemId, amount, description
     }

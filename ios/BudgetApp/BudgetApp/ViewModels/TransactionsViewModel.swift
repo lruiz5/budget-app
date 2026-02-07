@@ -54,6 +54,19 @@ class TransactionsViewModel: ObservableObject {
                 }
             }
             
+            // Collect parent transaction IDs that have been split (so they don't show as uncategorized)
+            var splitParentIds = Set<Int>()
+            for category in budget.categories.values {
+                for item in category.items {
+                    for split in item.splitTransactions ?? [] {
+                        splitParentIds.insert(split.parentTransactionId)
+                    }
+                }
+            }
+
+            // Remove split parents from uncategorized
+            uncategorizedTransactions.removeAll { splitParentIds.contains($0.id) }
+
             // Filter out deleted transactions and any that are in the uncategorized list
             let uncategorizedIds = Set(uncategorizedTransactions.map { $0.id })
             categorizedTransactions = categorized.filter { !uncategorizedIds.contains($0.id) && !$0.isDeleted }
@@ -188,5 +201,26 @@ class TransactionsViewModel: ObservableObject {
 
     func categorizeTransaction(transactionId: Int, budgetItemId: Int) async {
         await updateTransaction(id: transactionId, budgetItemId: budgetItemId, date: nil, description: nil, amount: nil, type: nil)
+    }
+
+    // MARK: - Split Transactions
+
+    func splitTransaction(transactionId: Int, splits: [SplitInput]) async {
+        do {
+            let request = CreateSplitsRequest(parentTransactionId: transactionId, splits: splits)
+            _ = try await transactionService.createSplits(request)
+            await loadTransactions()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func unsplitTransaction(transactionId: Int, budgetItemId: Int? = nil) async {
+        do {
+            _ = try await transactionService.deleteSplits(parentTransactionId: transactionId, budgetItemId: budgetItemId)
+            await loadTransactions()
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 }
