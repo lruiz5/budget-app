@@ -47,18 +47,21 @@ actor TransactionService {
 
     func getSplits(parentTransactionId: Int) async throws -> [SplitTransaction] {
         try await api.get("/api/transactions/split", queryParams: [
-            "parentTransactionId": String(parentTransactionId)
+            "transactionId": String(parentTransactionId)
         ])
     }
 
     func createSplits(_ request: CreateSplitsRequest) async throws -> [SplitTransaction] {
-        try await api.post("/api/transactions/split", body: request)
+        let response: CreateSplitsResponse = try await api.post("/api/transactions/split", body: request)
+        return response.splits
     }
 
-    func deleteSplits(parentTransactionId: Int) async throws -> SuccessResponse {
-        try await api.delete("/api/transactions/split", queryParams: [
-            "parentTransactionId": String(parentTransactionId)
-        ])
+    func deleteSplits(parentTransactionId: Int, budgetItemId: Int? = nil) async throws -> SuccessResponse {
+        var params: [String: String] = ["transactionId": String(parentTransactionId)]
+        if let itemId = budgetItemId {
+            params["budgetItemId"] = String(itemId)
+        }
+        return try await api.delete("/api/transactions/split", queryParams: params)
     }
 }
 
@@ -134,19 +137,23 @@ struct RestoreTransactionRequest: Encodable {
     let action: String = "restore"
 }
 
+struct CreateSplitsResponse: Decodable {
+    let success: Bool
+    let splits: [SplitTransaction]
+}
+
 struct CreateSplitsRequest: Encodable {
     let parentTransactionId: Int
     let splits: [SplitInput]
+
+    enum CodingKeys: String, CodingKey {
+        case parentTransactionId = "transactionId"
+        case splits
+    }
 }
 
 struct SplitInput: Encodable {
     let budgetItemId: Int
-    let amount: String
+    let amount: Decimal
     let description: String?
-
-    init(budgetItemId: Int, amount: Decimal, description: String? = nil) {
-        self.budgetItemId = budgetItemId
-        self.amount = String(describing: amount)
-        self.description = description
-    }
 }

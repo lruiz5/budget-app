@@ -1,10 +1,25 @@
 import SwiftUI
 
+// MARK: - Active Sheet Enum (single-sheet pattern)
+
+enum RecurringActiveSheet: Identifiable {
+    case addPayment
+    case editPayment(RecurringPayment)
+
+    var id: String {
+        switch self {
+        case .addPayment: return "add"
+        case .editPayment(let p): return "edit-\(p.id)"
+        }
+    }
+}
+
+// MARK: - Main View
+
 struct RecurringPaymentsView: View {
     @StateObject private var viewModel = RecurringViewModel()
     @Environment(\.dismiss) private var dismiss
-    @State private var showAddPayment = false
-    @State private var selectedPayment: RecurringPayment?
+    @State private var activeSheet: RecurringActiveSheet?
 
     var body: some View {
         NavigationStack {
@@ -25,7 +40,7 @@ struct RecurringPaymentsView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showAddPayment = true
+                        activeSheet = .addPayment
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -37,21 +52,21 @@ struct RecurringPaymentsView: View {
             .task {
                 await viewModel.loadPayments()
             }
-            .sheet(isPresented: $showAddPayment) {
-                AddRecurringPaymentSheet(onSave: { name, amount, frequency, dueDate, categoryType in
-                    await viewModel.createPayment(
-                        name: name,
-                        amount: amount,
-                        frequency: frequency,
-                        nextDueDate: dueDate,
-                        categoryType: categoryType
-                    )
-                })
-            }
-            .sheet(item: $selectedPayment) { payment in
-                RecurringPaymentDetailSheet(payment: payment, onUpdate: {
-                    Task { await viewModel.loadPayments() }
-                })
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .addPayment:
+                    AddRecurringPaymentSheet(onSave: { name, amount, frequency, dueDate, categoryType in
+                        await viewModel.createPayment(
+                            name: name,
+                            amount: amount,
+                            frequency: frequency,
+                            nextDueDate: dueDate,
+                            categoryType: categoryType
+                        )
+                    })
+                case .editPayment(let payment):
+                    EditRecurringPaymentSheet(payment: payment, viewModel: viewModel)
+                }
             }
         }
     }
@@ -60,14 +75,13 @@ struct RecurringPaymentsView: View {
 
     private var paymentsList: some View {
         List {
-            // Upcoming Section
             if !viewModel.upcomingPayments.isEmpty {
                 Section("Upcoming (30 days)") {
                     ForEach(viewModel.upcomingPayments) { payment in
                         RecurringPaymentRow(payment: payment)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                selectedPayment = payment
+                                activeSheet = .editPayment(payment)
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
@@ -82,13 +96,12 @@ struct RecurringPaymentsView: View {
                 }
             }
 
-            // Other Payments Section
             Section(viewModel.upcomingPayments.isEmpty ? "All Payments" : "Other Payments") {
                 ForEach(viewModel.payments.filter { p in !viewModel.upcomingPayments.contains(where: { $0.id == p.id }) }) { payment in
                     RecurringPaymentRow(payment: payment)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            selectedPayment = payment
+                            activeSheet = .editPayment(payment)
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
@@ -114,7 +127,7 @@ struct RecurringPaymentsView: View {
             Text("Add recurring bills and subscriptions to track your upcoming expenses")
         } actions: {
             Button("Add Payment") {
-                showAddPayment = true
+                activeSheet = .addPayment
             }
             .buttonStyle(.borderedProminent)
         }
@@ -126,46 +139,80 @@ struct RecurringPaymentsView: View {
 struct RecurringPaymentRow: View {
     let payment: RecurringPayment
 
+    private var dueDateColor: Color {
+        if payment.daysUntilDue <= 7 { return .red }
+        if payment.daysUntilDue <= 30 { return .orange }
+        return .secondary
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(payment.name)
-                        .font(.body)
-                        .fontWeight(.medium)
+                // Category emoji + name
+                HStack(spacing: 6) {
+                    if let category = payment.categoryType,
+                       let emoji = Constants.categoryEmojis[category] {
+                        Text(emoji)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(payment.name)
+                            .font(.body)
+                            .fontWeight(.medium)
 
-                    Text(payment.frequency.displayName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        HStack(spacing: 4) {
+                            Text(payment.frequency.displayName)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            if payment.frequency != .monthly {
+                                Text("(\(formatCurrency(payment.monthlyContribution))/mo)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
 
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(formatCurrency(payment.amount))
-                        .font(.body)
-                        .fontWeight(.medium)
+                    HStack(spacing: 4) {
+                        Text(formatCurrency(payment.amount))
+                            .font(.body)
+                            .fontWeight(.medium)
+
+                        if payment.progress >= 1.0 {
+                            Text("Paid")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(.green, in: Capsule())
+                        }
+                    }
 
                     Text("Due \(formatDate(payment.nextDueDate))")
                         .font(.caption)
-                        .foregroundStyle(payment.isUpcoming ? .orange : .secondary)
+                        .foregroundStyle(dueDateColor)
                 }
             }
 
-            // Progress Bar
-            ProgressView(value: payment.progress)
-                .tint(payment.progress >= 1.0 ? .green : .blue)
+            if payment.progress < 1.0 {
+                ProgressView(value: payment.progress)
+                    .tint(.blue)
 
-            HStack {
-                Text("\(formatCurrency(payment.fundedAmount)) saved")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack {
+                    Text("\(formatCurrency(payment.fundedAmount)) saved")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
-                Spacer()
+                    Spacer()
 
-                Text("\(formatCurrency(payment.remaining)) to go")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    Text("\(formatCurrency(payment.remaining)) to go")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.vertical, 4)
@@ -198,6 +245,10 @@ struct AddRecurringPaymentSheet: View {
     @State private var categoryType = ""
     @State private var isSaving = false
 
+    private var categories: [String] {
+        Constants.defaultCategories.filter { $0 != "income" }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -216,9 +267,23 @@ struct AddRecurringPaymentSheet: View {
                     DatePicker("Next Due Date", selection: $nextDueDate, displayedComponents: .date)
                 }
 
+                if frequency != .monthly, let amountDecimal = Decimal(string: amount), amountDecimal > 0 {
+                    Section {
+                        LabeledContent("Monthly Contribution", value: formatCurrency(amountDecimal / Decimal(frequency.monthsInCycle)))
+                    }
+                }
+
                 Section("Category (Optional)") {
-                    TextField("Category Type", text: $categoryType)
-                        .autocapitalization(.none)
+                    Picker("Category", selection: $categoryType) {
+                        Text("None").tag("")
+                        ForEach(categories, id: \.self) { cat in
+                            HStack {
+                                Text(Constants.categoryEmojis[cat] ?? "")
+                                Text(cat.capitalized)
+                            }
+                            .tag(cat)
+                        }
+                    }
                 }
             }
             .navigationTitle("Add Payment")
@@ -248,25 +313,84 @@ struct AddRecurringPaymentSheet: View {
             }
         }
     }
+
+    private func formatCurrency(_ value: Decimal) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        return formatter.string(from: value as NSNumber) ?? "$0.00"
+    }
 }
 
-// MARK: - Recurring Payment Detail Sheet
+// MARK: - Edit Recurring Payment Sheet
 
-struct RecurringPaymentDetailSheet: View {
+struct EditRecurringPaymentSheet: View {
     let payment: RecurringPayment
-    let onUpdate: () -> Void
+    @ObservedObject var viewModel: RecurringViewModel
     @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String
+    @State private var amount: String
+    @State private var frequency: PaymentFrequency
+    @State private var nextDueDate: Date
+    @State private var categoryType: String
+    @State private var isSaving = false
+    @State private var showDeleteConfirmation = false
+
+    private var categories: [String] {
+        Constants.defaultCategories.filter { $0 != "income" }
+    }
+
+    private var hasChanges: Bool {
+        name != payment.name ||
+        Decimal(string: amount) != payment.amount ||
+        frequency != payment.frequency ||
+        !Calendar.current.isDate(nextDueDate, inSameDayAs: payment.nextDueDate) ||
+        categoryType != (payment.categoryType ?? "")
+    }
+
+    init(payment: RecurringPayment, viewModel: RecurringViewModel) {
+        self.payment = payment
+        self.viewModel = viewModel
+        _name = State(initialValue: payment.name)
+        _amount = State(initialValue: "\(payment.amount)")
+        _frequency = State(initialValue: payment.frequency)
+        _nextDueDate = State(initialValue: payment.nextDueDate)
+        _categoryType = State(initialValue: payment.categoryType ?? "")
+    }
 
     var body: some View {
         NavigationStack {
-            List {
+            Form {
                 Section {
-                    LabeledContent("Amount", value: formatCurrency(payment.amount))
-                    LabeledContent("Frequency", value: payment.frequency.displayName)
-                    LabeledContent("Next Due", value: formatDate(payment.nextDueDate))
-                    LabeledContent("Days Until Due", value: "\(payment.daysUntilDue)")
+                    TextField("Name", text: $name)
+
+                    TextField("Amount", text: $amount)
+                        .keyboardType(.decimalPad)
+
+                    Picker("Frequency", selection: $frequency) {
+                        ForEach(PaymentFrequency.allCases, id: \.self) { freq in
+                            Text(freq.displayName).tag(freq)
+                        }
+                    }
+
+                    DatePicker("Next Due Date", selection: $nextDueDate, displayedComponents: .date)
                 }
 
+                Section("Category") {
+                    Picker("Category", selection: $categoryType) {
+                        Text("None").tag("")
+                        ForEach(categories, id: \.self) { cat in
+                            HStack {
+                                Text(Constants.categoryEmojis[cat] ?? "")
+                                Text(cat.capitalized)
+                            }
+                            .tag(cat)
+                        }
+                    }
+                }
+
+                // Funding Progress
                 Section("Funding Progress") {
                     VStack(alignment: .leading, spacing: 8) {
                         ProgressView(value: payment.progress)
@@ -285,16 +409,70 @@ struct RecurringPaymentDetailSheet: View {
                         }
                     }
 
-                    LabeledContent("Monthly Contribution", value: formatCurrency(payment.monthlyContribution))
+                    if frequency != .monthly, let amountDecimal = Decimal(string: amount), amountDecimal > 0 {
+                        LabeledContent("Monthly Contribution", value: formatCurrency(amountDecimal / Decimal(frequency.monthsInCycle)))
+                    }
+                }
+
+                // Actions
+                Section {
+                    Button {
+                        Task {
+                            await viewModel.resetFunding(paymentId: payment.id)
+                            dismiss()
+                        }
+                    } label: {
+                        Label("Mark as Paid & Reset", systemImage: "checkmark.circle")
+                    }
+
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label("Delete Payment", systemImage: "trash")
+                    }
                 }
             }
             .navigationTitle(payment.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save()
+                    }
+                    .disabled(!hasChanges || name.isEmpty || amount.isEmpty || isSaving)
                 }
             }
+            .confirmationDialog("Delete Payment", isPresented: $showDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    Task {
+                        await viewModel.deletePayment(id: payment.id)
+                        dismiss()
+                    }
+                }
+            } message: {
+                Text("Are you sure you want to delete \"\(payment.name)\"? This cannot be undone.")
+            }
+        }
+    }
+
+    private func save() {
+        guard let amountDecimal = Decimal(string: amount) else { return }
+        let currentCategory = payment.categoryType ?? ""
+        isSaving = true
+        Task {
+            await viewModel.updatePayment(
+                id: payment.id,
+                name: name != payment.name ? name : nil,
+                amount: amountDecimal != payment.amount ? amountDecimal : nil,
+                frequency: frequency != payment.frequency ? frequency : nil,
+                nextDueDate: !Calendar.current.isDate(nextDueDate, inSameDayAs: payment.nextDueDate) ? nextDueDate : nil,
+                categoryType: categoryType != currentCategory ? (categoryType.isEmpty ? nil : categoryType) : nil
+            )
+            isSaving = false
+            dismiss()
         }
     }
 
@@ -303,12 +481,6 @@ struct RecurringPaymentDetailSheet: View {
         formatter.numberStyle = .currency
         formatter.currencyCode = "USD"
         return formatter.string(from: value as NSNumber) ?? "$0.00"
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: date)
     }
 }
 

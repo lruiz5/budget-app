@@ -6,12 +6,14 @@ enum TransactionActiveSheet: Identifiable {
     case addTransaction
     case editTransaction(Transaction)
     case categorizeTransaction(Transaction)
+    case splitTransaction(Transaction)
 
     var id: String {
         switch self {
         case .addTransaction: return "add"
         case .editTransaction(let t): return "edit-\(t.id)"
         case .categorizeTransaction(let t): return "categorize-\(t.id)"
+        case .splitTransaction(let t): return "split-\(t.id)"
         }
     }
 }
@@ -82,6 +84,14 @@ struct TransactionsView: View {
                 CategorizeTransactionSheet(transaction: transaction) { budgetItemId in
                     await viewModel.categorizeTransaction(transactionId: transaction.id, budgetItemId: budgetItemId)
                 }
+            case .splitTransaction(let transaction):
+                SplitTransactionSheet(
+                    transaction: transaction,
+                    existingSplits: transaction.splits ?? [],
+                    onComplete: {
+                        Task { await viewModel.loadTransactions() }
+                    }
+                )
             }
         }
     }
@@ -120,7 +130,11 @@ struct TransactionsView: View {
                         TransactionRow(transaction: transaction)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                activeSheet = .editTransaction(transaction)
+                                if transaction.isSplit {
+                                    activeSheet = .splitTransaction(transaction)
+                                } else {
+                                    activeSheet = .editTransaction(transaction)
+                                }
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 if selectedFilter == .deleted {
@@ -164,6 +178,13 @@ struct TransactionsView: View {
                                         Label("Categorize", systemImage: "folder")
                                     }
                                     .tint(.orange)
+
+                                    Button {
+                                        activeSheet = .splitTransaction(transaction)
+                                    } label: {
+                                        Label("Split", systemImage: "arrow.triangle.branch")
+                                    }
+                                    .tint(.purple)
                                 }
                             }
                     }
@@ -256,7 +277,7 @@ struct TransactionRow: View {
                 } else if transaction.isSplit {
                     Label("Split", systemImage: "arrow.triangle.branch")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.purple)
                 } else if transaction.budgetItemId == nil, transaction.suggestedBudgetItemId != nil {
                     Text("Swipe right to categorize")
                         .font(.caption)
