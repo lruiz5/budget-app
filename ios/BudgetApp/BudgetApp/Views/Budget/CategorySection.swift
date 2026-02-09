@@ -7,6 +7,7 @@ struct CategorySection: View {
     let onDeleteItem: ((Int) -> Void)?
     let onReorderItems: (([Int]) -> Void)?
     var onUpdatePlanned: ((Int, Decimal) -> Void)?
+    let onDeleteCategory: (() -> Void)?
 
     @State private var isExpanded = true
     @State private var orderedItems: [BudgetItem] = []
@@ -98,6 +99,15 @@ struct CategorySection: View {
             .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if let onDeleteCategory {
+                Button(role: .destructive) {
+                    onDeleteCategory()
+                } label: {
+                    Label("Delete Category", systemImage: "trash")
+                }
+            }
+        }
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
@@ -235,7 +245,8 @@ struct BudgetItemRow: View {
             onAddItem: { },
             onDeleteItem: nil,
             onReorderItems: nil,
-            onUpdatePlanned: nil
+            onUpdatePlanned: nil,
+            onDeleteCategory: nil
         )
     }
 }

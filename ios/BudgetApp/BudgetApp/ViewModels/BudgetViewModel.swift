@@ -66,18 +66,20 @@ class BudgetViewModel: ObservableObject {
         }
 
         do {
-            budget = try await budgetService.copyBudget(
+            _ = try await budgetService.copyBudget(
                 fromMonth: fromMonth,
                 fromYear: fromYear,
                 toMonth: selectedMonth,
                 toYear: selectedYear
             )
         } catch {
-            // If copy fails (no previous budget), just reload to get the new empty budget
-            await loadBudget()
+            #if DEBUG
+            print("Copy from previous month failed: \(error)")
+            #endif
         }
 
-        isLoading = false
+        // Always reload to get the full budget with categories
+        await loadBudget()
     }
 
     // MARK: - Update Buffer

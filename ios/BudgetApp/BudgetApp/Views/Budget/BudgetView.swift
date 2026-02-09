@@ -5,11 +5,15 @@ import SwiftUI
 enum BudgetActiveSheet: Identifiable {
     case itemDetail(BudgetItem)
     case addItem(categoryId: Int)
+    case addCategory
+    case resetBudget
 
     var id: String {
         switch self {
         case .itemDetail(let item): return "detail-\(item.id)"
         case .addItem(let catId): return "add-\(catId)"
+        case .addCategory: return "add-category"
+        case .resetBudget: return "reset-budget"
         }
     }
 }
@@ -17,6 +21,8 @@ enum BudgetActiveSheet: Identifiable {
 struct BudgetView: View {
     @StateObject private var viewModel = BudgetViewModel()
     @State private var activeSheet: BudgetActiveSheet?
+    @State private var categoryToDelete: BudgetCategory?
+    @State private var showDeleteCategoryConfirmation = false
 
     var body: some View {
         Group {
@@ -72,7 +78,28 @@ struct BudgetView: View {
                 AddBudgetItemSheet(categoryId: categoryId, onSave: {
                     Task { await viewModel.loadBudget() }
                 })
+            case .addCategory:
+                AddCategorySheet(onSave: { name, emoji in
+                    await viewModel.createCategory(name: name, emoji: emoji)
+                })
+            case .resetBudget:
+                if let budget = viewModel.budget {
+                    ResetBudgetSheet(budget: budget, onReset: { mode in
+                        await viewModel.resetBudget(mode: mode)
+                    })
+                }
             }
+        }
+        .confirmationDialog(
+            "Delete Category",
+            isPresented: $showDeleteCategoryConfirmation,
+            presenting: categoryToDelete
+        ) { category in
+            Button("Delete \"\(category.name)\"", role: .destructive) {
+                Task { await viewModel.deleteCategory(id: category.id) }
+            }
+        } message: { category in
+            Text("This will permanently delete \"\(category.name)\" and all its budget items. Transactions will be uncategorized.")
         }
     }
 
@@ -106,8 +133,34 @@ struct BudgetView: View {
                     },
                     onUpdatePlanned: { id, planned in
                         Task { await viewModel.updateItem(id: id, name: nil, planned: planned) }
-                    }
+                    },
+                    onDeleteCategory: isCustomCategory(category) ? {
+                        categoryToDelete = category
+                        showDeleteCategoryConfirmation = true
+                    } : nil
                 )
+            }
+
+            // Add Category button
+            Section {
+                Button {
+                    activeSheet = .addCategory
+                } label: {
+                    Label("Add Category", systemImage: "plus.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.blue)
+                }
+            }
+
+            // Reset Budget button
+            Section {
+                Button {
+                    activeSheet = .resetBudget
+                } label: {
+                    Label("Reset Budget", systemImage: "arrow.counterclockwise")
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                }
             }
         }
         .listStyle(.insetGrouped)
@@ -147,6 +200,10 @@ struct BudgetView: View {
     }
 
     // MARK: - Helpers
+
+    private func isCustomCategory(_ category: BudgetCategory) -> Bool {
+        !Constants.defaultCategories.contains(category.categoryType.lowercased())
+    }
 
     private func sortedCategories(_ categories: [String: BudgetCategory]) -> [BudgetCategory] {
         let defaultOrder = ["income", "giving", "household", "transportation", "food", "personal", "insurance", "saving"]
@@ -287,6 +344,10 @@ struct LeftToBudgetBanner: View {
         budget.buffer + incomePlanned - expensePlanned
     }
 
+    private var hasAnyPlanning: Bool {
+        budget.buffer > 0 || incomePlanned > 0 || expensePlanned > 0
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: iconName)
@@ -304,7 +365,9 @@ struct LeftToBudgetBanner: View {
     }
 
     private var iconName: String {
-        if leftToBudget > 0 {
+        if !hasAnyPlanning {
+            return "dollarsign.circle"
+        } else if leftToBudget > 0 {
             return "exclamationmark.circle.fill"
         } else if leftToBudget == 0 {
             return "checkmark.circle.fill"
@@ -314,7 +377,9 @@ struct LeftToBudgetBanner: View {
     }
 
     private var bannerText: String {
-        if leftToBudget > 0 {
+        if !hasAnyPlanning {
+            return "Start planning your budget"
+        } else if leftToBudget > 0 {
             return "\(formatCurrency(leftToBudget)) left to budget"
         } else if leftToBudget == 0 {
             return "Every dollar is assigned!"
@@ -324,7 +389,9 @@ struct LeftToBudgetBanner: View {
     }
 
     private var backgroundColor: Color {
-        if leftToBudget > 0 {
+        if !hasAnyPlanning {
+            return Color(.systemGray5)
+        } else if leftToBudget > 0 {
             return Color.orange.opacity(0.15)
         } else if leftToBudget == 0 {
             return Color.green.opacity(0.15)
@@ -334,7 +401,9 @@ struct LeftToBudgetBanner: View {
     }
 
     private var foregroundColor: Color {
-        if leftToBudget > 0 {
+        if !hasAnyPlanning {
+            return .secondary
+        } else if leftToBudget > 0 {
             return .orange
         } else if leftToBudget == 0 {
             return .green
