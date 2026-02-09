@@ -32,8 +32,8 @@ enum Constants {
 
     // MARK: - Teller
     enum Teller {
-        // TODO: Replace with your Teller application ID
         static let applicationId = "app_pnff4g9cfpm7a902ps000"
+        static let environment = "sandbox" // "sandbox", "development", or "production"
     }
 
     // MARK: - App Info

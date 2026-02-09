@@ -33,7 +33,7 @@ struct AccountsView: View {
                         Image(systemName: "arrow.triangle.2.circlepath")
                     }
                 }
-                .disabled(viewModel.isSyncing)
+                .disabled(viewModel.isSyncing || viewModel.accounts.isEmpty)
             }
         }
         .refreshable {
@@ -43,8 +43,8 @@ struct AccountsView: View {
             await viewModel.loadAccounts()
         }
         .sheet(isPresented: $showAddAccount) {
-            AddAccountSheet(onComplete: {
-                Task { await viewModel.loadAccounts() }
+            AddAccountSheet(viewModel: viewModel, onComplete: {
+                showAddAccount = false
             })
         }
         .alert("Sync Complete", isPresented: $viewModel.showSyncAlert) {
@@ -106,9 +106,19 @@ struct AccountCard: View {
                     .font(.body)
                     .fontWeight(.medium)
 
-                Text(account.accountTypeDisplay)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Text(account.accountTypeDisplay)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("·")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+
+                    Text(account.lastSyncedDisplay)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
 
             Spacer()
@@ -127,8 +137,12 @@ struct AccountCard: View {
 // MARK: - Add Account Sheet
 
 struct AddAccountSheet: View {
+    @ObservedObject var viewModel: AccountsViewModel
     let onComplete: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var showTellerConnect = false
+    @State private var isLinking = false
+    @State private var linkError: String?
 
     var body: some View {
         NavigationStack {
@@ -147,16 +161,19 @@ struct AddAccountSheet: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
 
-                Button {
-                    // TODO: Launch Teller Connect SDK
-                    launchTellerConnect()
-                } label: {
-                    Text("Connect Bank")
-                        .frame(maxWidth: .infinity)
+                if isLinking {
+                    ProgressView("Saving accounts...")
+                } else {
+                    Button {
+                        showTellerConnect = true
+                    } label: {
+                        Text("Connect Bank")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .padding(.horizontal)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .padding(.horizontal)
 
                 Spacer()
             }
@@ -166,16 +183,60 @@ struct AddAccountSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .disabled(isLinking)
                 }
+            }
+            .fullScreenCover(isPresented: $showTellerConnect) {
+                TellerConnectSheet(
+                    onSuccess: { accessToken, enrollmentId in
+                        showTellerConnect = false
+                        isLinking = true
+                        Task {
+                            await viewModel.linkAccount(accessToken: accessToken, enrollmentId: enrollmentId)
+                            isLinking = false
+                            onComplete()
+                            dismiss()
+                        }
+                    },
+                    onDismiss: {
+                        showTellerConnect = false
+                    }
+                )
+            }
+            .alert("Error", isPresented: .init(
+                get: { linkError != nil },
+                set: { if !$0 { linkError = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(linkError ?? "")
             }
         }
     }
+}
 
-    private func launchTellerConnect() {
-        // TODO: Integrate Teller Connect iOS SDK
-        // TellerConnect.configure(applicationId: "your-app-id")
-        // TellerConnect.open(on: self) { enrollment in ... }
-        print("TODO: Launch Teller Connect")
+// MARK: - Teller Connect Sheet (wraps TellerConnectView with nav chrome)
+
+struct TellerConnectSheet: View {
+    let onSuccess: (String, String) -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            TellerConnectView(
+                applicationId: Constants.Teller.applicationId,
+                environment: Constants.Teller.environment,
+                onSuccess: onSuccess,
+                onExit: onDismiss
+            )
+            .navigationTitle("Link Bank")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onDismiss() }
+                }
+            }
+        }
     }
 }
 

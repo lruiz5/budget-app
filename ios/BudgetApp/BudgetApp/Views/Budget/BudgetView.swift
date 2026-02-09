@@ -230,18 +230,32 @@ struct BudgetSummaryCard: View {
     @State private var editedBufferText = ""
     @FocusState private var isBufferFocused: Bool
 
-    private var totalPlanned: Decimal {
-        budget.categories.values.reduce(0) { $0 + $1.planned }
+    private var incomePlanned: Decimal {
+        budget.categories.values
+            .first { $0.categoryType.lowercased() == "income" }?.planned ?? 0
     }
 
-    private var totalActual: Decimal {
-        budget.categories.values.reduce(0) { $0 + $1.actual }
+    private var incomeActual: Decimal {
+        budget.categories.values
+            .first { $0.categoryType.lowercased() == "income" }?.actual ?? 0
+    }
+
+    private var expensePlanned: Decimal {
+        budget.categories.values
+            .filter { $0.categoryType.lowercased() != "income" }
+            .reduce(0) { $0 + $1.planned }
+    }
+
+    private var expenseActual: Decimal {
+        budget.categories.values
+            .filter { $0.categoryType.lowercased() != "income" }
+            .reduce(0) { $0 + $1.actual }
     }
 
     var body: some View {
         HStack {
             // Buffer (tappable to edit)
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Buffer")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -279,25 +293,23 @@ struct BudgetSummaryCard: View {
 
             Spacer()
 
-            VStack(alignment: .trailing) {
-                Text("Planned")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(formatCurrency(totalPlanned))
-                    .font(.title2)
-                    .fontWeight(.semibold)
-            }
+            // Income progress ring
+            MiniProgressRing(
+                label: "Income",
+                actual: incomeActual,
+                planned: incomePlanned,
+                tint: .green
+            )
 
             Spacer()
 
-            VStack(alignment: .trailing) {
-                Text("Actual")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(formatCurrency(totalActual))
-                    .font(.title2)
-                    .fontWeight(.semibold)
-            }
+            // Expenses progress ring
+            MiniProgressRing(
+                label: "Expenses",
+                actual: expenseActual,
+                planned: expensePlanned,
+                tint: .orange
+            )
         }
         .padding(.vertical, 4)
         .onChange(of: isBufferFocused) { _, focused in
@@ -321,6 +333,74 @@ struct BudgetSummaryCard: View {
         formatter.numberStyle = .currency
         formatter.currencyCode = "USD"
         return formatter.string(from: value as NSNumber) ?? "$0.00"
+    }
+}
+
+// MARK: - Mini Progress Ring
+
+struct MiniProgressRing: View {
+    let label: String
+    let actual: Decimal
+    let planned: Decimal
+    let tint: Color
+
+    private var progress: Double {
+        guard planned > 0 else { return 0 }
+        return min(1.0, Double(truncating: (actual / planned) as NSNumber))
+    }
+
+    private var isOver: Bool {
+        actual > planned && planned > 0
+    }
+
+    private var ringColor: Color {
+        isOver ? .red : tint
+    }
+
+    var body: some View {
+        VStack(spacing: 4) {
+            ZStack {
+                Circle()
+                    .stroke(Color(.systemGray5), lineWidth: 4)
+
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(ringColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+
+                Text(percentText)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(isOver ? .red : .primary)
+            }
+            .frame(width: 44, height: 44)
+
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+            Text(formatCompact(actual))
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundStyle(isOver ? .red : .primary)
+        }
+    }
+
+    private var percentText: String {
+        guard planned > 0 else { return "0%" }
+        let pct = Int(Double(truncating: (actual / planned * 100) as NSNumber))
+        return "\(pct)%"
+    }
+
+    private func formatCompact(_ value: Decimal) -> String {
+        let num = Double(truncating: value as NSNumber)
+        if num >= 1000 {
+            return "$\(String(format: "%.1f", num / 1000))k"
+        }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: value as NSNumber) ?? "$0"
     }
 }
 

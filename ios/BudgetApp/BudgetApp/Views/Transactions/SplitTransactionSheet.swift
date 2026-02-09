@@ -375,6 +375,7 @@ struct SplitTransactionSheet: View {
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
+        formatter.timeZone = TimeZone(identifier: "UTC")
         return formatter.string(from: date)
     }
 }

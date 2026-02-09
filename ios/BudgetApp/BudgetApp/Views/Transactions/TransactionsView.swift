@@ -195,8 +195,10 @@ struct TransactionsView: View {
     }
 
     private var groupedByDate: [(key: Date, value: [Transaction])] {
+        var utcCalendar = Calendar.current
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
         let grouped = Dictionary(grouping: currentTransactions) { transaction in
-            Calendar.current.startOfDay(for: transaction.date)
+            utcCalendar.startOfDay(for: transaction.date)
         }
         return grouped.sorted { $0.key > $1.key }
     }
@@ -238,6 +240,7 @@ struct TransactionsView: View {
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
+        formatter.timeZone = TimeZone(identifier: "UTC")
         return formatter.string(from: date)
     }
 }

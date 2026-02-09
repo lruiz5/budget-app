@@ -15,16 +15,12 @@ actor AccountsService {
         try await api.get("/api/teller/accounts")
     }
 
-    func linkAccount(accessToken: String, accountId: String, institutionName: String, accountName: String, accountType: String, accountSubtype: String?, lastFour: String?) async throws -> LinkedAccount {
-        try await api.post("/api/teller/accounts", body: LinkAccountRequest(
+    func linkAccount(accessToken: String, enrollmentId: String) async throws -> [LinkedAccount] {
+        let response: LinkedAccountsResponse = try await api.post("/api/teller/accounts", body: LinkAccountRequest(
             accessToken: accessToken,
-            accountId: accountId,
-            institutionName: institutionName,
-            accountName: accountName,
-            accountType: accountType,
-            accountSubtype: accountSubtype,
-            lastFour: lastFour
+            enrollment: EnrollmentId(id: enrollmentId)
         ))
+        return response.accounts
     }
 
     func unlinkAccount(id: Int) async throws -> SuccessResponse {
@@ -49,12 +45,11 @@ actor AccountsService {
 
 struct LinkAccountRequest: Encodable {
     let accessToken: String
-    let accountId: String
-    let institutionName: String
-    let accountName: String
-    let accountType: String
-    let accountSubtype: String?
-    let lastFour: String?
+    let enrollment: EnrollmentId
+}
+
+struct EnrollmentId: Encodable {
+    let id: String
 }
 
 struct SyncRequest: Encodable {

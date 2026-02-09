@@ -6,6 +6,42 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.6.0] - 2026-02-09 - Bank Account Linking, Date Fix & Budget Summary Redesign
+
+### Added
+
+- **Bank account linking via Teller** — WKWebView wrapper (`TellerConnectView`) embeds Teller Connect JS SDK for bank enrollment. Supports sandbox/development/production environments. On success, accounts are saved via `POST /api/teller/accounts`
+- **Teller Connect UI flow** — full-screen cover from Accounts tab: "Connect Bank" → Teller WebView → accounts saved → dismiss. Manual sync via toolbar button (no auto-sync)
+- **Budget summary progress rings** — replaced Planned/Actual text columns with two `MiniProgressRing` components showing income and expense progress (actual vs planned). Compact 44pt circles with percentage, label, and compact dollar amount
+
+### Fixed
+
+- **Transaction dates off by one day** — dates parsed as midnight UTC but displayed/grouped using local timezone, causing Feb 9 to show as Feb 8 in US timezones. Fixed all `DateFormatter` and `Calendar` instances to use UTC for transaction date display and grouping
+- **`LinkAccountRequest` shape mismatch** — iOS sent individual fields but API expects `{ accessToken, enrollment: { id } }`. Fixed request struct to match
+- **`linkAccount()` return type** — was single `LinkedAccount` but API returns `{ accounts: [...] }` wrapper. Now uses `LinkedAccountsResponse`
+- **`LinkedAccount` missing fields** — added `tellerEnrollmentId`, `institutionId`, `status`, `lastSyncedAt` to match API response
+
+### Changed
+
+- **Account card** — now shows account subtype (e.g., "Credit Card") and last synced time
+- **No auto-sync after linking** — linking accounts no longer triggers automatic transaction sync; user controls when to sync
+
+### Files Modified
+
+- `Views/Accounts/TellerConnectView.swift` — **new** WKWebView wrapper for Teller Connect JS SDK
+- `Views/Accounts/AccountsView.swift` — wired TellerConnectView via fullScreenCover, enhanced AccountCard
+- `Models/LinkedAccount.swift` — added missing fields, improved computed properties
+- `Services/AccountsService.swift` — fixed LinkAccountRequest shape, return type
+- `ViewModels/AccountsViewModel.swift` — simplified linkAccount, removed auto-sync
+- `Views/Budget/BudgetView.swift` — replaced summary card with MiniProgressRing, new MiniProgressRing component
+- `Views/Transactions/TransactionsView.swift` — UTC timezone for date formatting and grouping
+- `Views/Transactions/SplitTransactionSheet.swift` — UTC timezone for date formatting
+- `Views/Budget/BudgetItemDetail.swift` — UTC timezone for date formatting
+- `ViewModels/TransactionsViewModel.swift` — UTC calendar for date range filtering
+- `Utilities/Constants.swift` — added Teller.environment
+
+---
+
 ## [0.5.0] - 2026-02-09 - Custom Categories, Budget Copy/Reset & Banner Fix
 
 ### Added
@@ -147,8 +183,8 @@ All notable changes to the Budget App iOS application.
 - [x] Budget item creation and editing
 - [x] Split transaction support
 - [x] Recurring payment management (create/edit/delete)
-- [ ] Bank account linking via Teller
-- [ ] Transaction sync from linked accounts
+- [x] Bank account linking via Teller
+- [x] Transaction sync from linked accounts
 - [x] Custom category creation
 - [x] Budget copy from previous month
 - [x] Budget reset functionality
@@ -164,6 +200,5 @@ All notable changes to the Budget App iOS application.
 
 ### Known Issues
 
-- No bank account linking
 - No search/filter functionality
 - No onboarding flow
