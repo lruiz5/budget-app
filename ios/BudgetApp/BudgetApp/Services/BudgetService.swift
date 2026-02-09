@@ -22,12 +22,12 @@ actor BudgetService {
         try await api.put("/api/budgets", body: budget)
     }
 
-    func copyBudget(fromMonth: Int, fromYear: Int, toMonth: Int, toYear: Int) async throws -> Budget {
+    func copyBudget(fromMonth: Int, fromYear: Int, toMonth: Int, toYear: Int) async throws -> SuccessResponse {
         try await api.post("/api/budgets/copy", body: CopyBudgetRequest(
-            fromMonth: fromMonth,
-            fromYear: fromYear,
-            toMonth: toMonth,
-            toYear: toYear
+            sourceMonth: fromMonth,
+            sourceYear: fromYear,
+            targetMonth: toMonth,
+            targetYear: toYear
         ))
     }
 
@@ -89,10 +89,10 @@ struct BudgetUpdateRequest: Encodable {
 }
 
 struct CopyBudgetRequest: Encodable {
-    let fromMonth: Int
-    let fromYear: Int
-    let toMonth: Int
-    let toYear: Int
+    let sourceMonth: Int
+    let sourceYear: Int
+    let targetMonth: Int
+    let targetYear: Int
 }
 
 struct ResetBudgetRequest: Encodable {

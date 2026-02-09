@@ -6,6 +6,32 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.5.0] - 2026-02-09 - Custom Categories, Budget Copy/Reset & Banner Fix
+
+### Added
+
+- **Custom category creation** — "Add Category" button on budget page opens sheet with name field and emoji picker (12 curated groups matching web app). Default emoji: 📋
+- **Custom category deletion** — long-press category header shows "Delete Category" context menu (custom categories only, not default 8)
+- **Budget reset UI** — two-step sheet: choose mode (zero out planned amounts OR replace with previous month's budget), then confirm with red button. Uses existing `POST /api/budgets/reset` endpoint
+- **"Start planning" banner state** — when no buffer, income, or expenses are planned, banner shows neutral "Start planning your budget" (gray) instead of misleading "Every dollar is assigned!" (green)
+
+### Fixed
+
+- **Budget copy field name mismatch** — `CopyBudgetRequest` sent `fromMonth/fromYear/toMonth/toYear` but API expected `sourceMonth/sourceYear/targetMonth/targetYear`, causing silent 400 errors on every copy attempt
+- **Budget copy return type** — `copyBudget()` declared return type as `Budget` but API returns `{ success: true }`. Changed to `SuccessResponse`
+- **`createBudget()` flow** — was trying to assign copy result to `budget` (type mismatch). Changed to `_ = try await`, always reloads via `loadBudget()`
+
+### Files Modified
+
+- `Views/Budget/AddCategorySheet.swift` — **new** custom category creation form with emoji picker
+- `Views/Budget/ResetBudgetSheet.swift` — **new** two-step reset confirmation sheet
+- `Views/Budget/BudgetView.swift` — added `.addCategory`/`.resetBudget` to sheet enum, buttons, delete confirmation dialog, `hasAnyPlanning` banner fix
+- `Views/Budget/CategorySection.swift` — added `onDeleteCategory` callback, `.contextMenu` on header
+- `Services/BudgetService.swift` — fixed `CopyBudgetRequest` field names, `copyBudget` return type
+- `ViewModels/BudgetViewModel.swift` — fixed `createBudget()` flow
+
+---
+
 ## [0.2.0] - 2026-02-06 - Auth Fix, Transaction Categorization & Budget UI
 
 ### Fixed
@@ -117,15 +143,15 @@ All notable changes to the Budget App iOS application.
 
 ### Planned Features
 
-- [ ] Transaction creation and editing
-- [ ] Budget item creation and editing
-- [ ] Split transaction support
-- [ ] Recurring payment management (create/edit/delete)
+- [x] Transaction creation and editing
+- [x] Budget item creation and editing
+- [x] Split transaction support
+- [x] Recurring payment management (create/edit/delete)
 - [ ] Bank account linking via Teller
 - [ ] Transaction sync from linked accounts
-- [ ] Custom category creation
-- [ ] Budget copy from previous month
-- [ ] Budget reset functionality
+- [x] Custom category creation
+- [x] Budget copy from previous month
+- [x] Budget reset functionality
 - [ ] Onboarding flow for new users
 - [ ] Monthly report/insights
 - [ ] Interactive charts (Budget vs Actual, Spending Trends, Cash Flow)
@@ -138,9 +164,6 @@ All notable changes to the Budget App iOS application.
 
 ### Known Issues
 
-- Cannot create budget items or transactions from app
-- No split transaction support
-- No recurring payment management
 - No bank account linking
 - No search/filter functionality
-- No custom category creation
+- No onboarding flow
