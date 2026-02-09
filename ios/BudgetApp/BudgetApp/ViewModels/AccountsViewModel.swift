@@ -72,18 +72,13 @@ class AccountsViewModel: ObservableObject {
 
     // MARK: - Link Account (called after Teller Connect)
 
-    func linkAccount(accessToken: String, accountId: String, institutionName: String, accountName: String, accountType: String, accountSubtype: String?, lastFour: String?) async {
+    func linkAccount(accessToken: String, enrollmentId: String) async {
         do {
-            let account = try await accountsService.linkAccount(
+            let newAccounts = try await accountsService.linkAccount(
                 accessToken: accessToken,
-                accountId: accountId,
-                institutionName: institutionName,
-                accountName: accountName,
-                accountType: accountType,
-                accountSubtype: accountSubtype,
-                lastFour: lastFour
+                enrollmentId: enrollmentId
             )
-            accounts.append(account)
+            accounts.append(contentsOf: newAccounts)
         } catch {
             self.error = error.localizedDescription
         }

@@ -86,35 +86,39 @@ class TransactionsViewModel: ObservableObject {
     private func filterTransactionsToDateRange(_ transactions: [Transaction], month: Int, year: Int) -> [Transaction] {
         let calendar = Calendar.current
         
+        // Use UTC calendar since transaction dates are midnight UTC
+        var utcCalendar = calendar
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+
         // First day of current month (month is 0-indexed)
         var monthStartComponents = DateComponents()
         monthStartComponents.year = year
         monthStartComponents.month = month + 1 // DateComponents uses 1-indexed months
         monthStartComponents.day = 1
-        guard let monthStart = calendar.date(from: monthStartComponents) else {
+        guard let monthStart = utcCalendar.date(from: monthStartComponents) else {
             return transactions
         }
-        
+
         // Last day of current month
-        guard let monthEnd = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart) else {
+        guard let monthEnd = utcCalendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart) else {
             return transactions
         }
-        
+
         // 7 days before month start (start of day)
-        guard var rangeStart = calendar.date(byAdding: .day, value: -7, to: monthStart) else {
+        guard var rangeStart = utcCalendar.date(byAdding: .day, value: -7, to: monthStart) else {
             return transactions
         }
-        rangeStart = calendar.startOfDay(for: rangeStart)
-        
+        rangeStart = utcCalendar.startOfDay(for: rangeStart)
+
         // 7 days after month end (end of day)
-        guard var rangeEnd = calendar.date(byAdding: .day, value: 7, to: monthEnd) else {
+        guard var rangeEnd = utcCalendar.date(byAdding: .day, value: 7, to: monthEnd) else {
             return transactions
         }
         // Set to end of day (23:59:59)
-        rangeEnd = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: rangeEnd) ?? rangeEnd
-        
+        rangeEnd = utcCalendar.date(bySettingHour: 23, minute: 59, second: 59, of: rangeEnd) ?? rangeEnd
+
         return transactions.filter { txn in
-            let txnDate = calendar.startOfDay(for: txn.date)
+            let txnDate = utcCalendar.startOfDay(for: txn.date)
             return txnDate >= rangeStart && txnDate <= rangeEnd
         }
     }
