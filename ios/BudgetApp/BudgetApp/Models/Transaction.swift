@@ -11,7 +11,7 @@ struct Transaction: Codable, Identifiable {
     let merchant: String?
     let tellerId: String?
     let deletedAt: Date?
-    let suggestedBudgetItemId: Int?
+    var suggestedBudgetItemId: Int?
     let fromPreviousMonth: Bool?
     var splits: [SplitTransaction]?
 

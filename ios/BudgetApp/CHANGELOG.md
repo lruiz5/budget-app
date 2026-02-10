@@ -6,6 +6,57 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.7.1] - 2026-02-09 - Interactive Chart Drill-Downs & Quick Assign Fix
+
+### Added
+
+- **Budget vs Actual drill-down** — tap any category bar to see a breakdown of all budget items with planned/actual amounts, remaining/over indicators, and progress bar dividers
+- **Daily Spending heatmap drill-down** — tap any colored day cell to see all transactions for that day with merchant, description, and amount. Empty/future days are ignored
+- **CategoryDrillDownSheet** — reusable sheet showing category header (planned vs actual, under/over budget) and sorted item list
+- **DayDrillDownSheet** — shows total spent header with transaction count, then transaction list sorted by amount
+
+### Fixed
+
+- **Quick Assign cross-month bug** — "Quick Assign" swipe was categorizing transactions to wrong month's budget items (e.g., November items when viewing February). Root cause: server returned raw `budgetItemId` from historical transactions, but budget items have different IDs per month. Fixed with two layers:
+  - **Client-side validation** — iOS now validates server suggestions against current month's budget item IDs, discarding any that don't belong
+  - **Client-side suggestion generation** — builds merchant→itemId map from current month's categorized transactions, providing correct suggestions without relying on server
+  - **Server-side fix** — API now matches merchants to item *names* historically, then resolves to current month's item IDs via budget join (requires deploy)
+
+### Changed
+
+- **Consolidated sheet pattern** — replaced `showMonthlyReport` boolean with `InsightsActiveSheet` enum using single `.sheet(item:)` pattern (prevents SwiftUI multi-sheet bug)
+- **Budget vs Actual rows** — added chevron hint for tap affordance
+- **ViewModel drill-down helper** — `getTransactionsForDay(day:from:)` collects expense transactions for a specific day across all categories (UTC calendar, filters deleted + income)
+
+### Files Modified
+
+- `Views/Insights/InsightsView.swift` — `InsightsActiveSheet` enum, `.sheet(item:)`, tap gestures on bars and heatmap cells
+- `Views/Insights/CategoryDrillDownSheet.swift` — **new** category drill-down sheet
+- `Views/Insights/DayDrillDownSheet.swift` — **new** day drill-down sheet
+- `ViewModels/InsightsViewModel.swift` — added `getTransactionsForDay()` helper
+- `Models/Transaction.swift` — `suggestedBudgetItemId` changed from `let` to `var` for client-side validation
+- `ViewModels/TransactionsViewModel.swift` — client-side Quick Assign validation and merchant→item suggestion
+- `app/api/teller/sync/route.ts` — server-side name-based merchant suggestion lookup
+
+---
+
+## [0.7.0] - 2026-02-09 - Monthly Report, Insights Charts
+
+### Added
+
+- **Monthly report sheet** — 7-section detailed breakdown (overview, income, expenses by category, budget health, buffer flow, savings, trends vs previous month)
+- **Spending pace chart** — cumulative burn-down line chart with ideal pace (dashed), actual spending (teal area+line), and "Today" marker for current month
+- **Daily spending heatmap** — calendar grid with color-coded cells (green→orange→red by spending intensity), weekday headers, future day styling
+- **Spending trends chart** — multi-line chart showing category spending across months with point markers
+
+### Files Modified
+
+- `Views/Insights/InsightsView.swift` — all 4 chart sections, heatmap grid builder, color helpers
+- `Views/Insights/MonthlyReportSheet.swift` — **new** 7-section monthly report
+- `ViewModels/InsightsViewModel.swift` — chart data computation helpers
+
+---
+
 ## [0.6.0] - 2026-02-09 - Bank Account Linking, Date Fix & Budget Summary Redesign
 
 ### Added
@@ -189,8 +240,8 @@ All notable changes to the Budget App iOS application.
 - [x] Budget copy from previous month
 - [x] Budget reset functionality
 - [ ] Onboarding flow for new users
-- [ ] Monthly report/insights
-- [ ] Interactive charts (Budget vs Actual, Spending Trends, Cash Flow)
+- [x] Monthly report/insights
+- [x] Interactive charts (Budget vs Actual, Daily Spending heatmap drill-downs)
 - [ ] Comprehensive error handling and user feedback
 - [ ] Offline support with local caching
 - [ ] App Store assets (screenshots, description, keywords)

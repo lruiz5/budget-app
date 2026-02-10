@@ -4,7 +4,7 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.9.0 (stable)  |  **iOS App:** v0.6.0 (pre-release)
+**Web App:** v1.9.0 (stable)  |  **iOS App:** v0.7.1 (pre-release)
 **Last Session:** 2026-02-09
 
 ## Instructions for Claude
@@ -147,6 +147,7 @@ Auth (Clerk), budget viewing with categories/items, month navigation, transactio
 | iOS empty categories sheet | Multiple `.sheet` bug. Fixed with single `.sheet(item:)` enum pattern |
 | PG numeric `toFixed` error | Wrap: `parseFloat(String(value)).toFixed(2)` |
 | Buffer Flow wrong values | Underspent/Overspent only from expense categories (not income). Saving excluded from report totals |
+| Quick Assign wrong month | Budget item IDs are per-month. Client validates suggestions against current month's items + generates own merchant→item map. Server uses name-based lookup |
 
 ## Development Commands
 
@@ -165,8 +166,9 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 **Web:** v1.9.0 — stable, production-ready on Vercel
 
-**iOS:** v0.7.0 — pre-release. Monthly report, spending pace chart, daily spending heatmap. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.7.1 — pre-release. Interactive chart drill-downs (Budget vs Actual, Heatmap). See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 
 **Next iOS work:**
 - Onboarding flow
-- Interactive chart drill-downs
+- Comprehensive error handling
+- Offline support / local caching

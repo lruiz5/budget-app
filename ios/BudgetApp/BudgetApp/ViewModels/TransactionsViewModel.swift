@@ -67,6 +67,36 @@ class TransactionsViewModel: ObservableObject {
             // Remove split parents from uncategorized
             uncategorizedTransactions.removeAll { splitParentIds.contains($0.id) }
 
+            // Validate and generate Quick Assign suggestions client-side
+            // This prevents wrong-month categorization regardless of server response
+            let validItemIds = Set(budget.categories.values.flatMap { $0.items.map { $0.id } })
+
+            // Build merchant → itemId map from current month's categorized transactions
+            var merchantToItemId: [String: Int] = [:]
+            for category in budget.categories.values {
+                for item in category.items {
+                    for txn in item.transactions {
+                        if let merchant = txn.merchant, !merchant.isEmpty {
+                            merchantToItemId[merchant] = item.id
+                        }
+                    }
+                }
+            }
+
+            // For each uncategorized transaction:
+            // - Discard server suggestions that point to wrong month's items
+            // - Generate client-side suggestions from current month's data
+            uncategorizedTransactions = uncategorizedTransactions.map { txn in
+                var modified = txn
+                if let suggestedId = modified.suggestedBudgetItemId, !validItemIds.contains(suggestedId) {
+                    modified.suggestedBudgetItemId = nil
+                }
+                if modified.suggestedBudgetItemId == nil, let merchant = modified.merchant {
+                    modified.suggestedBudgetItemId = merchantToItemId[merchant]
+                }
+                return modified
+            }
+
             // Filter out deleted transactions and any that are in the uncategorized list
             let uncategorizedIds = Set(uncategorizedTransactions.map { $0.id })
             categorizedTransactions = categorized.filter { !uncategorizedIds.contains($0.id) && !$0.isDeleted }
