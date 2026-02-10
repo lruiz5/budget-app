@@ -24,8 +24,10 @@ export async function POST(request: NextRequest) {
         .from(linkedAccounts)
         .where(and(eq(linkedAccounts.id, parseInt(accountId)), eq(linkedAccounts.userId, userId)));
     } else {
-      // Sync all user's accounts
-      accountsToSync = await db.select().from(linkedAccounts).where(eq(linkedAccounts.userId, userId));
+      // Sync all user's accounts that have sync enabled
+      accountsToSync = await db.select().from(linkedAccounts).where(
+        and(eq(linkedAccounts.userId, userId), eq(linkedAccounts.syncEnabled, true))
+      );
     }
 
     if (accountsToSync.length === 0) {
@@ -43,12 +45,13 @@ export async function POST(request: NextRequest) {
       try {
         const tellerClient = createTellerClient(account.accessToken);
 
-        // Fetch transactions from Teller
+        // Fetch transactions from Teller (use syncStartDate to avoid pulling historical data)
+        const effectiveStartDate = startDate || account.syncStartDate || undefined;
         const tellerTransactions: TellerTransaction[] = await tellerClient.listTransactions(
           account.tellerAccountId,
           {
             count: 500, // Max transactions to fetch
-            startDate,
+            startDate: effectiveStartDate,
             endDate,
           }
         );

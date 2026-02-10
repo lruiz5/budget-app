@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
           .where(eq(linkedAccounts.tellerAccountId, account.id));
         savedAccounts.push({ ...existing[0], updated: true });
       } else {
-        // Insert new account
+        // Insert new account (sync enabled by default, starting from today)
         const [newAccount] = await db
           .insert(linkedAccounts)
           .values({
@@ -76,6 +76,8 @@ export async function POST(request: NextRequest) {
             accountSubtype: account.subtype,
             lastFour: account.last_four,
             status: account.status,
+            syncEnabled: true,
+            syncStartDate: new Date().toISOString().split('T')[0],
           })
           .returning();
         savedAccounts.push(newAccount);
@@ -86,6 +88,54 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error saving linked account:', error);
     return NextResponse.json({ error: 'Failed to save linked account' }, { status: 500 });
+  }
+}
+
+// PATCH - Update account settings (sync toggle)
+export async function PATCH(request: NextRequest) {
+  try {
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult.error;
+    const { userId } = authResult;
+
+    const body = await request.json();
+    const { id, syncEnabled } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Account ID is required' }, { status: 400 });
+    }
+
+    // Verify ownership
+    const [account] = await db
+      .select()
+      .from(linkedAccounts)
+      .where(and(eq(linkedAccounts.id, id), eq(linkedAccounts.userId, userId)))
+      .limit(1);
+
+    if (!account) {
+      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+    }
+
+    const updates: Record<string, unknown> = {};
+
+    if (syncEnabled !== undefined) {
+      updates.syncEnabled = syncEnabled;
+      // Set syncStartDate to today when first enabling (don't overwrite if re-enabling)
+      if (syncEnabled && !account.syncStartDate) {
+        updates.syncStartDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      }
+    }
+
+    const [updated] = await db
+      .update(linkedAccounts)
+      .set(updates)
+      .where(eq(linkedAccounts.id, id))
+      .returning();
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error('Error updating linked account:', error);
+    return NextResponse.json({ error: 'Failed to update linked account' }, { status: 500 });
   }
 }
 

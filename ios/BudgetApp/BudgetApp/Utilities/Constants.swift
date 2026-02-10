@@ -33,12 +33,12 @@ enum Constants {
     // MARK: - Teller
     enum Teller {
         static let applicationId = "app_pnff4g9cfpm7a902ps000"
-        static let environment = "sandbox" // "sandbox", "development", or "production"
+        static let environment = "development" // "sandbox", "development", or "production"
     }
 
     // MARK: - App Info
     enum App {
-        static let version = "1.0.0"
+        static let version = "0.8.0"
         static let buildNumber = "1"
         static let name = "Budget App"
     }

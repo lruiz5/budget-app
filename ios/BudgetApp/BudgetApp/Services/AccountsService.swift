@@ -27,6 +27,12 @@ actor AccountsService {
         try await api.delete("/api/teller/accounts", queryParams: ["id": String(id)])
     }
 
+    // MARK: - Account Settings
+
+    func updateAccountSync(id: Int, enabled: Bool) async throws -> LinkedAccount {
+        try await api.patch("/api/teller/accounts", body: UpdateSyncRequest(id: id, syncEnabled: enabled))
+    }
+
     // MARK: - Transaction Sync
 
     func getUncategorizedTransactions(month: Int, year: Int) async throws -> [Transaction] {
@@ -50,6 +56,11 @@ struct LinkAccountRequest: Encodable {
 
 struct EnrollmentId: Encodable {
     let id: String
+}
+
+struct UpdateSyncRequest: Encodable {
+    let id: Int
+    let syncEnabled: Bool
 }
 
 struct SyncRequest: Encodable {
