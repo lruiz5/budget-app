@@ -48,12 +48,30 @@ struct TransactionsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    Task { await viewModel.syncAllAccounts() }
+                } label: {
+                    if viewModel.isSyncing {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                    }
+                }
+                .disabled(viewModel.isSyncing)
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
                     activeSheet = .addTransaction
                 } label: {
                     Image(systemName: "plus")
                 }
             }
         }
+        .toast(
+            isPresented: $viewModel.showSyncAlert,
+            message: viewModel.syncMessage,
+            isError: viewModel.syncMessage.hasPrefix("Sync failed")
+        )
         .refreshable {
             await viewModel.loadTransactions()
             if selectedFilter == .deleted {

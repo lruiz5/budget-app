@@ -1,8 +1,22 @@
 import SwiftUI
 
+// MARK: - Active Sheet Enum (single .sheet pattern)
+
+enum AccountActiveSheet: Identifiable {
+    case addAccount
+    case accountDetail(LinkedAccount)
+
+    var id: String {
+        switch self {
+        case .addAccount: return "add"
+        case .accountDetail(let a): return "detail-\(a.id)"
+        }
+    }
+}
+
 struct AccountsView: View {
     @StateObject private var viewModel = AccountsViewModel()
-    @State private var showAddAccount = false
+    @State private var activeSheet: AccountActiveSheet?
 
     var body: some View {
         Group {
@@ -17,23 +31,10 @@ struct AccountsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showAddAccount = true
+                    activeSheet = .addAccount
                 } label: {
                     Image(systemName: "plus")
                 }
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    Task { await viewModel.syncAllAccounts() }
-                } label: {
-                    if viewModel.isSyncing {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                    }
-                }
-                .disabled(viewModel.isSyncing || viewModel.accounts.isEmpty)
             }
         }
         .refreshable {
@@ -42,15 +43,34 @@ struct AccountsView: View {
         .task {
             await viewModel.loadAccounts()
         }
-        .sheet(isPresented: $showAddAccount) {
-            AddAccountSheet(viewModel: viewModel, onComplete: {
-                showAddAccount = false
-            })
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .addAccount:
+                AddAccountSheet(viewModel: viewModel, onComplete: {
+                    activeSheet = nil
+                })
+            case .accountDetail(let account):
+                AccountDetailSheet(account: account, viewModel: viewModel)
+                    .presentationDetents([.medium])
+            }
         }
-        .alert("Sync Complete", isPresented: $viewModel.showSyncAlert) {
-            Button("OK", role: .cancel) { }
+        .alert(
+            "Remove \(viewModel.institutionToUnlink ?? "")?",
+            isPresented: Binding(
+                get: { viewModel.institutionToUnlink != nil },
+                set: { if !$0 { viewModel.institutionToUnlink = nil } }
+            )
+        ) {
+            Button("Remove", role: .destructive) {
+                if let name = viewModel.institutionToUnlink {
+                    Task { await viewModel.unlinkInstitution(name: name) }
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                viewModel.institutionToUnlink = nil
+            }
         } message: {
-            Text(viewModel.syncMessage)
+            Text("This will unlink all accounts from this institution.")
         }
     }
 
@@ -59,18 +79,31 @@ struct AccountsView: View {
     private var accountsList: some View {
         List {
             ForEach(viewModel.groupedAccounts, id: \.key) { institution, accounts in
-                Section(header: Text(institution)) {
+                Section {
                     ForEach(accounts) { account in
                         AccountCard(account: account)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    Task {
-                                        await viewModel.unlinkAccount(id: account.id)
-                                    }
-                                } label: {
-                                    Label("Unlink", systemImage: "link.badge.minus")
-                                }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                activeSheet = .accountDetail(account)
                             }
+                    }
+                } header: {
+                    HStack(spacing: 8) {
+                        InstitutionIcon(name: institution)
+
+                        Text(institution)
+                        Spacer()
+                        Menu {
+                            Button(role: .destructive) {
+                                viewModel.institutionToUnlink = institution
+                            } label: {
+                                Label("Remove Institution", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -87,7 +120,7 @@ struct AccountsView: View {
             Text("Link your bank accounts to automatically import transactions")
         } actions: {
             Button("Link Account") {
-                showAddAccount = true
+                activeSheet = .addAccount
             }
             .buttonStyle(.borderedProminent)
         }
@@ -131,6 +164,95 @@ struct AccountCard: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Account Detail Sheet
+
+struct AccountDetailSheet: View {
+    let account: LinkedAccount
+    @ObservedObject var viewModel: AccountsViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var isSyncEnabled: Bool
+    @State private var isUpdating = false
+
+    init(account: LinkedAccount, viewModel: AccountsViewModel) {
+        self.account = account
+        self.viewModel = viewModel
+        _isSyncEnabled = State(initialValue: account.syncEnabled)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Account header
+                VStack(spacing: 8) {
+                    InstitutionIcon(name: account.institutionName, size: 56)
+
+                    Text(account.accountName)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    if let lastFour = account.lastFour {
+                        Text("••••\(lastFour)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+                .padding(.top, 8)
+
+                // Streaming toggle card
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Transaction Streaming")
+                                .font(.headline)
+
+                            if isSyncEnabled, let dateStr = viewModel.selectedAccount?.syncStartDateDisplay ?? account.syncStartDateDisplay {
+                                Text("Streaming since \(dateStr)")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                            } else {
+                                Text("Turn on to begin syncing transactions automatically")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        if isUpdating {
+                            ProgressView()
+                        } else {
+                            Toggle("", isOn: $isSyncEnabled)
+                                .labelsHidden()
+                        }
+                    }
+                }
+                .padding()
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal)
+
+                Spacer()
+            }
+            .navigationTitle(account.institutionName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .onChange(of: isSyncEnabled) { _, newValue in
+                guard newValue != account.syncEnabled else { return }
+                isUpdating = true
+                Task {
+                    await viewModel.toggleSync(account: account, enabled: newValue)
+                    isUpdating = false
+                }
+            }
+        }
     }
 }
 
@@ -237,6 +359,103 @@ struct TellerConnectSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Institution Icon
+
+struct InstitutionIcon: View {
+    let name: String
+    private let size: CGFloat
+
+    init(name: String, size: CGFloat = 28) {
+        self.name = name
+        self.size = size
+    }
+
+    var body: some View {
+        if let domain = Self.domainFor(name) {
+            AsyncImage(url: URL(string: "https://www.google.com/s2/favicons?domain=\(domain)&sz=128")) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: size, height: size)
+                        .clipShape(Circle())
+                case .failure:
+                    defaultIcon
+                default:
+                    defaultIcon
+                }
+            }
+        } else {
+            defaultIcon
+        }
+    }
+
+    private var defaultIcon: some View {
+        Image(systemName: "building.columns.fill")
+            .font(.system(size: size * 0.5))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(Color.green, in: Circle())
+    }
+
+    /// Maps known institution names to their website domains for favicon lookup.
+    /// Add entries here as users link new banks.
+    private static func domainFor(_ institution: String) -> String? {
+        let key = institution.lowercased()
+        let mapping: [String: String] = [
+            "chase": "chase.com",
+            "bank of america": "bankofamerica.com",
+            "wells fargo": "wellsfargo.com",
+            "citibank": "citibank.com",
+            "citi": "citibank.com",
+            "capital one": "capitalone.com",
+            "us bank": "usbank.com",
+            "u.s. bank": "usbank.com",
+            "pnc": "pnc.com",
+            "pnc bank": "pnc.com",
+            "truist": "truist.com",
+            "td bank": "td.com",
+            "ally": "ally.com",
+            "ally bank": "ally.com",
+            "discover": "discover.com",
+            "discover bank": "discover.com",
+            "american express": "americanexpress.com",
+            "amex": "americanexpress.com",
+            "charles schwab": "schwab.com",
+            "schwab": "schwab.com",
+            "fidelity": "fidelity.com",
+            "vanguard": "vanguard.com",
+            "navy federal": "navyfederal.org",
+            "navy federal credit union": "navyfederal.org",
+            "usaa": "usaa.com",
+            "marcus": "marcus.com",
+            "goldman sachs": "goldmansachs.com",
+            "sofi": "sofi.com",
+            "chime": "chime.com",
+            "citizens bank": "citizensbank.com",
+            "citizens": "citizensbank.com",
+            "huntington": "huntington.com",
+            "huntington bank": "huntington.com",
+            "regions": "regions.com",
+            "regions bank": "regions.com",
+            "fifth third": "53.com",
+            "fifth third bank": "53.com",
+            "m&t bank": "mtb.com",
+            "keybank": "key.com",
+            "bmo": "bmo.com",
+            "first citizens": "firstcitizens.com",
+            "synchrony": "synchrony.com",
+            "synchrony bank": "synchrony.com",
+            "simple": "simple.com",
+            "robinhood": "robinhood.com",
+            "paypal": "paypal.com",
+            "venmo": "venmo.com",
+        ]
+        return mapping[key]
     }
 }
 

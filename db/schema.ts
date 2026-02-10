@@ -73,6 +73,8 @@ export const linkedAccounts = pgTable('linked_accounts', {
   accountSubtype: text('account_subtype').notNull(), // 'checking', 'savings', 'credit_card', etc.
   lastFour: text('last_four').notNull(),
   status: text('status').notNull().$type<'open' | 'closed'>(),
+  syncEnabled: boolean('sync_enabled').notNull().default(true),
+  syncStartDate: text('sync_start_date'), // YYYY-MM-DD, set when sync first enabled
   lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
 });

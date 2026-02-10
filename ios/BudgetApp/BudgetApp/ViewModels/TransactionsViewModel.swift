@@ -7,6 +7,9 @@ class TransactionsViewModel: ObservableObject {
     @Published var deletedTransactions: [Transaction] = []
     @Published var isLoading = false
     @Published var isLoadingDeleted = false
+    @Published var isSyncing = false
+    @Published var showSyncAlert = false
+    @Published var syncMessage = ""
     @Published var error: String?
     
     // Keep uncategorized and categorized transactions separate
@@ -25,6 +28,32 @@ class TransactionsViewModel: ObservableObject {
     var selectedYear: Int {
         get { sharedDate.selectedYear }
         set { sharedDate.selectedYear = newValue }
+    }
+
+    // MARK: - Sync Transactions
+
+    func syncAllAccounts() async {
+        isSyncing = true
+        error = nil
+
+        do {
+            let response = try await accountsService.syncTransactions()
+            let updated = response.updated ?? 0
+            let skipped = response.skipped ?? 0
+            syncMessage = "Synced \(response.synced) new, \(updated) updated, \(skipped) unchanged"
+            showSyncAlert = true
+            await loadTransactions()
+        } catch let apiError as APIError {
+            error = apiError.errorDescription
+            syncMessage = "Sync failed: \(apiError.errorDescription ?? "Unknown error")"
+            showSyncAlert = true
+        } catch {
+            self.error = error.localizedDescription
+            syncMessage = "Sync failed: \(error.localizedDescription)"
+            showSyncAlert = true
+        }
+
+        isSyncing = false
     }
 
     // MARK: - Load Transactions

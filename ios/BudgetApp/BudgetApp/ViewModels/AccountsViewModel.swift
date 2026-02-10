@@ -5,10 +5,9 @@ import Combine
 class AccountsViewModel: ObservableObject {
     @Published var accounts: [LinkedAccount] = []
     @Published var isLoading = false
-    @Published var isSyncing = false
     @Published var error: String?
-    @Published var showSyncAlert = false
-    @Published var syncMessage = ""
+    @Published var institutionToUnlink: String?
+    @Published var selectedAccount: LinkedAccount?
 
     private let accountsService = AccountsService.shared
 
@@ -45,29 +44,33 @@ class AccountsViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Sync All Accounts
+    // MARK: - Unlink Institution (all accounts for a bank)
 
-    func syncAllAccounts() async {
-        isSyncing = true
-        error = nil
+    func unlinkInstitution(name: String) async {
+        let institutionAccounts = accounts.filter { $0.institutionName == name }
+        for account in institutionAccounts {
+            do {
+                _ = try await accountsService.unlinkAccount(id: account.id)
+                accounts.removeAll { $0.id == account.id }
+            } catch {
+                self.error = error.localizedDescription
+                return
+            }
+        }
+    }
 
+    // MARK: - Toggle Sync
+
+    func toggleSync(account: LinkedAccount, enabled: Bool) async {
         do {
-            let response = try await accountsService.syncTransactions()
-            let updated = response.updated ?? 0
-            let skipped = response.skipped ?? 0
-            syncMessage = "Synced \(response.synced) new, \(updated) updated, \(skipped) unchanged"
-            showSyncAlert = true
-        } catch let apiError as APIError {
-            error = apiError.errorDescription
-            syncMessage = "Sync failed: \(apiError.errorDescription ?? "Unknown error")"
-            showSyncAlert = true
+            let updated = try await accountsService.updateAccountSync(id: account.id, enabled: enabled)
+            if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+                accounts[index] = updated
+            }
+            selectedAccount = updated
         } catch {
             self.error = error.localizedDescription
-            syncMessage = "Sync failed: \(error.localizedDescription)"
-            showSyncAlert = true
         }
-
-        isSyncing = false
     }
 
     // MARK: - Link Account (called after Teller Connect)
