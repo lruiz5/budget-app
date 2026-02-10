@@ -161,6 +161,27 @@ class InsightsViewModel: ObservableObject {
             .reduce(0) { $0 + $1.planned }
     }
 
+    // MARK: - Drill-Down Helpers
+
+    func getTransactionsForDay(day: Int, from budget: Budget) -> [Transaction] {
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+
+        var result: [Transaction] = []
+        for category in budget.categories.values {
+            guard category.categoryType.lowercased() != "income" else { continue }
+            for item in category.items {
+                for transaction in item.transactions
+                    where !transaction.isDeleted
+                        && transaction.type == .expense
+                        && utcCalendar.component(.day, from: transaction.date) == day {
+                    result.append(transaction)
+                }
+            }
+        }
+        return result.sorted { $0.amount > $1.amount }
+    }
+
     private func shortMonthName(_ month: Int) -> String {
         // month is 0-indexed (0=Jan), DateComponents.month is 1-indexed
         let formatter = DateFormatter()

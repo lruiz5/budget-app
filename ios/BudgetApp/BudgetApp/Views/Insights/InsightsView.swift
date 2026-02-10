@@ -1,9 +1,26 @@
 import SwiftUI
 import Charts
 
+enum InsightsActiveSheet: Identifiable {
+    case monthlyReport(budget: Budget, previousBudget: Budget?)
+    case categoryDrillDown(category: BudgetCategory)
+    case dayDrillDown(date: Date, transactions: [Transaction])
+
+    var id: String {
+        switch self {
+        case .monthlyReport(let b, _):
+            return "report-\(b.id)"
+        case .categoryDrillDown(let cat):
+            return "cat-\(cat.id)"
+        case .dayDrillDown(let date, _):
+            return "day-\(date.timeIntervalSince1970)"
+        }
+    }
+}
+
 struct InsightsView: View {
     @StateObject private var viewModel = InsightsViewModel()
-    @State private var showMonthlyReport = false
+    @State private var activeSheet: InsightsActiveSheet?
 
     var body: some View {
         ScrollView {
@@ -31,9 +48,14 @@ struct InsightsView: View {
         .task {
             await viewModel.loadData()
         }
-        .sheet(isPresented: $showMonthlyReport) {
-            if let budget = viewModel.currentBudget {
-                MonthlyReportSheet(budget: budget, previousBudget: viewModel.previousBudget)
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .monthlyReport(let budget, let previousBudget):
+                MonthlyReportSheet(budget: budget, previousBudget: previousBudget)
+            case .categoryDrillDown(let category):
+                CategoryDrillDownSheet(category: category)
+            case .dayDrillDown(let date, let transactions):
+                DayDrillDownSheet(date: date, transactions: transactions)
             }
         }
     }
@@ -42,7 +64,9 @@ struct InsightsView: View {
 
     private var monthlyReportCard: some View {
         Button {
-            showMonthlyReport = true
+            if let budget = viewModel.currentBudget {
+                activeSheet = .monthlyReport(budget: budget, previousBudget: viewModel.previousBudget)
+            }
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -93,10 +117,15 @@ struct InsightsView: View {
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
-                                Text(formatCurrency(item.actual))
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(item.actual > item.planned ? .red : .primary)
+                                HStack(spacing: 4) {
+                                    Text(formatCurrency(item.actual))
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(item.actual > item.planned ? .red : .primary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
                             }
 
                             GeometryReader { geo in
@@ -119,6 +148,12 @@ struct InsightsView: View {
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                                 Spacer()
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if let category = budget.categories.values.first(where: { $0.name == item.category }) {
+                                activeSheet = .categoryDrillDown(category: category)
                             }
                         }
                     }
@@ -272,6 +307,13 @@ struct InsightsView: View {
                             .aspectRatio(1, contentMode: .fit)
                     case .day(let day):
                         heatmapCell(day: day, maxAmount: maxDailyAmount, budget: budget)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                guard day.amount > 0 else { return }
+                                let transactions = viewModel.getTransactionsForDay(day: day.id, from: budget)
+                                guard !transactions.isEmpty else { return }
+                                activeSheet = .dayDrillDown(date: day.date, transactions: transactions)
+                            }
                     }
                 }
             }

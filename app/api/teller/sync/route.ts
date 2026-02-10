@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { linkedAccounts, transactions, splitTransactions } from '@/db/schema';
-import { eq, and, isNull, isNotNull, notInArray, inArray, sql } from 'drizzle-orm';
+import { budgets, budgetCategories, budgetItems, linkedAccounts, transactions, splitTransactions } from '@/db/schema';
+import { eq, and, isNull, isNotNull, notInArray, inArray } from 'drizzle-orm';
 import { createTellerClient, TellerTransaction } from '@/lib/teller';
 import { requireAuth, isAuthError } from '@/lib/auth';
 
@@ -189,14 +189,20 @@ export async function GET(request: NextRequest) {
     const merchantNames = [...new Set(userTransactions.map(t => t.merchant).filter(Boolean))] as string[];
     const merchantSuggestions: Record<string, number> = {};
 
-    if (merchantNames.length > 0) {
-      // Find previously categorized transactions with matching merchants
+    // Get month/year from query params for current-month item lookup
+    const { searchParams } = new URL(request.url);
+    const month = searchParams.get('month');
+    const year = searchParams.get('year');
+
+    if (merchantNames.length > 0 && month !== null && year !== null) {
+      // Find previously categorized transactions with matching merchants, joined to get item name
       const historicalTxns = await db
         .select({
           merchant: transactions.merchant,
-          budgetItemId: transactions.budgetItemId,
+          budgetItemName: budgetItems.name,
         })
         .from(transactions)
+        .innerJoin(budgetItems, eq(transactions.budgetItemId, budgetItems.id))
         .where(
           and(
             isNotNull(transactions.budgetItemId),
@@ -205,33 +211,57 @@ export async function GET(request: NextRequest) {
           )
         );
 
-      // Filter to user's transactions only (via linked accounts)
-      const userHistorical = historicalTxns.filter(t => {
-        // We already have userAccountIds from above - but historical txns may be manual (no linkedAccountId)
-        // For safety, just use all matches since merchant names are scoped to user's uncategorized txns
-        return t.budgetItemId !== null;
-      });
-
-      // Count frequency of each merchant -> budgetItemId pairing
-      const merchantItemCounts: Record<string, Record<number, number>> = {};
-      for (const t of userHistorical) {
+      // Count frequency of each merchant -> item name pairing
+      const merchantNameCounts: Record<string, Record<string, number>> = {};
+      for (const t of historicalTxns) {
         const m = t.merchant!;
-        if (!merchantItemCounts[m]) merchantItemCounts[m] = {};
-        merchantItemCounts[m][t.budgetItemId!] = (merchantItemCounts[m][t.budgetItemId!] || 0) + 1;
+        if (!merchantNameCounts[m]) merchantNameCounts[m] = {};
+        merchantNameCounts[m][t.budgetItemName] = (merchantNameCounts[m][t.budgetItemName] || 0) + 1;
       }
 
-      // Pick the most frequently used budget item for each merchant
-      for (const [merchant, counts] of Object.entries(merchantItemCounts)) {
+      // Pick the most frequently used item name for each merchant
+      const merchantBestItemName: Record<string, string> = {};
+      for (const [merchant, counts] of Object.entries(merchantNameCounts)) {
         let maxCount = 0;
-        let bestItemId = 0;
-        for (const [itemId, count] of Object.entries(counts)) {
+        let bestName = '';
+        for (const [itemName, count] of Object.entries(counts)) {
           if (count > maxCount) {
             maxCount = count;
-            bestItemId = parseInt(itemId);
+            bestName = itemName;
           }
         }
-        if (bestItemId > 0) {
-          merchantSuggestions[merchant] = bestItemId;
+        if (bestName) {
+          merchantBestItemName[merchant] = bestName;
+        }
+      }
+
+      // Look up current month's budget items by name
+      const itemNames = [...new Set(Object.values(merchantBestItemName))];
+      if (itemNames.length > 0) {
+        const currentMonthItems = await db
+          .select({
+            id: budgetItems.id,
+            name: budgetItems.name,
+          })
+          .from(budgetItems)
+          .innerJoin(budgetCategories, eq(budgetItems.categoryId, budgetCategories.id))
+          .innerJoin(budgets, eq(budgetCategories.budgetId, budgets.id))
+          .where(
+            and(
+              eq(budgets.userId, userId),
+              eq(budgets.month, parseInt(month)),
+              eq(budgets.year, parseInt(year)),
+              inArray(budgetItems.name, itemNames)
+            )
+          );
+
+        const nameToCurrentId = new Map(currentMonthItems.map(i => [i.name, i.id]));
+
+        for (const [merchant, itemName] of Object.entries(merchantBestItemName)) {
+          const currentId = nameToCurrentId.get(itemName);
+          if (currentId) {
+            merchantSuggestions[merchant] = currentId;
+          }
         }
       }
     }
