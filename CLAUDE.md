@@ -134,7 +134,7 @@ Auth (Clerk), multi-user, onboarding (6-step), full budget CRUD, custom categori
 
 ## Working Features (iOS)
 
-Auth (Clerk), budget viewing with categories/items, month navigation, transaction viewing + categorization + editing, transaction creation (from item detail or transactions tab), budget item detail (progress ring, edit name/planned, view/add/edit transactions), bank account linking (Teller Connect via WKWebView), transaction sync from linked accounts, accounts viewing + unlink, pull-to-refresh, sticky "Left to Budget" banner, budget summary progress rings (income/expenses), progress bar dividers, split transactions (create from item detail), recurring payment management (CRUD, contribute, mark as paid/reset, category picker), custom category creation (name+emoji picker, long-press delete), budget copy from previous month, budget reset (zero out / replace with previous month)
+Auth (Clerk), budget viewing with categories/items, month navigation, transaction viewing + categorization + editing, transaction creation (from item detail or transactions tab), budget item detail (progress ring, edit name/planned, view/add/edit transactions), bank account linking (Teller Connect via WKWebView), transaction sync from linked accounts, accounts viewing + unlink, pull-to-refresh, sticky "Left to Budget" banner, budget summary progress rings (income/expenses), progress bar dividers, split transactions (create from item detail), recurring payment management (CRUD, contribute, mark as paid/reset, category picker), custom category creation (name+emoji picker, long-press delete), budget copy from previous month, budget reset (zero out / replace with previous month), monthly report sheet (7 sections with trends), insights charts (budget vs actual bars, spending pace burn-down, daily spending heatmap, spending trends)
 
 ## Common Issues
 
@@ -165,9 +165,8 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 **Web:** v1.9.0 — stable, production-ready on Vercel
 
-**iOS:** v0.6.0 — pre-release. Bank account linking, date fix, budget summary redesign. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.7.0 — pre-release. Monthly report, spending pace chart, daily spending heatmap. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 
 **Next iOS work:**
 - Onboarding flow
-- Monthly report/insights
-- Interactive charts
+- Interactive chart drill-downs

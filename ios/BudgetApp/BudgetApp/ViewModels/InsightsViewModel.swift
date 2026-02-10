@@ -4,13 +4,16 @@ import Combine
 @MainActor
 class InsightsViewModel: ObservableObject {
     @Published var budgets: [Budget] = []
+    @Published var previousBudget: Budget?
     @Published var isLoading = false
     @Published var error: String?
 
     private let budgetService = BudgetService.shared
+    private let sharedDate = SharedDateViewModel.shared
 
     var currentBudget: Budget? {
-        budgets.last
+        // Return the budget matching the selected month/year
+        budgets.first { $0.month == sharedDate.selectedMonth && $0.year == sharedDate.selectedYear }
     }
 
     // MARK: - Load Data
@@ -19,29 +22,29 @@ class InsightsViewModel: ObservableObject {
         isLoading = true
         error = nil
 
-        let now = Date()
-        let calendar = Calendar.current
-        let currentMonth = calendar.component(.month, from: now)
-        let currentYear = calendar.component(.year, from: now)
+        // Use SharedDateViewModel (0-indexed months, matching API)
+        let selectedMonth = sharedDate.selectedMonth
+        let selectedYear = sharedDate.selectedYear
 
-        // Load current month + 2 previous months
+        // Calculate previous month (0-indexed)
+        var prevMonth = selectedMonth - 1
+        var prevYear = selectedYear
+        if prevMonth < 0 {
+            prevMonth = 11
+            prevYear -= 1
+        }
+
+        // Load selected month + previous month + 1 more for trends (3 months total)
         var loadedBudgets: [Budget] = []
+        let monthsToLoad = [
+            (month: prevMonth - 1 < 0 ? 11 : prevMonth - 1, year: prevMonth - 1 < 0 ? prevYear - 1 : prevYear),
+            (month: prevMonth, year: prevYear),
+            (month: selectedMonth, year: selectedYear)
+        ]
 
-        for offset in (-2...0) {
-            var targetMonth = currentMonth + offset
-            var targetYear = currentYear
-
-            while targetMonth < 1 {
-                targetMonth += 12
-                targetYear -= 1
-            }
-            while targetMonth > 12 {
-                targetMonth -= 12
-                targetYear += 1
-            }
-
+        for target in monthsToLoad {
             do {
-                let budget = try await budgetService.getBudget(month: targetMonth, year: targetYear)
+                let budget = try await budgetService.getBudget(month: target.month, year: target.year)
                 loadedBudgets.append(budget)
             } catch {
                 // Skip months without budgets
@@ -49,6 +52,7 @@ class InsightsViewModel: ObservableObject {
         }
 
         budgets = loadedBudgets.sorted { ($0.year, $0.month) < ($1.year, $1.month) }
+        previousBudget = budgets.first { $0.month == prevMonth && $0.year == prevYear }
         isLoading = false
     }
 
@@ -100,11 +104,69 @@ class InsightsViewModel: ObservableObject {
         return dataPoints
     }
 
+    // MARK: - Daily Spending Helpers
+
+    struct DailySpending: Identifiable {
+        let id: Int  // day of month (1-31)
+        let date: Date
+        let amount: Decimal
+        let cumulative: Decimal
+    }
+
+    func getDailySpending(from budget: Budget) -> [DailySpending] {
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+
+        // Build a date for day 1 of the budget month (month is 0-indexed, DateComponents needs 1-indexed)
+        var startComponents = DateComponents()
+        startComponents.year = budget.year
+        startComponents.month = budget.month + 1
+        startComponents.day = 1
+        guard let monthStart = utcCalendar.date(from: startComponents) else { return [] }
+
+        let daysInMonth = utcCalendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+
+        // Flatten all expense transactions from the budget
+        var spendingByDay: [Int: Decimal] = [:]
+        for category in budget.categories.values {
+            guard category.categoryType.lowercased() != "income" else { continue }
+            for item in category.items {
+                for transaction in item.transactions where !transaction.isDeleted && transaction.type == .expense {
+                    let day = utcCalendar.component(.day, from: transaction.date)
+                    spendingByDay[day, default: 0] += transaction.amount
+                }
+            }
+        }
+
+        // Build daily array with cumulative totals
+        var result: [DailySpending] = []
+        var cumulative: Decimal = 0
+        for day in 1...daysInMonth {
+            let amount = spendingByDay[day] ?? 0
+            cumulative += amount
+            var dayComponents = DateComponents()
+            dayComponents.year = budget.year
+            dayComponents.month = budget.month + 1
+            dayComponents.day = day
+            let date = utcCalendar.date(from: dayComponents) ?? monthStart
+            result.append(DailySpending(id: day, date: date, amount: amount, cumulative: cumulative))
+        }
+
+        return result
+    }
+
+    func totalPlannedExpenses(from budget: Budget) -> Decimal {
+        budget.categories.values
+            .filter { $0.categoryType.lowercased() != "income" }
+            .reduce(0) { $0 + $1.planned }
+    }
+
     private func shortMonthName(_ month: Int) -> String {
+        // month is 0-indexed (0=Jan), DateComponents.month is 1-indexed
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM"
         var components = DateComponents()
-        components.month = month
+        components.month = month + 1
         if let date = Calendar.current.date(from: components) {
             return formatter.string(from: date)
         }
