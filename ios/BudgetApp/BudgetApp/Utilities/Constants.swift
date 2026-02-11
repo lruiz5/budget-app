@@ -38,7 +38,7 @@ enum Constants {
 
     // MARK: - App Info
     enum App {
-        static let version = "0.8.0"
+        static let version = "0.9.0"
         static let buildNumber = "1"
         static let name = "Budget App"
     }
@@ -65,5 +65,31 @@ enum Constants {
         "personal": "👤",
         "insurance": "🛡️",
         "saving": "💵"
+    ]
+
+    // MARK: - Onboarding Suggested Items
+    struct SuggestedBudgetItem {
+        let name: String
+        let planned: Decimal
+    }
+
+    static let suggestedBudgetItems: [String: [SuggestedBudgetItem]] = [
+        "giving": [SuggestedBudgetItem(name: "Charity", planned: 25)],
+        "household": [
+            SuggestedBudgetItem(name: "Rent", planned: 1200),
+            SuggestedBudgetItem(name: "Utilities", planned: 250),
+            SuggestedBudgetItem(name: "Hygiene/Toiletries", planned: 100),
+        ],
+        "transportation": [
+            SuggestedBudgetItem(name: "Maintenance", planned: 150),
+            SuggestedBudgetItem(name: "Gas", planned: 150),
+        ],
+        "food": [
+            SuggestedBudgetItem(name: "Groceries", planned: 400),
+            SuggestedBudgetItem(name: "Restaurant", planned: 100),
+        ],
+        "personal": [SuggestedBudgetItem(name: "Spending Money", planned: 100)],
+        "insurance": [SuggestedBudgetItem(name: "Auto Insurance", planned: 200)],
+        "saving": [SuggestedBudgetItem(name: "Emergency Fund", planned: 500)],
     ]
 }

@@ -7,6 +7,7 @@ struct BudgetAppApp: App {
     @State private var isLoading = true
     @State private var isAuthReady = false
     @State private var showAuth = false
+    @State private var hasCompletedOnboarding: Bool?
 
     var body: some Scene {
         WindowGroup {
@@ -14,8 +15,27 @@ struct BudgetAppApp: App {
                 if isLoading {
                     ProgressView("Loading...")
                 } else if clerk.user != nil && isAuthReady {
-                    // User is signed in AND auth token is ready
-                    ContentView()
+                    // User is signed in AND auth token is ready — check onboarding
+                    if let completed = hasCompletedOnboarding {
+                        if completed {
+                            ContentView()
+                        } else {
+                            OnboardingFlowView(onComplete: {
+                                hasCompletedOnboarding = true
+                            })
+                        }
+                    } else {
+                        ProgressView("Checking setup...")
+                            .task {
+                                do {
+                                    let status = try await OnboardingService.shared.getStatus()
+                                    hasCompletedOnboarding = status.completed
+                                } catch {
+                                    // If check fails, don't block the app
+                                    hasCompletedOnboarding = true
+                                }
+                            }
+                    }
                 } else if clerk.user != nil && !isAuthReady {
                     // User is signed in but auth token not yet set
                     ProgressView("Preparing...")
@@ -46,6 +66,7 @@ struct BudgetAppApp: App {
                 // Reset auth ready state when user changes (sign out/sign in)
                 if newValue == nil {
                     isAuthReady = false
+                    hasCompletedOnboarding = nil
                 }
             }
         }

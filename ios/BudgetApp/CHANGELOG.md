@@ -6,6 +6,41 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.9.0] - 2026-02-10 - Onboarding Flow
+
+### Added
+
+- **6-step onboarding flow** for new users — Welcome → Zero-Based Concepts → Buffer Practice → Budget Items Practice → Transaction Practice → Completion
+- **Purely educational** — all practice steps use local state only. No budget, transaction, or account data is created or modified. Only onboarding progress is tracked via API
+- **OnboardingFlowView** — segmented progress bar, step navigation, skip button
+- **OnboardingWelcomeStep** — introduces the app with feature highlights
+- **OnboardingConceptsStep** — explains zero-based budgeting with concept cards and a worked example breakdown
+- **OnboardingBufferStep** — practice entering a starting buffer amount
+- **OnboardingItemsStep** — practice adding budget items across 7 expense categories with suggestion chips and category accordions
+- **OnboardingTransactionStep** — practice logging a transaction against a created budget item
+- **OnboardingCompleteStep** — summary of practiced items with "Head to your budget to set things up for real" CTA
+- **OnboardingService** — API client for onboarding status tracking (GET/POST/PUT/PATCH `/api/onboarding`)
+- **OnboardingViewModel** — centralized state management with static category list, local item storage, and step tracking
+- **Automatic routing** — `BudgetAppApp.swift` checks onboarding status on launch; new users see onboarding, returning users go straight to budget
+
+### Files Added
+
+- `Views/Onboarding/OnboardingFlowView.swift`
+- `Views/Onboarding/OnboardingWelcomeStep.swift`
+- `Views/Onboarding/OnboardingConceptsStep.swift`
+- `Views/Onboarding/OnboardingBufferStep.swift`
+- `Views/Onboarding/OnboardingItemsStep.swift`
+- `Views/Onboarding/OnboardingTransactionStep.swift`
+- `Views/Onboarding/OnboardingCompleteStep.swift`
+- `ViewModels/OnboardingViewModel.swift`
+- `Services/OnboardingService.swift`
+
+### Files Modified
+
+- `BudgetAppApp.swift` — onboarding status check and routing
+
+---
+
 ## [0.7.1] - 2026-02-09 - Interactive Chart Drill-Downs & Quick Assign Fix
 
 ### Added
@@ -239,7 +274,7 @@ All notable changes to the Budget App iOS application.
 - [x] Custom category creation
 - [x] Budget copy from previous month
 - [x] Budget reset functionality
-- [ ] Onboarding flow for new users
+- [x] Onboarding flow for new users
 - [x] Monthly report/insights
 - [x] Interactive charts (Budget vs Actual, Daily Spending heatmap drill-downs)
 - [ ] Comprehensive error handling and user feedback
@@ -252,4 +287,3 @@ All notable changes to the Budget App iOS application.
 ### Known Issues
 
 - No search/filter functionality
-- No onboarding flow
