@@ -45,12 +45,11 @@ export async function POST(request: NextRequest) {
       try {
         const tellerClient = createTellerClient(account.accessToken);
 
-        // Fetch transactions from Teller (use syncStartDate to avoid pulling historical data)
+        // Fetch transactions from Teller with automatic pagination
         const effectiveStartDate = startDate || account.syncStartDate || undefined;
-        const tellerTransactions: TellerTransaction[] = await tellerClient.listTransactions(
+        const tellerTransactions: TellerTransaction[] = await tellerClient.listAllTransactions(
           account.tellerAccountId,
           {
-            count: 500, // Max transactions to fetch
             startDate: effectiveStartDate,
             endDate,
           }

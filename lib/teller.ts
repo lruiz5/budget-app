@@ -168,6 +168,37 @@ class TellerClient {
     return this.request<TellerTransaction[]>(endpoint);
   }
 
+  // List ALL transactions for an account with automatic pagination
+  async listAllTransactions(
+    accountId: string,
+    options?: {
+      startDate?: string;
+      endDate?: string;
+    }
+  ): Promise<TellerTransaction[]> {
+    const pageSize = 250;
+    const allTransactions: TellerTransaction[] = [];
+    let fromId: string | undefined;
+
+    while (true) {
+      const page = await this.listTransactions(accountId, {
+        count: pageSize,
+        fromId,
+        startDate: options?.startDate,
+        endDate: options?.endDate,
+      });
+
+      if (page.length === 0) break;
+
+      allTransactions.push(...page);
+      fromId = page[page.length - 1].id;
+
+      if (page.length < pageSize) break;
+    }
+
+    return allTransactions;
+  }
+
   // Delete/disconnect an account
   async deleteAccount(accountId: string): Promise<void> {
     await this.request<void>(`/accounts/${accountId}`, 'DELETE');
