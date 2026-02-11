@@ -8,9 +8,12 @@ class TransactionsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var isLoadingDeleted = false
     @Published var isSyncing = false
-    @Published var showSyncAlert = false
-    @Published var syncMessage = ""
     @Published var error: String?
+
+    // Toast state for non-blocking feedback (replaces showSyncAlert/syncMessage)
+    @Published var showToast = false
+    @Published var toastMessage: String?
+    @Published var isToastError = false
     
     // Keep uncategorized and categorized transactions separate
     @Published var uncategorizedTransactions: [Transaction] = []
@@ -30,6 +33,14 @@ class TransactionsViewModel: ObservableObject {
         set { sharedDate.selectedYear = newValue }
     }
 
+    // MARK: - Toast Helper
+
+    private func showToast(_ message: String, isError: Bool) {
+        toastMessage = message
+        isToastError = isError
+        showToast = true
+    }
+
     // MARK: - Sync Transactions
 
     func syncAllAccounts() async {
@@ -39,18 +50,14 @@ class TransactionsViewModel: ObservableObject {
         do {
             let response = try await accountsService.syncTransactions()
             let updated = response.updated ?? 0
-            let skipped = response.skipped ?? 0
-            syncMessage = "Synced \(response.synced) new, \(updated) updated, \(skipped) unchanged"
-            showSyncAlert = true
+            var parts: [String] = []
+            if response.synced > 0 { parts.append("\(response.synced) new") }
+            if updated > 0 { parts.append("\(updated) updated") }
+            let summary = parts.isEmpty ? "No new transactions" : "Synced " + parts.joined(separator: ", ")
+            showToast(summary, isError: false)
             await loadTransactions()
-        } catch let apiError as APIError {
-            error = apiError.errorDescription
-            syncMessage = "Sync failed: \(apiError.errorDescription ?? "Unknown error")"
-            showSyncAlert = true
         } catch {
-            self.error = error.localizedDescription
-            syncMessage = "Sync failed: \(error.localizedDescription)"
-            showSyncAlert = true
+            showToast("Sync failed: \(error.localizedDescription)", isError: true)
         }
 
         isSyncing = false
@@ -194,6 +201,7 @@ class TransactionsViewModel: ObservableObject {
             deletedTransactions = try await transactionService.getDeletedTransactions(month: month, year: year)
         } catch {
             deletedTransactions = []
+            showToast("Failed to load deleted transactions", isError: true)
         }
 
         isLoadingDeleted = false
@@ -214,7 +222,7 @@ class TransactionsViewModel: ObservableObject {
             _ = try await transactionService.createTransaction(request)
             await loadTransactions()
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -233,7 +241,7 @@ class TransactionsViewModel: ObservableObject {
             _ = try await transactionService.updateTransaction(request)
             await loadTransactions()
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -243,8 +251,9 @@ class TransactionsViewModel: ObservableObject {
         do {
             _ = try await transactionService.deleteTransaction(id: id)
             await loadTransactions()
+            showToast("Transaction deleted", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -255,8 +264,9 @@ class TransactionsViewModel: ObservableObject {
             _ = try await transactionService.restoreTransaction(id: id)
             await loadTransactions()
             await loadDeletedTransactions()
+            showToast("Transaction restored", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -274,7 +284,7 @@ class TransactionsViewModel: ObservableObject {
             _ = try await transactionService.createSplits(request)
             await loadTransactions()
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -283,7 +293,7 @@ class TransactionsViewModel: ObservableObject {
             _ = try await transactionService.deleteSplits(parentTransactionId: transactionId, budgetItemId: budgetItemId)
             await loadTransactions()
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 }

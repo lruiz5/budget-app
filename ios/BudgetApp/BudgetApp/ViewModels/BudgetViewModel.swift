@@ -7,6 +7,11 @@ class BudgetViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
+    // Toast state for non-blocking mutation feedback
+    @Published var showToast = false
+    @Published var toastMessage: String?
+    @Published var isToastError = false
+
     private let budgetService = BudgetService.shared
     private let sharedDate = SharedDateViewModel.shared
     
@@ -51,6 +56,14 @@ class BudgetViewModel: ObservableObject {
         isLoading = false
     }
 
+    // MARK: - Toast Helper
+
+    private func showToast(_ message: String, isError: Bool) {
+        toastMessage = message
+        isToastError = isError
+        showToast = true
+    }
+
     // MARK: - Create Budget (for empty state)
 
     func createBudget() async {
@@ -76,6 +89,7 @@ class BudgetViewModel: ObservableObject {
             #if DEBUG
             print("Copy from previous month failed: \(error)")
             #endif
+            showToast("Failed to copy from previous month", isError: true)
         }
 
         // Always reload to get the full budget with categories
@@ -93,7 +107,7 @@ class BudgetViewModel: ObservableObject {
             )
             await loadBudget()
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -104,7 +118,7 @@ class BudgetViewModel: ObservableObject {
             _ = try await budgetService.createBudgetItem(categoryId: categoryId, name: name, planned: planned)
             await loadBudget()
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -113,7 +127,7 @@ class BudgetViewModel: ObservableObject {
             _ = try await budgetService.updateBudgetItem(id: id, name: name, planned: planned)
             await loadBudget()
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -121,8 +135,9 @@ class BudgetViewModel: ObservableObject {
         do {
             _ = try await budgetService.deleteBudgetItem(id: id)
             await loadBudget()
+            showToast("Item deleted", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -134,7 +149,7 @@ class BudgetViewModel: ObservableObject {
             _ = try await budgetService.reorderBudgetItems(items: reorderItems)
             await loadBudget()
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -147,7 +162,7 @@ class BudgetViewModel: ObservableObject {
             _ = try await budgetService.createCategory(budgetId: budget.id, name: name, emoji: emoji)
             await loadBudget()
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -155,8 +170,9 @@ class BudgetViewModel: ObservableObject {
         do {
             _ = try await budgetService.deleteCategory(id: id)
             await loadBudget()
+            showToast("Category deleted", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -169,8 +185,9 @@ class BudgetViewModel: ObservableObject {
         do {
             _ = try await budgetService.resetBudget(budgetId: budget.id, mode: mode)
             await loadBudget()
+            showToast("Budget reset", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
         isLoading = false
     }

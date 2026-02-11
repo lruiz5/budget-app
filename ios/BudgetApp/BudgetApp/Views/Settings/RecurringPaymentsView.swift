@@ -68,6 +68,11 @@ struct RecurringPaymentsView: View {
                     EditRecurringPaymentSheet(payment: payment, viewModel: viewModel)
                 }
             }
+            .toast(
+                isPresented: $viewModel.showToast,
+                message: viewModel.toastMessage ?? "",
+                isError: viewModel.isToastError
+            )
         }
     }
 

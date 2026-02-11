@@ -101,6 +101,11 @@ struct BudgetView: View {
         } message: { category in
             Text("This will permanently delete \"\(category.name)\" and all its budget items. Transactions will be uncategorized.")
         }
+        .toast(
+            isPresented: $viewModel.showToast,
+            message: viewModel.toastMessage ?? "",
+            isError: viewModel.isToastError
+        )
     }
 
     // MARK: - Budget Content

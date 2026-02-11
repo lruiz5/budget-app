@@ -9,11 +9,24 @@ class AccountsViewModel: ObservableObject {
     @Published var institutionToUnlink: String?
     @Published var selectedAccount: LinkedAccount?
 
+    // Toast state for non-blocking feedback
+    @Published var showToast = false
+    @Published var toastMessage: String?
+    @Published var isToastError = false
+
     private let accountsService = AccountsService.shared
 
     var groupedAccounts: [(key: String, value: [LinkedAccount])] {
         let grouped = Dictionary(grouping: accounts) { $0.institutionName }
         return grouped.sorted { $0.key < $1.key }
+    }
+
+    // MARK: - Toast Helper
+
+    private func showToast(_ message: String, isError: Bool) {
+        toastMessage = message
+        isToastError = isError
+        showToast = true
     }
 
     // MARK: - Load Accounts
@@ -24,10 +37,8 @@ class AccountsViewModel: ObservableObject {
 
         do {
             accounts = try await accountsService.getLinkedAccounts()
-        } catch let apiError as APIError {
-            error = apiError.errorDescription
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
 
         isLoading = false
@@ -39,8 +50,9 @@ class AccountsViewModel: ObservableObject {
         do {
             _ = try await accountsService.unlinkAccount(id: id)
             accounts.removeAll { $0.id == id }
+            showToast("Account unlinked", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -48,14 +60,19 @@ class AccountsViewModel: ObservableObject {
 
     func unlinkInstitution(name: String) async {
         let institutionAccounts = accounts.filter { $0.institutionName == name }
+        var failCount = 0
         for account in institutionAccounts {
             do {
                 _ = try await accountsService.unlinkAccount(id: account.id)
                 accounts.removeAll { $0.id == account.id }
             } catch {
-                self.error = error.localizedDescription
-                return
+                failCount += 1
             }
+        }
+        if failCount > 0 {
+            showToast("Failed to unlink \(failCount) account(s)", isError: true)
+        } else {
+            showToast("Institution removed", isError: false)
         }
     }
 
@@ -68,8 +85,11 @@ class AccountsViewModel: ObservableObject {
                 accounts[index] = updated
             }
             selectedAccount = updated
+            showToast(enabled ? "Sync enabled" : "Sync disabled", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
+            // Revert local state to match server
+            await loadAccounts()
         }
     }
 
@@ -82,8 +102,9 @@ class AccountsViewModel: ObservableObject {
                 enrollmentId: enrollmentId
             )
             accounts.append(contentsOf: newAccounts)
+            showToast("Account linked", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 }
