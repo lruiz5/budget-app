@@ -7,6 +7,7 @@ enum TransactionActiveSheet: Identifiable {
     case editTransaction(Transaction)
     case categorizeTransaction(Transaction)
     case splitTransaction(Transaction)
+    case filterOptions
 
     var id: String {
         switch self {
@@ -14,6 +15,7 @@ enum TransactionActiveSheet: Identifiable {
         case .editTransaction(let t): return "edit-\(t.id)"
         case .categorizeTransaction(let t): return "categorize-\(t.id)"
         case .splitTransaction(let t): return "split-\(t.id)"
+        case .filterOptions: return "filters"
         }
     }
 }
@@ -23,9 +25,17 @@ struct TransactionsView: View {
     @State private var selectedFilter: TransactionFilter = .uncategorized
     @State private var activeSheet: TransactionActiveSheet?
 
+    // Search & filter state
+    @State private var searchText = ""
+    @State private var filterType: TransactionTypeFilter = .all
+    @State private var filterCategoryIds: Set<Int> = []
+    @State private var filterMinAmount = ""
+    @State private var filterMaxAmount = ""
+    @State private var filterAccountIds: Set<Int> = []
+
     var body: some View {
         VStack(spacing: 0) {
-            // Filter Picker
+            // Tab Picker
             Picker("Filter", selection: $selectedFilter) {
                 ForEach(TransactionFilter.allCases, id: \.self) { filter in
                     Text(filter.title).tag(filter)
@@ -33,6 +43,11 @@ struct TransactionsView: View {
             }
             .pickerStyle(.segmented)
             .padding()
+
+            // Filter Chip Bar
+            if hasActiveFilters {
+                filterChipBar
+            }
 
             // Transaction List
             if isCurrentTabLoading {
@@ -45,7 +60,16 @@ struct TransactionsView: View {
                 transactionList
             }
         }
+        .searchable(text: $searchText, prompt: "Search transactions")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    activeSheet = .filterOptions
+                } label: {
+                    Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     Task { await viewModel.syncAllAccounts() }
@@ -83,6 +107,10 @@ struct TransactionsView: View {
                 Task { await viewModel.loadDeletedTransactions() }
             }
         }
+        .onChange(of: viewModel.budgetCategories.map(\.id)) { _, _ in
+            // Clear category filter on month change (category IDs differ per month)
+            filterCategoryIds.removeAll()
+        }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .addTransaction:
@@ -110,6 +138,17 @@ struct TransactionsView: View {
                         Task { await viewModel.loadTransactions() }
                     }
                 )
+            case .filterOptions:
+                TransactionFilterSheet(
+                    filterType: $filterType,
+                    filterCategoryIds: $filterCategoryIds,
+                    filterMinAmount: $filterMinAmount,
+                    filterMaxAmount: $filterMaxAmount,
+                    filterAccountIds: $filterAccountIds,
+                    budgetCategories: viewModel.budgetCategories,
+                    linkedAccounts: viewModel.linkedAccounts,
+                    selectedTab: selectedFilter
+                )
             }
         }
     }
@@ -125,17 +164,79 @@ struct TransactionsView: View {
         }
     }
 
-    private var currentTransactions: [Transaction] {
+    private var tabFilteredTransactions: [Transaction] {
         switch selectedFilter {
         case .uncategorized:
-            // Only show uncategorized transactions from Teller sync (±7 days)
             return viewModel.uncategorizedTransactions.filter { $0.budgetItemId == nil && !$0.isDeleted }
         case .tracked:
-            // Show all categorized transactions (no date filtering)
             return viewModel.categorizedTransactions.filter { $0.budgetItemId != nil }
         case .deleted:
             return viewModel.deletedTransactions
         }
+    }
+
+    private var currentTransactions: [Transaction] {
+        var result = tabFilteredTransactions
+
+        // Text search (merchant, description, amount)
+        if !searchText.isEmpty {
+            let query = searchText.lowercased()
+            result = result.filter { txn in
+                txn.description.lowercased().contains(query) ||
+                (txn.merchant?.lowercased().contains(query) ?? false) ||
+                txn.displayAmount.contains(query)
+            }
+        }
+
+        // Type filter
+        if filterType != .all {
+            let matchType: TransactionType = filterType == .income ? .income : .expense
+            result = result.filter { $0.type == matchType }
+        }
+
+        // Category filter (only on Tracked tab — others lack budgetItemId)
+        if selectedFilter == .tracked && !filterCategoryIds.isEmpty {
+            let itemIds = Set(viewModel.budgetCategories
+                .filter { filterCategoryIds.contains($0.id) }
+                .flatMap { $0.items.map { $0.id } })
+            result = result.filter { txn in
+                guard let itemId = txn.budgetItemId else { return false }
+                return itemIds.contains(itemId)
+            }
+        }
+
+        // Amount range
+        if let min = Decimal(string: filterMinAmount) {
+            result = result.filter { $0.amount >= min }
+        }
+        if let max = Decimal(string: filterMaxAmount) {
+            result = result.filter { $0.amount <= max }
+        }
+
+        // Account filter (-1 sentinel = manual/nil linkedAccountId)
+        if !filterAccountIds.isEmpty {
+            result = result.filter { txn in
+                if let accountId = txn.linkedAccountId {
+                    return filterAccountIds.contains(accountId)
+                } else {
+                    return filterAccountIds.contains(-1)
+                }
+            }
+        }
+
+        return result
+    }
+
+    // MARK: - Budget Item Lookup
+
+    private var budgetItemNameMap: [Int: String] {
+        var map: [Int: String] = [:]
+        for category in viewModel.budgetCategories {
+            for item in category.items {
+                map[item.id] = item.name
+            }
+        }
+        return map
     }
 
     // MARK: - Transaction List
@@ -145,7 +246,7 @@ struct TransactionsView: View {
             ForEach(groupedByDate, id: \.key) { date, transactions in
                 Section(header: Text(formatDate(date))) {
                     ForEach(transactions) { transaction in
-                        TransactionRow(transaction: transaction)
+                        TransactionRow(transaction: transaction, budgetItemName: budgetItemNameMap[transaction.budgetItemId ?? -1])
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 if transaction.isSplit {
@@ -221,13 +322,118 @@ struct TransactionsView: View {
         return grouped.sorted { $0.key > $1.key }
     }
 
+    // MARK: - Filter Chip Bar
+
+    private var hasActiveFilters: Bool {
+        filterType != .all ||
+        !filterCategoryIds.isEmpty ||
+        !filterMinAmount.isEmpty ||
+        !filterMaxAmount.isEmpty ||
+        !filterAccountIds.isEmpty
+    }
+
+    private var activeFilterCount: Int {
+        var count = 0
+        if filterType != .all { count += 1 }
+        if !filterCategoryIds.isEmpty { count += 1 }
+        if !filterMinAmount.isEmpty || !filterMaxAmount.isEmpty { count += 1 }
+        if !filterAccountIds.isEmpty { count += 1 }
+        return count
+    }
+
+    private var filterChipBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                if filterType != .all {
+                    FilterChip(label: filterType.rawValue) {
+                        filterType = .all
+                    }
+                }
+
+                if !filterCategoryIds.isEmpty {
+                    let names = viewModel.budgetCategories
+                        .filter { filterCategoryIds.contains($0.id) }
+                        .map { $0.name }
+                    let label = names.count == 1 ? names[0] : "\(names.count) categories"
+                    FilterChip(label: label) {
+                        filterCategoryIds.removeAll()
+                    }
+                }
+
+                if !filterMinAmount.isEmpty || !filterMaxAmount.isEmpty {
+                    let label: String = {
+                        if !filterMinAmount.isEmpty && !filterMaxAmount.isEmpty {
+                            return "$\(filterMinAmount)–$\(filterMaxAmount)"
+                        } else if !filterMinAmount.isEmpty {
+                            return "$\(filterMinAmount)+"
+                        } else {
+                            return "Up to $\(filterMaxAmount)"
+                        }
+                    }()
+                    FilterChip(label: label) {
+                        filterMinAmount = ""
+                        filterMaxAmount = ""
+                    }
+                }
+
+                if !filterAccountIds.isEmpty {
+                    let names: [String] = filterAccountIds.compactMap { id in
+                        if id == -1 { return "Manual" }
+                        return viewModel.linkedAccounts.first { $0.id == id }?.displayName
+                    }
+                    let label = names.count == 1 ? names[0] : "\(names.count) accounts"
+                    FilterChip(label: label) {
+                        filterAccountIds.removeAll()
+                    }
+                }
+
+                Button("Clear All") {
+                    clearAllFilters()
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        }
+    }
+
+    private func clearAllFilters() {
+        searchText = ""
+        filterType = .all
+        filterCategoryIds.removeAll()
+        filterMinAmount = ""
+        filterMaxAmount = ""
+        filterAccountIds.removeAll()
+    }
+
     // MARK: - Empty State
 
+    private var hasTabData: Bool {
+        !tabFilteredTransactions.isEmpty
+    }
+
     private var emptyStateView: some View {
-        ContentUnavailableView {
-            Label(emptyStateTitle, systemImage: emptyStateIcon)
-        } description: {
-            Text(emptyStateMessage)
+        Group {
+            if hasTabData {
+                // Filters produced zero results but tab has data
+                ContentUnavailableView {
+                    Label("No Matching Transactions", systemImage: "magnifyingglass")
+                } description: {
+                    Text("Try adjusting your search or filters")
+                } actions: {
+                    Button("Clear Filters") {
+                        clearAllFilters()
+                    }
+                    .buttonStyle(.bordered)
+                }
+            } else {
+                ContentUnavailableView {
+                    Label(emptyStateTitle, systemImage: emptyStateIcon)
+                } description: {
+                    Text(emptyStateMessage)
+                }
+            }
         }
     }
 
@@ -283,6 +489,7 @@ enum TransactionFilter: CaseIterable {
 
 struct TransactionRow: View {
     let transaction: Transaction
+    var budgetItemName: String? = nil
 
     var body: some View {
         HStack {
@@ -299,6 +506,10 @@ struct TransactionRow: View {
                     Label("Split", systemImage: "arrow.triangle.branch")
                         .font(.caption)
                         .foregroundStyle(.purple)
+                } else if let itemName = budgetItemName {
+                    Text(itemName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 } else if transaction.budgetItemId == nil, transaction.suggestedBudgetItemId != nil {
                     Text("Swipe right to categorize")
                         .font(.caption)
@@ -398,6 +609,32 @@ struct CategorizeTransactionSheet: View {
         formatter.numberStyle = .currency
         formatter.currencyCode = "USD"
         return formatter.string(from: value as NSNumber) ?? "$0.00"
+    }
+}
+
+// MARK: - Filter Chip
+
+struct FilterChip: View {
+    let label: String
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .lineLimit(1)
+            Button {
+                onRemove()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.green.opacity(0.15))
+        .foregroundStyle(.green)
+        .clipShape(Capsule())
     }
 }
 

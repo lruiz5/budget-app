@@ -19,6 +19,10 @@ class TransactionsViewModel: ObservableObject {
     @Published var uncategorizedTransactions: [Transaction] = []
     @Published var categorizedTransactions: [Transaction] = []
 
+    // Data for filter sheet
+    @Published var budgetCategories: [BudgetCategory] = []
+    @Published var linkedAccounts: [LinkedAccount] = []
+
     private let transactionService = TransactionService.shared
     private let accountsService = AccountsService.shared
     private let sharedDate = SharedDateViewModel.shared
@@ -81,7 +85,10 @@ class TransactionsViewModel: ObservableObject {
             
             // Load budget to get all categorized transactions
             let budget = try await BudgetService.shared.getBudget(month: month, year: year)
-            
+
+            // Expose categories for filter sheet
+            budgetCategories = budget.sortedCategoryKeys.compactMap { budget.categories[$0] }
+
             // Extract all transactions from budget items
             var categorized: [Transaction] = []
             for category in budget.categories.values {
@@ -139,6 +146,10 @@ class TransactionsViewModel: ObservableObject {
             
             // For backward compatibility, combine both lists
             transactions = uncategorizedTransactions + categorizedTransactions
+            // Load linked accounts for account filter (non-blocking)
+            if let accounts = try? await accountsService.getLinkedAccounts() {
+                linkedAccounts = accounts
+            }
         } catch let apiError as APIError {
             error = apiError.errorDescription
         } catch {

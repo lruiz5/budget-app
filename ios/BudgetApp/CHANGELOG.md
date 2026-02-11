@@ -6,6 +6,28 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.11.0] - 2026-02-11 - Transaction Search & Filters
+
+### Added
+
+- **Native search bar** — `.searchable()` on Transactions tab searches merchant, description, and formatted amount in real-time across all 3 tabs (New/Tracked/Deleted)
+- **Advanced filter sheet** — toolbar button opens filter form with 4 sections: transaction type (segmented All/Income/Expense), budget category (multi-select, Tracked tab only), amount range (min/max), account source (linked accounts + Manual Entry)
+- **Filter chips** — active filters shown as dismissible capsule pills below the tab picker. Each chip has an "x" to clear that filter; "Clear All" link at the end
+- **Smart empty state** — when filters produce zero results but the tab has data, shows "No Matching Transactions" with "Clear Filters" button instead of the default empty state
+- **Budget item name on Tracked tab** — each tracked transaction row shows its assigned budget item name in smaller secondary text below the merchant/description
+- **Category filter auto-clear** — category filter resets on month change since category IDs differ per month
+
+### Files Added
+
+- `Views/Transactions/TransactionFilterSheet.swift` — filter sheet with `TransactionTypeFilter` enum and `@Binding` state for live updates
+
+### Files Modified
+
+- `Views/Transactions/TransactionsView.swift` — search state, filter pipeline (`tabFilteredTransactions` → `currentTransactions`), filter chip bar, `FilterChip` component, `budgetItemNameMap` lookup, smart empty state, `.filterOptions` sheet case
+- `ViewModels/TransactionsViewModel.swift` — added `budgetCategories` and `linkedAccounts` `@Published` properties, populated in `loadTransactions()`
+
+---
+
 ## [0.10.0] - 2026-02-11 - Comprehensive Error Handling
 
 ### Added
@@ -317,6 +339,7 @@ All notable changes to the Budget App iOS application.
 - [x] Monthly report/insights
 - [x] Interactive charts (Budget vs Actual, Daily Spending heatmap drill-downs)
 - [x] Comprehensive error handling and user feedback
+- [x] Transaction search & filters
 - [ ] Offline support with local caching
 - [ ] App Store assets (screenshots, description, keywords)
 - [ ] TestFlight beta testing
@@ -325,4 +348,4 @@ All notable changes to the Budget App iOS application.
 
 ### Known Issues
 
-- No search/filter functionality
+- None currently tracked
