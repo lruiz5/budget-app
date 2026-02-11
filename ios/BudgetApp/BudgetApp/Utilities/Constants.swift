@@ -38,7 +38,7 @@ enum Constants {
 
     // MARK: - App Info
     enum App {
-        static let version = "0.9.0"
+        static let version = "0.10.0"
         static let buildNumber = "1"
         static let name = "Budget App"
     }

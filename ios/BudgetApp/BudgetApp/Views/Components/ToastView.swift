@@ -4,19 +4,24 @@ struct ToastView: View {
     let message: String
     let isError: Bool
 
+    private var tintColor: Color {
+        isError ? .red : .green
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: isError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                .foregroundStyle(isError ? .red : .green)
+                .foregroundStyle(.white)
 
             Text(message)
                 .font(.subheadline)
                 .fontWeight(.medium)
+                .foregroundStyle(.white)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial, in: Capsule())
-        .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+        .background(tintColor.opacity(0.85), in: Capsule())
+        .shadow(color: tintColor.opacity(0.25), radius: 8, y: 4)
     }
 }
 

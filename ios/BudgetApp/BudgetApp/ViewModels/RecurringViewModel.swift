@@ -7,11 +7,24 @@ class RecurringViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
+    // Toast state for non-blocking feedback
+    @Published var showToast = false
+    @Published var toastMessage: String?
+    @Published var isToastError = false
+
     private let recurringService = RecurringService.shared
 
     var upcomingPayments: [RecurringPayment] {
         payments.filter { $0.isUpcoming && $0.isActive }
             .sorted { $0.nextDueDate < $1.nextDueDate }
+    }
+
+    // MARK: - Toast Helper
+
+    private func showToast(_ message: String, isError: Bool) {
+        toastMessage = message
+        isToastError = isError
+        showToast = true
     }
 
     // MARK: - Load Payments
@@ -22,10 +35,8 @@ class RecurringViewModel: ObservableObject {
 
         do {
             payments = try await recurringService.getRecurringPayments()
-        } catch let apiError as APIError {
-            error = apiError.errorDescription
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
 
         isLoading = false
@@ -45,7 +56,7 @@ class RecurringViewModel: ObservableObject {
             let payment = try await recurringService.createRecurringPayment(request)
             payments.append(payment)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -67,7 +78,7 @@ class RecurringViewModel: ObservableObject {
                 payments[index] = updated
             }
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -77,8 +88,9 @@ class RecurringViewModel: ObservableObject {
         do {
             _ = try await recurringService.deleteRecurringPayment(id: id)
             payments.removeAll { $0.id == id }
+            showToast("Payment deleted", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -92,7 +104,7 @@ class RecurringViewModel: ObservableObject {
                 payments[index] = updated
             }
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 
@@ -105,8 +117,9 @@ class RecurringViewModel: ObservableObject {
             if let index = payments.firstIndex(where: { $0.id == paymentId }) {
                 payments[index] = updated
             }
+            showToast("Marked as paid", isError: false)
         } catch {
-            self.error = error.localizedDescription
+            showToast(error.localizedDescription, isError: true)
         }
     }
 }

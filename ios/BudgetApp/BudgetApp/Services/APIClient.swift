@@ -111,7 +111,13 @@ actor APIClient {
         }
         #endif
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw APIError.networkError(error)
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -130,6 +136,9 @@ actor APIClient {
         }
         #endif
 
+        // Parse server error message from response body for non-2xx responses
+        let serverMessage = Self.parseErrorMessage(from: data)
+
         switch httpResponse.statusCode {
         case 200...299:
             do {
@@ -143,14 +152,20 @@ actor APIClient {
         case 403:
             throw APIError.forbidden
         case 404:
-            throw APIError.notFound
+            throw APIError.notFound(serverMessage)
         case 405:
             throw APIError.methodNotAllowed
         case 500...599:
-            throw APIError.serverError(httpResponse.statusCode)
+            throw APIError.serverError(httpResponse.statusCode, serverMessage)
         default:
-            throw APIError.httpError(httpResponse.statusCode)
+            throw APIError.httpError(httpResponse.statusCode, serverMessage)
         }
+    }
+
+    /// Try to extract an error message from a JSON response body (e.g. `{ "error": "message" }`)
+    private static func parseErrorMessage(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return json["error"] as? String ?? json["message"] as? String
     }
 }
 
@@ -160,10 +175,10 @@ enum APIError: LocalizedError {
     case invalidResponse
     case unauthorized
     case forbidden
-    case notFound
+    case notFound(String?)
     case methodNotAllowed
-    case serverError(Int)
-    case httpError(Int)
+    case serverError(Int, String?)
+    case httpError(Int, String?)
     case decodingError(Error)
     case networkError(Error)
 
@@ -175,18 +190,18 @@ enum APIError: LocalizedError {
             return "Please sign in to continue"
         case .forbidden:
             return "You don't have permission to access this"
-        case .notFound:
-            return "Resource not found"
+        case .notFound(let message):
+            return message ?? "Resource not found"
         case .methodNotAllowed:
             return "Method not allowed"
-        case .serverError(let code):
-            return "Server error (\(code))"
-        case .httpError(let code):
-            return "HTTP error (\(code))"
+        case .serverError(let code, let message):
+            return message ?? "Server error (\(code))"
+        case .httpError(let code, let message):
+            return message ?? "Request failed (\(code))"
         case .decodingError(let error):
             return "Failed to parse response: \(error.localizedDescription)"
-        case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
+        case .networkError:
+            return "No internet connection. Please check your network and try again."
         }
     }
 }

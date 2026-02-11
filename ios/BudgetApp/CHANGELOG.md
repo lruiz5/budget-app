@@ -6,6 +6,45 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.10.0] - 2026-02-11 - Comprehensive Error Handling
+
+### Added
+
+- **Toast notifications for all mutations** — non-blocking, auto-dismissing capsule toasts with status-colored backgrounds (green for success, red for error). Applied across all 4 tabs: Budget, Transactions, Accounts, Recurring Payments
+- **APIClient network error wrapping** — `URLSession` errors now wrapped as `APIError.networkError` with user-friendly "No internet connection" message instead of raw `URLError`
+- **Server error message parsing** — non-2xx responses now extract `{ "error": "message" }` or `{ "message": "..." }` from JSON body, showing meaningful messages like "Budget not found" instead of generic "HTTP error (404)"
+- **Success toasts** — confirmations for destructive operations: item deleted, category deleted, budget reset, transaction deleted/restored, payment deleted, marked as paid, account linked/unlinked, sync enabled/disabled, institution removed
+- **Error toasts** — all mutation catch blocks show user-readable error messages via toast instead of silent failures
+- **EditTransactionSheet error alert** — save, delete, and unsplit failures now show `.alert()` with error message
+
+### Fixed
+
+- **Budget mutation errors no longer replace budget view** — previously, mutation errors set `self.error` which triggered a full-screen error screen, hiding the entire budget. Now uses toast for mutations, keeping `self.error` only for initial load failures where full-screen error + retry is appropriate
+- **Sync toast cleanup** — removed unchanged transaction count from sync summary; shows only non-zero counts ("3 new", "2 updated") with "No new transactions" fallback
+
+### Changed
+
+- **ToastView styling** — status-colored background at 85% opacity with white text/icon and matching color shadow (replaced grey translucent material)
+- **TransactionsViewModel** — removed `showSyncAlert`/`syncMessage` properties, consolidated into unified `showToast`/`toastMessage`/`isToastError` pattern
+- **APIError cases updated** — `notFound(String?)`, `serverError(Int, String?)`, `httpError(Int, String?)` now carry optional server messages; added `networkError(Error)` case
+- **AccountsViewModel toggleSync error recovery** — on API failure, reloads accounts from server to revert local toggle state
+- **AccountDetailSheet toggle revert** — reads `viewModel.selectedAccount` after API call to sync local toggle with server truth
+
+### Files Modified
+
+- `Services/APIClient.swift` — network error wrapping, server message parsing, updated APIError enum
+- `ViewModels/BudgetViewModel.swift` — toast state, mutation errors use toast
+- `ViewModels/TransactionsViewModel.swift` — unified toast, removed showSyncAlert/syncMessage
+- `ViewModels/AccountsViewModel.swift` — toast state, toggleSync error recovery
+- `ViewModels/RecurringViewModel.swift` — toast state for all mutations
+- `Views/Budget/BudgetView.swift` — wired `.toast()` modifier
+- `Views/Transactions/TransactionsView.swift` — replaced sync toast with unified toast
+- `Views/Accounts/AccountsView.swift` — wired `.toast()`, toggle revert in AccountDetailSheet
+- `Views/Settings/RecurringPaymentsView.swift` — wired `.toast()` modifier
+- `Views/Transactions/EditTransactionSheet.swift` — added saveError state + `.alert()`
+
+---
+
 ## [0.9.0] - 2026-02-10 - Onboarding Flow
 
 ### Added
@@ -277,7 +316,7 @@ All notable changes to the Budget App iOS application.
 - [x] Onboarding flow for new users
 - [x] Monthly report/insights
 - [x] Interactive charts (Budget vs Actual, Daily Spending heatmap drill-downs)
-- [ ] Comprehensive error handling and user feedback
+- [x] Comprehensive error handling and user feedback
 - [ ] Offline support with local caching
 - [ ] App Store assets (screenshots, description, keywords)
 - [ ] TestFlight beta testing

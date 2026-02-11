@@ -68,9 +68,9 @@ struct TransactionsView: View {
             }
         }
         .toast(
-            isPresented: $viewModel.showSyncAlert,
-            message: viewModel.syncMessage,
-            isError: viewModel.syncMessage.hasPrefix("Sync failed")
+            isPresented: $viewModel.showToast,
+            message: viewModel.toastMessage ?? "",
+            isError: viewModel.isToastError
         )
         .refreshable {
             await viewModel.loadTransactions()

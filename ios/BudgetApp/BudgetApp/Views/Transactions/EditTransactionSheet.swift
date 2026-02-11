@@ -16,6 +16,7 @@ struct EditTransactionSheet: View {
     @State private var isSaving = false
     @State private var showDeleteConfirmation = false
     @State private var showUnsplitConfirmation = false
+    @State private var saveError: String?
 
     @StateObject private var budgetVM = BudgetViewModel()
 
@@ -172,9 +173,13 @@ struct EditTransactionSheet: View {
             .confirmationDialog("Remove Splits", isPresented: $showUnsplitConfirmation) {
                 Button("Remove Splits", role: .destructive) {
                     Task {
-                        _ = try? await TransactionService.shared.deleteSplits(parentTransactionId: transaction.id)
-                        onUpdate()
-                        dismiss()
+                        do {
+                            _ = try await TransactionService.shared.deleteSplits(parentTransactionId: transaction.id)
+                            onUpdate()
+                            dismiss()
+                        } catch {
+                            saveError = error.localizedDescription
+                        }
                     }
                 }
                 Button("Cancel", role: .cancel) {}
@@ -184,15 +189,27 @@ struct EditTransactionSheet: View {
             .confirmationDialog("Delete Transaction", isPresented: $showDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
                     Task {
-                        _ = try? await TransactionService.shared.deleteTransaction(id: transaction.id)
-                        onTransactionDeleted?(transaction.id)
-                        onUpdate()
-                        dismiss()
+                        do {
+                            _ = try await TransactionService.shared.deleteTransaction(id: transaction.id)
+                            onTransactionDeleted?(transaction.id)
+                            onUpdate()
+                            dismiss()
+                        } catch {
+                            saveError = error.localizedDescription
+                        }
                     }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to delete this transaction?")
+            }
+            .alert("Error", isPresented: Binding(
+                get: { saveError != nil },
+                set: { if !$0 { saveError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(saveError ?? "")
             }
         }
     }
@@ -226,6 +243,7 @@ struct EditTransactionSheet: View {
                     dismiss()
                 }
             } catch {
+                saveError = error.localizedDescription
                 isSaving = false
             }
         }

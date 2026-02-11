@@ -72,6 +72,11 @@ struct AccountsView: View {
         } message: {
             Text("This will unlink all accounts from this institution.")
         }
+        .toast(
+            isPresented: $viewModel.showToast,
+            message: viewModel.toastMessage ?? "",
+            isError: viewModel.isToastError
+        )
     }
 
     // MARK: - Accounts List
@@ -249,6 +254,10 @@ struct AccountDetailSheet: View {
                 isUpdating = true
                 Task {
                     await viewModel.toggleSync(account: account, enabled: newValue)
+                    // Revert toggle if server state differs (error case)
+                    if let current = viewModel.selectedAccount {
+                        isSyncEnabled = current.syncEnabled
+                    }
                     isUpdating = false
                 }
             }
