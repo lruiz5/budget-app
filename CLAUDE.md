@@ -4,8 +4,8 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.9.0 (stable)  |  **iOS App:** v0.8.0 (pre-release)
-**Last Session:** 2026-02-09
+**Web App:** v1.9.0 (stable)  |  **iOS App:** v0.11.0 (pre-release)
+**Last Session:** 2026-02-11
 
 ## Instructions for Claude
 
@@ -134,7 +134,7 @@ Auth (Clerk), multi-user, onboarding (6-step), full budget CRUD, custom categori
 
 ## Working Features (iOS)
 
-Auth (Clerk), budget viewing with categories/items, month navigation, transaction viewing + categorization + editing, transaction creation (from item detail or transactions tab), budget item detail (progress ring, edit name/planned, view/add/edit transactions), bank account linking (Teller Connect via WKWebView), transaction sync from linked accounts, per-account sync toggle (half-sheet with streaming on/off), accounts viewing with institution grouping + unlink + institution icons, pull-to-refresh, sticky "Left to Budget" banner, budget summary progress rings (income/expenses), progress bar dividers, split transactions (create from item detail), recurring payment management (CRUD, contribute, mark as paid/reset, category picker), custom category creation (name+emoji picker, long-press delete), budget copy from previous month, budget reset (zero out / replace with previous month), monthly report sheet (7 sections with trends), insights charts (budget vs actual bars, spending pace burn-down, daily spending heatmap, spending trends), onboarding flow (6-step purely educational — no live data created), comprehensive error handling (toast notifications for all mutations, network error wrapping, server error message parsing)
+Auth (Clerk), budget viewing with categories/items, month navigation, transaction viewing + categorization + editing, transaction creation (from item detail or transactions tab), budget item detail (progress ring, edit name/planned, view/add/edit transactions), bank account linking (Teller Connect via WKWebView), transaction sync from linked accounts, per-account sync toggle (half-sheet with streaming on/off), accounts viewing with institution grouping + unlink + institution icons, pull-to-refresh, sticky "Left to Budget" banner, budget summary progress rings (income/expenses), progress bar dividers, split transactions (create from item detail), recurring payment management (CRUD, contribute, mark as paid/reset, category picker), custom category creation (name+emoji picker, long-press delete), budget copy from previous month, budget reset (zero out / replace with previous month), monthly report sheet (7 sections with trends), insights charts (budget vs actual bars, spending pace burn-down, daily spending heatmap, spending trends), onboarding flow (6-step purely educational — no live data created), comprehensive error handling (toast notifications for all mutations, network error wrapping, server error message parsing), transaction search & filters (text search on merchant/description/amount, type/category/amount range/account filters, filter chips with dismiss)
 
 ## Common Issues
 
@@ -166,7 +166,7 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 **Web:** v1.9.0 — stable, production-ready on Vercel
 
-**iOS:** v0.10.0 — pre-release. Comprehensive error handling with toast notifications. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.11.0 — pre-release. Transaction search & filters. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 
 **Next iOS work:**
 - Offline support / local caching
