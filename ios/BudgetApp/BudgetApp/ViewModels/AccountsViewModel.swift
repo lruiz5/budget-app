@@ -29,16 +29,37 @@ class AccountsViewModel: ObservableObject {
         showToast = true
     }
 
+    private func requireOnline() -> Bool {
+        guard NetworkMonitor.shared.isConnected else {
+            showToast("You're offline. Connect to make changes.", isError: true)
+            return false
+        }
+        return true
+    }
+
     // MARK: - Load Accounts
 
     func loadAccounts() async {
-        isLoading = true
         error = nil
 
+        // Load from cache first
+        let cacheKey = "linked_accounts"
+        if let cached: [LinkedAccount] = await CacheManager.shared.load(forKey: cacheKey) {
+            accounts = cached
+        }
+
+        if accounts.isEmpty {
+            isLoading = true
+        }
+
         do {
-            accounts = try await accountsService.getLinkedAccounts()
+            let fresh = try await accountsService.getLinkedAccounts()
+            accounts = fresh
+            await CacheManager.shared.save(fresh, forKey: cacheKey)
         } catch {
-            showToast(error.localizedDescription, isError: true)
+            if accounts.isEmpty {
+                showToast(error.localizedDescription, isError: true)
+            }
         }
 
         isLoading = false
@@ -47,9 +68,11 @@ class AccountsViewModel: ObservableObject {
     // MARK: - Unlink Account
 
     func unlinkAccount(id: Int) async {
+        guard requireOnline() else { return }
         do {
             _ = try await accountsService.unlinkAccount(id: id)
             accounts.removeAll { $0.id == id }
+            await CacheManager.shared.save(accounts, forKey: "linked_accounts")
             showToast("Account unlinked", isError: false)
         } catch {
             showToast(error.localizedDescription, isError: true)
@@ -59,6 +82,7 @@ class AccountsViewModel: ObservableObject {
     // MARK: - Unlink Institution (all accounts for a bank)
 
     func unlinkInstitution(name: String) async {
+        guard requireOnline() else { return }
         let institutionAccounts = accounts.filter { $0.institutionName == name }
         var failCount = 0
         for account in institutionAccounts {
@@ -69,6 +93,7 @@ class AccountsViewModel: ObservableObject {
                 failCount += 1
             }
         }
+        await CacheManager.shared.save(accounts, forKey: "linked_accounts")
         if failCount > 0 {
             showToast("Failed to unlink \(failCount) account(s)", isError: true)
         } else {
@@ -79,6 +104,7 @@ class AccountsViewModel: ObservableObject {
     // MARK: - Toggle Sync
 
     func toggleSync(account: LinkedAccount, enabled: Bool) async {
+        guard requireOnline() else { return }
         do {
             let updated = try await accountsService.updateAccountSync(id: account.id, enabled: enabled)
             if let index = accounts.firstIndex(where: { $0.id == account.id }) {
@@ -96,12 +122,14 @@ class AccountsViewModel: ObservableObject {
     // MARK: - Link Account (called after Teller Connect)
 
     func linkAccount(accessToken: String, enrollmentId: String) async {
+        guard requireOnline() else { return }
         do {
             let newAccounts = try await accountsService.linkAccount(
                 accessToken: accessToken,
                 enrollmentId: enrollmentId
             )
             accounts.append(contentsOf: newAccounts)
+            await CacheManager.shared.save(accounts, forKey: "linked_accounts")
             showToast("Account linked", isError: false)
         } catch {
             showToast(error.localizedDescription, isError: true)

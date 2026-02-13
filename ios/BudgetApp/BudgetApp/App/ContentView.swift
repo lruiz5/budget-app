@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
     @State private var selectedTab = 0
 
     var body: some View {
@@ -30,6 +31,25 @@ struct ContentView: View {
                 .tag(3)
         }
         .tint(.green) // Emerald-like primary color
+        .overlay(alignment: .top) {
+            if !networkMonitor.isConnected {
+                HStack(spacing: 6) {
+                    Image(systemName: "wifi.slash")
+                        .font(.caption2)
+                    Text("Offline — View Only")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(.gray.opacity(0.85), in: Capsule())
+                .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                .padding(.top, 54)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: networkMonitor.isConnected)
     }
 }
 
@@ -95,4 +115,5 @@ struct InsightsTab: View {
 
 #Preview {
     ContentView()
+        .environmentObject(NetworkMonitor.shared)
 }

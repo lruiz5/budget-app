@@ -6,6 +6,41 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.12.0] - 2026-02-12 - Offline Support, Caching & Split Transaction Fixes
+
+### Added
+
+- **Local caching (CacheManager)** — disk-backed JSON cache in app's Caches directory. All ViewModels load cached data instantly on launch, then refresh from API in the background (cache-then-network pattern). Spinner only shown when no cached data exists
+- **NetworkMonitor** — `NWPathMonitor` wrapper publishes `isConnected` state. All mutation methods (`requireOnline()`) block with toast when offline
+- **Offline banner** — floating "Offline — View Only" pill overlaid on tab bar with animated slide-in/out transition
+- **Cache clear on sign-out** — `CacheManager.removeAll()` called when Clerk user becomes nil, preventing stale data across accounts
+- **Split transactions in Tracked tab** — split parent transactions now appear in the Tracked tab. Previously missing because the uncategorized API explicitly excludes split parents (`notInArray`). Fixed by reconstructing parent transactions from the budget's `SplitTransactionWithParent` data
+- **Split row budget item names** — split transaction rows now show comma-separated budget item names (e.g. "Groceries, Gas") instead of generic "Split" label. Purple branch icon retained, text uses `.secondary` color to match other tracked rows
+
+### Fixed
+
+- **Split parents not in Tracked tab** — two root causes: (1) uncategorized API excludes split parents, so they were never loaded; (2) Tracked tab filter (`budgetItemId != nil`) excluded them since split parents have `budgetItemId = null`. Fixed by reconstructing parents from budget split data and adding `|| $0.isSplit` to the tracked filter
+- **SplitTransactionWithParent missing parent data** — previously only decoded `parentType` from the nested `parentTransaction` object. Now decodes the full `Transaction` object, enabling parent reconstruction in the ViewModel
+
+### Files Added
+
+- `Services/CacheManager.swift` — generic disk-backed JSON cache with `save()`, `load()`, `remove()`, `removeAll()`
+- `Utilities/NetworkMonitor.swift` — `NWPathMonitor` singleton publishing `isConnected`
+
+### Files Modified
+
+- `Models/Budget.swift` — `SplitTransactionWithParent` decodes full parent `Transaction`
+- `ViewModels/BudgetViewModel.swift` — cache-then-network loading, offline guards
+- `ViewModels/TransactionsViewModel.swift` — cache-then-network, split parent reconstruction from budget data
+- `ViewModels/AccountsViewModel.swift` — cache-then-network, offline guards
+- `ViewModels/InsightsViewModel.swift` — cache-then-network loading
+- `ViewModels/RecurringViewModel.swift` — cache-then-network, offline guards
+- `Views/Transactions/TransactionsView.swift` — tracked filter includes splits, split row shows item names with secondary color
+- `App/ContentView.swift` — floating offline pill banner
+- `BudgetAppApp.swift` — cache clear on sign-out
+
+---
+
 ## [0.11.0] - 2026-02-11 - Transaction Search & Filters
 
 ### Added
@@ -340,7 +375,7 @@ All notable changes to the Budget App iOS application.
 - [x] Interactive charts (Budget vs Actual, Daily Spending heatmap drill-downs)
 - [x] Comprehensive error handling and user feedback
 - [x] Transaction search & filters
-- [ ] Offline support with local caching
+- [x] Offline support with local caching
 - [ ] App Store assets (screenshots, description, keywords)
 - [ ] TestFlight beta testing
 - [ ] Performance optimization

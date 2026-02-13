@@ -13,7 +13,7 @@ struct BudgetAppApp: App {
         WindowGroup {
             Group {
                 if isLoading {
-                    ProgressView("Loading...")
+                    SplashView()
                 } else if clerk.user != nil && isAuthReady {
                     // User is signed in AND auth token is ready — check onboarding
                     if let completed = hasCompletedOnboarding {
@@ -25,7 +25,7 @@ struct BudgetAppApp: App {
                             })
                         }
                     } else {
-                        ProgressView("Checking setup...")
+                        SplashView()
                             .task {
                                 do {
                                     let status = try await OnboardingService.shared.getStatus()
@@ -38,7 +38,7 @@ struct BudgetAppApp: App {
                     }
                 } else if clerk.user != nil && !isAuthReady {
                     // User is signed in but auth token not yet set
-                    ProgressView("Preparing...")
+                    SplashView()
                         .task {
                             // Set up token provider that fetches a fresh Clerk token per request.
                             // Clerk tokens are short-lived (~60s), so this prevents expiration issues
@@ -56,6 +56,7 @@ struct BudgetAppApp: App {
                         }
                 }
             }
+            .environmentObject(NetworkMonitor.shared)
             .environment(\.clerk, clerk)
             .task {
                 clerk.configure(publishableKey: Constants.Clerk.publishableKey)
@@ -67,6 +68,7 @@ struct BudgetAppApp: App {
                 if newValue == nil {
                     isAuthReady = false
                     hasCompletedOnboarding = nil
+                    Task { await CacheManager.shared.removeAll() }
                 }
             }
         }
@@ -113,6 +115,25 @@ struct SignInLandingView: View {
             }
             .padding(.horizontal, 32)
             .padding(.bottom, 60)
+        }
+    }
+}
+
+// MARK: - Splash View
+
+private struct SplashView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "dollarsign.circle.fill")
+                .font(.system(size: 80))
+                .foregroundStyle(.green)
+
+            Text("Budget App")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+
+            ProgressView()
+                .padding(.top, 8)
         }
     }
 }
