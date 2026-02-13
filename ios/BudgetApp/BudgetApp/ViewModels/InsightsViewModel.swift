@@ -19,7 +19,6 @@ class InsightsViewModel: ObservableObject {
     // MARK: - Load Data
 
     func loadData() async {
-        isLoading = true
         error = nil
 
         // Use SharedDateViewModel (0-indexed months, matching API)
@@ -35,24 +34,45 @@ class InsightsViewModel: ObservableObject {
         }
 
         // Load selected month + previous month + 1 more for trends (3 months total)
-        var loadedBudgets: [Budget] = []
         let monthsToLoad = [
             (month: prevMonth - 1 < 0 ? 11 : prevMonth - 1, year: prevMonth - 1 < 0 ? prevYear - 1 : prevYear),
             (month: prevMonth, year: prevYear),
             (month: selectedMonth, year: selectedYear)
         ]
 
+        // Load from cache first (instant, no spinner)
+        var cachedBudgets: [Budget] = []
+        for target in monthsToLoad {
+            if let cached: Budget = await CacheManager.shared.load(forKey: "budget_\(target.month)_\(target.year)") {
+                cachedBudgets.append(cached)
+            }
+        }
+        if !cachedBudgets.isEmpty {
+            budgets = cachedBudgets.sorted { ($0.year, $0.month) < ($1.year, $1.month) }
+            previousBudget = budgets.first { $0.month == prevMonth && $0.year == prevYear }
+        }
+
+        // Only show loading spinner if no cached data
+        if budgets.isEmpty {
+            isLoading = true
+        }
+
+        // Fetch fresh data from network
+        var loadedBudgets: [Budget] = []
         for target in monthsToLoad {
             do {
                 let budget = try await budgetService.getBudget(month: target.month, year: target.year)
                 loadedBudgets.append(budget)
+                await CacheManager.shared.save(budget, forKey: "budget_\(target.month)_\(target.year)")
             } catch {
                 // Skip months without budgets
             }
         }
 
-        budgets = loadedBudgets.sorted { ($0.year, $0.month) < ($1.year, $1.month) }
-        previousBudget = budgets.first { $0.month == prevMonth && $0.year == prevYear }
+        if !loadedBudgets.isEmpty {
+            budgets = loadedBudgets.sorted { ($0.year, $0.month) < ($1.year, $1.month) }
+            previousBudget = budgets.first { $0.month == prevMonth && $0.year == prevYear }
+        }
         isLoading = false
     }
 

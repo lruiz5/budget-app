@@ -169,7 +169,7 @@ struct TransactionsView: View {
         case .uncategorized:
             return viewModel.uncategorizedTransactions.filter { $0.budgetItemId == nil && !$0.isDeleted }
         case .tracked:
-            return viewModel.categorizedTransactions.filter { $0.budgetItemId != nil }
+            return viewModel.categorizedTransactions.filter { $0.budgetItemId != nil || $0.isSplit }
         case .deleted:
             return viewModel.deletedTransactions
         }
@@ -246,7 +246,9 @@ struct TransactionsView: View {
             ForEach(groupedByDate, id: \.key) { date, transactions in
                 Section(header: Text(formatDate(date))) {
                     ForEach(transactions) { transaction in
-                        TransactionRow(transaction: transaction, budgetItemName: budgetItemNameMap[transaction.budgetItemId ?? -1])
+                        TransactionRow(transaction: transaction, budgetItemName: transaction.isSplit
+                            ? transaction.splits?.compactMap { budgetItemNameMap[$0.budgetItemId] }.joined(separator: ", ")
+                            : budgetItemNameMap[transaction.budgetItemId ?? -1])
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 if transaction.isSplit {
@@ -503,9 +505,14 @@ struct TransactionRow: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                 } else if transaction.isSplit {
-                    Label("Split", systemImage: "arrow.triangle.branch")
-                        .font(.caption)
-                        .foregroundStyle(.purple)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .foregroundStyle(.purple)
+                        Text(budgetItemName ?? "Split")
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    .font(.caption)
                 } else if let itemName = budgetItemName {
                     Text(itemName)
                         .font(.caption)

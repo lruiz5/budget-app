@@ -32,25 +32,37 @@ class BudgetViewModel: ObservableObject {
     }
 
     func loadBudgetForMonth(month: Int, year: Int) async {
-        isLoading = true
         error = nil
 
         // Update the selected month/year to match what we're loading
         selectedMonth = month
         selectedYear = year
 
+        // Load from cache first (instant, no spinner)
+        let cacheKey = "budget_\(month)_\(year)"
+        if let cached: Budget = await CacheManager.shared.load(forKey: cacheKey) {
+            budget = cached
+        }
+
+        // Only show loading spinner if no cached data
+        if budget == nil {
+            isLoading = true
+        }
+
         do {
-            budget = try await budgetService.getBudget(month: month, year: year)
+            let fresh = try await budgetService.getBudget(month: month, year: year)
+            budget = fresh
+            await CacheManager.shared.save(fresh, forKey: cacheKey)
         } catch let apiError as APIError {
             #if DEBUG
             print("❌ BudgetVM load failed (APIError): \(apiError.errorDescription ?? "unknown")")
             #endif
-            error = apiError.errorDescription
+            if budget == nil { error = apiError.errorDescription }
         } catch {
             #if DEBUG
             print("❌ BudgetVM load failed: \(error)")
             #endif
-            self.error = error.localizedDescription
+            if budget == nil { self.error = error.localizedDescription }
         }
 
         isLoading = false
@@ -64,9 +76,18 @@ class BudgetViewModel: ObservableObject {
         showToast = true
     }
 
+    private func requireOnline() -> Bool {
+        guard NetworkMonitor.shared.isConnected else {
+            showToast("You're offline. Connect to make changes.", isError: true)
+            return false
+        }
+        return true
+    }
+
     // MARK: - Create Budget (for empty state)
 
     func createBudget() async {
+        guard requireOnline() else { return }
         isLoading = true
         error = nil
 
@@ -99,6 +120,7 @@ class BudgetViewModel: ObservableObject {
     // MARK: - Update Buffer
 
     func updateBuffer(_ newBuffer: Decimal) async {
+        guard requireOnline() else { return }
         guard let budget = budget else { return }
 
         do {
@@ -114,6 +136,7 @@ class BudgetViewModel: ObservableObject {
     // MARK: - Budget Item Operations
 
     func createItem(categoryId: Int, name: String, planned: Decimal) async {
+        guard requireOnline() else { return }
         do {
             _ = try await budgetService.createBudgetItem(categoryId: categoryId, name: name, planned: planned)
             await loadBudget()
@@ -123,6 +146,7 @@ class BudgetViewModel: ObservableObject {
     }
 
     func updateItem(id: Int, name: String?, planned: Decimal?) async {
+        guard requireOnline() else { return }
         do {
             _ = try await budgetService.updateBudgetItem(id: id, name: name, planned: planned)
             await loadBudget()
@@ -132,6 +156,7 @@ class BudgetViewModel: ObservableObject {
     }
 
     func deleteItem(id: Int) async {
+        guard requireOnline() else { return }
         do {
             _ = try await budgetService.deleteBudgetItem(id: id)
             await loadBudget()
@@ -142,6 +167,7 @@ class BudgetViewModel: ObservableObject {
     }
 
     func reorderItems(itemIds: [Int]) async {
+        guard requireOnline() else { return }
         let reorderItems = itemIds.enumerated().map { index, id in
             ReorderItem(id: id, order: index)
         }
@@ -156,6 +182,7 @@ class BudgetViewModel: ObservableObject {
     // MARK: - Category Operations
 
     func createCategory(name: String, emoji: String) async {
+        guard requireOnline() else { return }
         guard let budget = budget else { return }
 
         do {
@@ -167,6 +194,7 @@ class BudgetViewModel: ObservableObject {
     }
 
     func deleteCategory(id: Int) async {
+        guard requireOnline() else { return }
         do {
             _ = try await budgetService.deleteCategory(id: id)
             await loadBudget()
@@ -179,6 +207,7 @@ class BudgetViewModel: ObservableObject {
     // MARK: - Reset Budget
 
     func resetBudget(mode: ResetMode) async {
+        guard requireOnline() else { return }
         guard let budget = budget else { return }
 
         isLoading = true

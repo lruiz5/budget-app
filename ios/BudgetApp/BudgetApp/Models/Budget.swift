@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Budget Models
 // These mirror the TypeScript types from types/budget.ts
 
-struct Budget: Decodable, Identifiable {
+struct Budget: Codable, Identifiable {
     let id: Int
     let userId: String
     let month: Int
@@ -61,6 +61,18 @@ struct Budget: Decodable, Identifiable {
         self.categories = categories
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(userId, forKey: .userId)
+        try container.encode(month, forKey: .month)
+        try container.encode(year, forKey: .year)
+        try container.encode(buffer, forKey: .buffer)
+        try container.encode(createdAt, forKey: .createdAt)
+        // Encode categories as array — decoder expects array and converts to dict
+        try container.encode(Array(categories.values), forKey: .categories)
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
@@ -97,7 +109,7 @@ struct Budget: Decodable, Identifiable {
     }
 }
 
-struct BudgetCategory: Decodable, Identifiable {
+struct BudgetCategory: Codable, Identifiable {
     let id: Int
     let budgetId: Int
     let categoryType: String
@@ -147,6 +159,19 @@ struct BudgetCategory: Decodable, Identifiable {
         case order = "categoryOrder"
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(budgetId, forKey: .budgetId)
+        try container.encode(categoryType, forKey: .categoryType)
+        try container.encode(name, forKey: .name)
+        try container.encode(order, forKey: .order) // Encodes under "categoryOrder" key
+        try container.encodeIfPresent(emoji, forKey: .emoji)
+        try container.encode(items, forKey: .items)
+        try container.encode(planned, forKey: .planned)
+        try container.encode(actual, forKey: .actual)
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
@@ -174,7 +199,7 @@ struct BudgetCategory: Decodable, Identifiable {
     }
 }
 
-struct BudgetItem: Decodable, Identifiable {
+struct BudgetItem: Codable, Identifiable {
     let id: Int
     let categoryId: Int
     let name: String
@@ -213,6 +238,19 @@ struct BudgetItem: Decodable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, categoryId, name, planned, actual, order, recurringPaymentId, transactions, splitTransactions
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(categoryId, forKey: .categoryId)
+        try container.encode(name, forKey: .name)
+        try container.encode(planned, forKey: .planned)
+        try container.encode(actual, forKey: .actual)
+        try container.encode(order, forKey: .order)
+        try container.encodeIfPresent(recurringPaymentId, forKey: .recurringPaymentId)
+        try container.encode(transactions, forKey: .transactions)
+        try container.encodeIfPresent(splitTransactions, forKey: .splitTransactions)
     }
 
     init(from decoder: Decoder) throws {
@@ -267,20 +305,27 @@ struct BudgetItem: Decodable, Identifiable {
 }
 
 // Split transaction with parent info for actual calculation
-struct SplitTransactionWithParent: Decodable, Identifiable {
+struct SplitTransactionWithParent: Codable, Identifiable {
     let id: Int
     let parentTransactionId: Int
     let budgetItemId: Int
     var amount: Decimal
     let description: String?
     let parentType: TransactionType?
+    let parentTransaction: Transaction?
 
     enum CodingKeys: String, CodingKey {
         case id, parentTransactionId, budgetItemId, amount, description, parentTransaction
     }
 
-    private enum ParentKeys: String, CodingKey {
-        case type
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(parentTransactionId, forKey: .parentTransactionId)
+        try container.encode(budgetItemId, forKey: .budgetItemId)
+        try container.encode(amount, forKey: .amount)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encodeIfPresent(parentTransaction, forKey: .parentTransaction)
     }
 
     init(from decoder: Decoder) throws {
@@ -297,11 +342,8 @@ struct SplitTransactionWithParent: Decodable, Identifiable {
             amount = try container.decode(Decimal.self, forKey: .amount)
         }
 
-        // Decode parent transaction type
-        if let parentContainer = try? container.nestedContainer(keyedBy: ParentKeys.self, forKey: .parentTransaction) {
-            parentType = try parentContainer.decodeIfPresent(TransactionType.self, forKey: .type)
-        } else {
-            parentType = nil
-        }
+        // Decode full parent transaction (includes type, date, description, amount, etc.)
+        parentTransaction = try container.decodeIfPresent(Transaction.self, forKey: .parentTransaction)
+        parentType = parentTransaction?.type
     }
 }
