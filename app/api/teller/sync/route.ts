@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         const existingMap = new Map(existingTxns.map(t => [t.tellerTransactionId, t]));
 
         // Separate into new vs existing
-        const toInsert: typeof transactions.$inferInsert[] = [];
+        let toInsert: typeof transactions.$inferInsert[] = [];
         const toUpdate: { id: number; data: Partial<typeof transactions.$inferInsert> }[] = [];
 
         for (const txn of tellerTransactions) {
@@ -108,6 +108,66 @@ export async function POST(request: NextRequest) {
               status: txn.status,
             });
             results.synced++;
+          }
+        }
+
+        // Fuzzy-match new posted transactions to stale pending ones
+        // (handles Teller issuing new IDs when pending → posted, e.g. restaurant tips)
+        if (toInsert.length > 0) {
+          const stalePending = await db
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.linkedAccountId, account.id),
+                eq(transactions.status, 'pending'),
+                isNull(transactions.deletedAt),
+                tellerIds.length > 0
+                  ? notInArray(transactions.tellerTransactionId!, tellerIds)
+                  : undefined
+              )
+            );
+
+          if (stalePending.length > 0) {
+            const matched = new Set<number>();
+            const stillToInsert: typeof toInsert = [];
+
+            for (const newTxn of toInsert) {
+              if (newTxn.status !== 'posted' || !newTxn.merchant) {
+                stillToInsert.push(newTxn);
+                continue;
+              }
+
+              const match = stalePending.find(p =>
+                !matched.has(p.id) &&
+                p.merchant &&
+                p.merchant.toLowerCase() === newTxn.merchant!.toLowerCase() &&
+                Math.abs(
+                  (new Date(newTxn.date!).getTime() - new Date(p.date).getTime()) / 86400000
+                ) <= 7
+              );
+
+              if (match) {
+                matched.add(match.id);
+                toUpdate.push({
+                  id: match.id,
+                  data: {
+                    tellerTransactionId: newTxn.tellerTransactionId,
+                    status: 'posted',
+                    amount: newTxn.amount,
+                    description: newTxn.description,
+                    merchant: newTxn.merchant || match.merchant,
+                    date: newTxn.date,
+                  },
+                });
+                results.updated++;
+                results.synced--;
+              } else {
+                stillToInsert.push(newTxn);
+              }
+            }
+
+            toInsert = stillToInsert;
           }
         }
 

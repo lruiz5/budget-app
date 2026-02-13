@@ -18,11 +18,13 @@ struct BudgetItemDetail: View {
     enum ActiveSheet: Identifiable {
         case addTransaction
         case editTransaction(Transaction)
+        case splitTransaction(Transaction)
 
         var id: String {
             switch self {
             case .addTransaction: return "add"
             case .editTransaction(let t): return "edit-\(t.id)"
+            case .splitTransaction(let t): return "split-\(t.id)"
             }
         }
     }
@@ -89,6 +91,12 @@ struct BudgetItemDetail: View {
                         onTransactionDeleted: { id in
                             transactions.removeAll { $0.id == id }
                         }
+                    )
+                case .splitTransaction(let transaction):
+                    SplitTransactionSheet(
+                        transaction: transaction,
+                        existingSplits: transaction.splits ?? [],
+                        onComplete: onUpdate
                     )
                 }
             }
@@ -255,6 +263,32 @@ struct BudgetItemDetail: View {
 
     // MARK: - Transactions Section
 
+    /// Unified row type for sorting direct + split transactions together by date
+    private enum TransactionListItem: Identifiable {
+        case direct(Transaction)
+        case split(SplitTransactionWithParent)
+
+        var id: String {
+            switch self {
+            case .direct(let t): return "d-\(t.id)"
+            case .split(let s): return "s-\(s.id)"
+            }
+        }
+
+        var date: Date {
+            switch self {
+            case .direct(let t): return t.date
+            case .split(let s): return s.parentTransaction?.date ?? Date.distantPast
+            }
+        }
+    }
+
+    private var sortedListItems: [TransactionListItem] {
+        var items: [TransactionListItem] = transactions.map { .direct($0) }
+        items += (item.splitTransactions ?? []).map { .split($0) }
+        return items.sorted { $0.date > $1.date }
+    }
+
     private var transactionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -271,76 +305,91 @@ struct BudgetItemDetail: View {
                 }
             }
 
-            let splitTxns = item.splitTransactions ?? []
+            let listItems = sortedListItems
 
-            if transactions.isEmpty && splitTxns.isEmpty {
+            if listItems.isEmpty {
                 Text("No transactions yet")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
-                // Direct transactions
-                let sorted = transactions.sorted(by: { $0.date > $1.date })
-                ForEach(sorted) { transaction in
-                    Button {
-                        activeSheet = .editTransaction(transaction)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(transaction.merchant ?? transaction.description)
+                ForEach(Array(listItems.enumerated()), id: \.element.id) { index, listItem in
+                    switch listItem {
+                    case .direct(let transaction):
+                        Button {
+                            activeSheet = .editTransaction(transaction)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(transaction.merchant ?? transaction.description)
+                                        .font(.body)
+                                        .lineLimit(1)
+
+                                    Text(formatDate(transaction.date))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                Text(transaction.displayAmount)
                                     .font(.body)
-                                    .lineLimit(1)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(transaction.type == .income ? .green : .primary)
 
-                                Text(formatDate(transaction.date))
+                                Image(systemName: "chevron.right")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            Text(transaction.displayAmount)
-                                .font(.body)
-                                .fontWeight(.medium)
-                                .foregroundStyle(transaction.type == .income ? .green : .primary)
-
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.vertical, 8)
-
-                    if transaction.id != sorted.last?.id || !splitTxns.isEmpty {
-                        Divider()
-                    }
-                }
-
-                // Split transactions
-                ForEach(splitTxns) { split in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 4) {
-                                Text(split.description ?? "Split")
-                                    .font(.body)
-                                    .lineLimit(1)
-
-                                Text("(split)")
-                                    .font(.caption)
-                                    .foregroundStyle(.purple)
+                                    .foregroundStyle(.tertiary)
                             }
                         }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 8)
 
-                        Spacer()
+                    case .split(let split):
+                        Button {
+                            if let parent = split.parentTransaction {
+                                activeSheet = .splitTransaction(parent)
+                            }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(split.parentTransaction?.merchant ?? split.parentTransaction?.description ?? "Split")
+                                        .font(.body)
+                                        .lineLimit(1)
 
-                        Text(formatCurrency(split.amount))
-                            .font(.body)
-                            .fontWeight(.medium)
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "arrow.triangle.branch")
+                                            .foregroundStyle(.purple)
+                                        Text(split.description ?? "Split")
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    .font(.caption)
+
+                                    if let date = split.parentTransaction?.date {
+                                        Text(formatDate(date))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                Text(formatCurrency(split.amount))
+                                    .font(.body)
+                                    .fontWeight(.medium)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 8)
                     }
-                    .padding(.vertical, 8)
 
-                    if split.id != splitTxns.last?.id {
+                    if index < listItems.count - 1 {
                         Divider()
                     }
                 }

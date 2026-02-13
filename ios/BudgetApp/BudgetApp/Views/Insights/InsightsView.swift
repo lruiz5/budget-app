@@ -5,6 +5,7 @@ enum InsightsActiveSheet: Identifiable {
     case monthlyReport(budget: Budget, previousBudget: Budget?)
     case categoryDrillDown(category: BudgetCategory)
     case dayDrillDown(date: Date, transactions: [Transaction])
+    case spendingPaceDrillDown(budget: Budget)
 
     var id: String {
         switch self {
@@ -14,6 +15,8 @@ enum InsightsActiveSheet: Identifiable {
             return "cat-\(cat.id)"
         case .dayDrillDown(let date, _):
             return "day-\(date.timeIntervalSince1970)"
+        case .spendingPaceDrillDown(let b):
+            return "pace-\(b.id)"
         }
     }
 }
@@ -56,6 +59,8 @@ struct InsightsView: View {
                 CategoryDrillDownSheet(category: category)
             case .dayDrillDown(let date, let transactions):
                 DayDrillDownSheet(date: date, transactions: transactions)
+            case .spendingPaceDrillDown(let budget):
+                SpendingPaceDrillDownSheet(budget: budget, viewModel: viewModel)
             }
         }
     }
@@ -179,8 +184,16 @@ struct InsightsView: View {
         let totalPlanned = viewModel.totalPlannedExpenses(from: budget)
 
         VStack(alignment: .leading, spacing: 12) {
-            Text("Spending Pace")
-                .font(.headline)
+            HStack {
+                Text("Spending Pace")
+                    .font(.headline)
+                Spacer()
+                if !dailyData.allSatisfy({ $0.amount == 0 }) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
 
             if dailyData.allSatisfy({ $0.amount == 0 }) {
                 Text("No spending data yet")
@@ -256,6 +269,11 @@ struct InsightsView: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !dailyData.allSatisfy({ $0.amount == 0 }) else { return }
+            activeSheet = .spendingPaceDrillDown(budget: budget)
+        }
     }
 
     private func isCurrentMonth(_ budget: Budget) -> Bool {

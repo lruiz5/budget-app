@@ -202,6 +202,92 @@ class InsightsViewModel: ObservableObject {
         return result.sorted { $0.amount > $1.amount }
     }
 
+    // MARK: - Per-Category Spending Pace
+
+    func getDailySpendingForCategory(from budget: Budget, categoryType: String) -> [DailySpending] {
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+
+        var startComponents = DateComponents()
+        startComponents.year = budget.year
+        startComponents.month = budget.month + 1
+        startComponents.day = 1
+        guard let monthStart = utcCalendar.date(from: startComponents) else { return [] }
+
+        let daysInMonth = utcCalendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+
+        var spendingByDay: [Int: Decimal] = [:]
+        if let category = budget.categories.values.first(where: { $0.categoryType.lowercased() == categoryType.lowercased() }) {
+            for item in category.items {
+                for transaction in item.transactions where !transaction.isDeleted && transaction.type == .expense {
+                    let day = utcCalendar.component(.day, from: transaction.date)
+                    spendingByDay[day, default: 0] += transaction.amount
+                }
+            }
+        }
+
+        var result: [DailySpending] = []
+        var cumulative: Decimal = 0
+        for day in 1...daysInMonth {
+            let amount = spendingByDay[day] ?? 0
+            cumulative += amount
+            var dayComponents = DateComponents()
+            dayComponents.year = budget.year
+            dayComponents.month = budget.month + 1
+            dayComponents.day = day
+            let date = utcCalendar.date(from: dayComponents) ?? monthStart
+            result.append(DailySpending(id: day, date: date, amount: amount, cumulative: cumulative))
+        }
+        return result
+    }
+
+    struct OverspendRisk: Identifiable {
+        var id: Int { category.id }
+        let category: BudgetCategory
+        let paceRatio: Double
+    }
+
+    func getOverspendRanking(from budget: Budget) -> [OverspendRisk] {
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+
+        // Determine how far through the month we are
+        var startComponents = DateComponents()
+        startComponents.year = budget.year
+        startComponents.month = budget.month + 1
+        startComponents.day = 1
+        guard let monthStart = utcCalendar.date(from: startComponents) else { return [] }
+        let daysInMonth = utcCalendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+
+        let now = Date()
+        let currentMonth = utcCalendar.component(.month, from: now) - 1  // 0-indexed
+        let currentYear = utcCalendar.component(.year, from: now)
+        let isCurrentMonth = budget.month == currentMonth && budget.year == currentYear
+
+        let dayOfMonth: Int
+        if isCurrentMonth {
+            dayOfMonth = utcCalendar.component(.day, from: now)
+        } else {
+            dayOfMonth = daysInMonth  // Past month — use full month
+        }
+
+        let monthProgress = Double(dayOfMonth) / Double(daysInMonth)
+
+        var risks: [OverspendRisk] = []
+        for category in budget.categories.values {
+            guard category.categoryType.lowercased() != "income" else { continue }
+            guard category.planned > 0 else { continue }
+
+            let expectedByNow = Double(truncating: category.planned as NSNumber) * monthProgress
+            guard expectedByNow > 0 else { continue }
+            let paceRatio = Double(truncating: category.actual as NSNumber) / expectedByNow
+
+            risks.append(OverspendRisk(category: category, paceRatio: paceRatio))
+        }
+
+        return risks.sorted { $0.paceRatio > $1.paceRatio }.prefix(5).map { $0 }
+    }
+
     private func shortMonthName(_ month: Int) -> String {
         // month is 0-indexed (0=Jan), DateComponents.month is 1-indexed
         let formatter = DateFormatter()

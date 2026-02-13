@@ -5,7 +5,7 @@
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
 **Web App:** v1.9.0 (stable)  |  **iOS App:** v0.11.0 (pre-release)
-**Last Session:** 2026-02-11
+**Last Session:** 2026-02-13
 
 ## Instructions for Claude
 
@@ -134,7 +134,7 @@ Auth (Clerk), multi-user, onboarding (6-step), full budget CRUD, custom categori
 
 ## Working Features (iOS)
 
-Auth (Clerk), budget viewing with categories/items, month navigation, transaction viewing + categorization + editing, transaction creation (from item detail or transactions tab), budget item detail (progress ring, edit name/planned, view/add/edit transactions), bank account linking (Teller Connect via WKWebView), transaction sync from linked accounts, per-account sync toggle (half-sheet with streaming on/off), accounts viewing with institution grouping + unlink + institution icons, pull-to-refresh, sticky "Left to Budget" banner, budget summary progress rings (income/expenses), progress bar dividers, split transactions (create from item detail), recurring payment management (CRUD, contribute, mark as paid/reset, category picker), custom category creation (name+emoji picker, long-press delete), budget copy from previous month, budget reset (zero out / replace with previous month), monthly report sheet (7 sections with trends), insights charts (budget vs actual bars, spending pace burn-down, daily spending heatmap, spending trends), onboarding flow (6-step purely educational — no live data created), comprehensive error handling (toast notifications for all mutations, network error wrapping, server error message parsing), transaction search & filters (text search on merchant/description/amount, type/category/amount range/account filters, filter chips with dismiss), offline support (cache-then-network loading, offline mutation guards, floating offline banner, cache clear on sign-out)
+Auth (Clerk), budget viewing with categories/items, month navigation, transaction viewing + categorization + editing, transaction creation (from item detail or transactions tab), budget item detail (progress ring, edit name/planned, view/add/edit transactions), bank account linking (Teller Connect via WKWebView), transaction sync from linked accounts, per-account sync toggle (half-sheet with streaming on/off), accounts viewing with institution grouping + unlink + institution icons, pull-to-refresh, sticky "Left to Budget" banner, budget summary progress rings (income/expenses), progress bar dividers, split transactions (create from item detail), recurring payment management (CRUD, contribute, mark as paid/reset, category picker), custom category creation (name+emoji picker, long-press delete), budget copy from previous month, budget reset (zero out / replace with previous month), monthly report sheet (7 sections with trends), insights charts (budget vs actual bars, spending pace burn-down with per-category drilldown, daily spending heatmap, spending trends), inline budget item editing (tap name or planned amount), onboarding flow (6-step purely educational — no live data created), comprehensive error handling (toast notifications for all mutations, network error wrapping, server error message parsing), transaction search & filters (text search on merchant/description/amount, type/category/amount range/account filters, filter chips with dismiss), offline support (cache-then-network loading, offline mutation guards, floating offline banner, cache clear on sign-out)
 
 ## Common Issues
 
@@ -148,6 +148,7 @@ Auth (Clerk), budget viewing with categories/items, month navigation, transactio
 | PG numeric `toFixed` error | Wrap: `parseFloat(String(value)).toFixed(2)` |
 | Buffer Flow wrong values | Underspent/Overspent only from expense categories (not income). Saving excluded from report totals |
 | Quick Assign wrong month | Budget item IDs are per-month. Client validates suggestions against current month's items + generates own merchant→item map. Server uses name-based lookup |
+| Teller pending→posted duplicates | Teller issues new IDs when pending settles as posted (tips). Sync fuzzy-matches stale pending by merchant+date (7d) to update instead of insert, preserving categorization |
 
 ## Development Commands
 

@@ -7,6 +7,7 @@ struct CategorySection: View {
     let onDeleteItem: ((Int) -> Void)?
     let onReorderItems: (([Int]) -> Void)?
     var onUpdatePlanned: ((Int, Decimal) -> Void)?
+    var onUpdateName: ((Int, String) -> Void)?
     let onDeleteCategory: (() -> Void)?
 
     @State private var isExpanded = true
@@ -25,7 +26,7 @@ struct CategorySection: View {
         Section {
             if isExpanded {
                 ForEach(orderedItems) { item in
-                    BudgetItemRow(item: item, onQuickEditPlanned: onUpdatePlanned)
+                    BudgetItemRow(item: item, onQuickEditPlanned: onUpdatePlanned, onQuickEditName: onUpdateName)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             onItemTap(item)
@@ -123,10 +124,15 @@ struct CategorySection: View {
 struct BudgetItemRow: View {
     let item: BudgetItem
     var onQuickEditPlanned: ((Int, Decimal) -> Void)?
+    var onQuickEditName: ((Int, String) -> Void)?
 
     @State private var isEditingPlanned = false
     @State private var editedPlannedText = ""
     @FocusState private var isFieldFocused: Bool
+
+    @State private var isEditingName = false
+    @State private var editedNameText = ""
+    @FocusState private var isNameFocused: Bool
 
     private var progress: Double {
         guard item.planned > 0 else { return 0 }
@@ -136,14 +142,34 @@ struct BudgetItemRow: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack {
-                HStack(spacing: 4) {
-                    Text(item.name)
+                if isEditingName {
+                    TextField("Item name", text: $editedNameText)
                         .font(.body)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($isNameFocused)
+                        .onSubmit { commitNameEdit() }
+                } else {
+                    Button {
+                        if onQuickEditName != nil {
+                            editedNameText = item.name
+                            isEditingName = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                isNameFocused = true
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(item.name)
+                                .font(.body)
+                                .foregroundStyle(.primary)
 
-                    if item.recurringPaymentId != nil {
-                        Text("🔄")
-                            .font(.caption)
+                            if item.recurringPaymentId != nil {
+                                Text("🔄")
+                                    .font(.caption)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
 
                 Spacer()
@@ -162,6 +188,13 @@ struct BudgetItemRow: View {
                             .textFieldStyle(.roundedBorder)
                             .focused($isFieldFocused)
                             .onSubmit { commitPlannedEdit() }
+                        Button {
+                            commitPlannedEdit()
+                        } label: {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        }
+                        .buttonStyle(.plain)
                     }
                 } else {
                     // Amount display — wrapped in Button to capture tap before row's onTapGesture
@@ -208,6 +241,21 @@ struct BudgetItemRow: View {
                 commitPlannedEdit()
             }
         }
+        .onChange(of: isNameFocused) { _, focused in
+            if !focused && isEditingName {
+                commitNameEdit()
+            }
+        }
+    }
+
+    private func commitNameEdit() {
+        let trimmed = editedNameText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            isEditingName = false
+            return
+        }
+        onQuickEditName?(item.id, trimmed)
+        isEditingName = false
     }
 
     private func commitPlannedEdit() {
@@ -246,6 +294,7 @@ struct BudgetItemRow: View {
             onDeleteItem: nil,
             onReorderItems: nil,
             onUpdatePlanned: nil,
+            onUpdateName: nil,
             onDeleteCategory: nil
         )
     }
