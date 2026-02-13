@@ -40,7 +40,7 @@ enum Constants {
     enum App {
         static let version = "0.12.0"
         static let buildNumber = "1"
-        static let name = "Budget App"
+        static let name = "Welcome"
     }
 
     // MARK: - Default Categories

@@ -139,6 +139,9 @@ struct BudgetView: View {
                     onUpdatePlanned: { id, planned in
                         Task { await viewModel.updateItem(id: id, name: nil, planned: planned) }
                     },
+                    onUpdateName: { id, name in
+                        Task { await viewModel.updateItem(id: id, name: name, planned: nil) }
+                    },
                     onDeleteCategory: isCustomCategory(category) ? {
                         categoryToDelete = category
                         showDeleteCategoryConfirmation = true
@@ -169,6 +172,7 @@ struct BudgetView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             LeftToBudgetBanner(budget: budget)
         }
