@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
           const amount = String(amountNum);
           const type: 'income' | 'expense' = parseFloat(txn.amount) > 0 ? 'income' : 'expense';
 
+          // Strip "POS DEBIT" prefix from descriptions
+          const cleanDescription = txn.description?.replace(/^POS DEBIT\s+/i, '').trim() || txn.description;
+
           const existingTxn = existingMap.get(txn.id);
 
           if (existingTxn) {
@@ -86,7 +89,7 @@ export async function POST(request: NextRequest) {
                 data: {
                   status: txn.status,
                   amount,
-                  description: txn.description,
+                  description: cleanDescription,
                   merchant: txn.details?.counterparty?.name || existingTxn.merchant,
                 },
               });
@@ -99,7 +102,7 @@ export async function POST(request: NextRequest) {
               budgetItemId: null,
               linkedAccountId: account.id,
               date: txn.date,
-              description: txn.description,
+              description: cleanDescription,
               amount,
               type,
               merchant: txn.details?.counterparty?.name || null,
@@ -133,19 +136,37 @@ export async function POST(request: NextRequest) {
             const stillToInsert: typeof toInsert = [];
 
             for (const newTxn of toInsert) {
-              if (newTxn.status !== 'posted' || !newTxn.merchant) {
+              if (newTxn.status !== 'posted') {
                 stillToInsert.push(newTxn);
                 continue;
               }
 
-              const match = stalePending.find(p =>
-                !matched.has(p.id) &&
-                p.merchant &&
-                p.merchant.toLowerCase() === newTxn.merchant!.toLowerCase() &&
-                Math.abs(
+              const match = stalePending.find(p => {
+                if (matched.has(p.id)) return false;
+                const withinDateRange = Math.abs(
                   (new Date(newTxn.date!).getTime() - new Date(p.date).getTime()) / 86400000
-                ) <= 7
-              );
+                ) <= 7;
+                if (!withinDateRange) return false;
+
+                // Try merchant match first
+                if (p.merchant && newTxn.merchant &&
+                    p.merchant.toLowerCase() === newTxn.merchant.toLowerCase()) {
+                  return true;
+                }
+
+                // Fall back to description substring match (first 15+ chars)
+                // e.g. "POS DEBIT SQ *Z AND J ASIAN SUBS EUREKA CA 4932"
+                //  vs  "SQ *Z AND J ASIAN SUBS Eureka CA 02/11"
+                const pDesc = (p.description || '').replace(/^POS DEBIT\s+/i, '').toLowerCase();
+                const nDesc = (newTxn.description || '').replace(/^POS DEBIT\s+/i, '').toLowerCase();
+                if (pDesc.length >= 15 && nDesc.length >= 15) {
+                  const shorter = pDesc.length <= nDesc.length ? pDesc : nDesc;
+                  const longer = pDesc.length <= nDesc.length ? nDesc : pDesc;
+                  return shorter.substring(0, 15) === longer.substring(0, 15);
+                }
+
+                return false;
+              });
 
               if (match) {
                 matched.add(match.id);
