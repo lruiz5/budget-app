@@ -28,6 +28,7 @@ struct MonthlyReportSheet: View {
     let budget: Budget
     let previousBudget: Budget?
     @Environment(\.dismiss) private var dismiss
+    @State private var excludeNonEarned = false
 
     var body: some View {
         NavigationStack {
@@ -47,6 +48,13 @@ struct MonthlyReportSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Toggle(isOn: $excludeNonEarned) {
+                        Label("Exclude Non-Earned", systemImage: "gift")
+                    }
+                    .toggleStyle(.button)
+                    .tint(excludeNonEarned ? .purple : .gray)
                 }
             }
         }
@@ -432,8 +440,21 @@ struct MonthlyReportSheet: View {
         budget.categories.values.first { $0.categoryType.lowercased() == "income" }
     }
 
+    private var nonEarnedIncomeAmount: Decimal {
+        guard excludeNonEarned, let category = incomeCategory else { return 0 }
+        return category.items.reduce(Decimal(0)) { sum, item in
+            let directNonEarned = item.transactions
+                .filter { $0.isNonEarned && $0.type == .income && !$0.isDeleted }
+                .reduce(Decimal(0)) { $0 + $1.amount }
+            let splitNonEarned = (item.splitTransactions ?? [])
+                .filter { $0.isNonEarned && $0.parentType == .income }
+                .reduce(Decimal(0)) { $0 + $1.amount }
+            return sum + directNonEarned + splitNonEarned
+        }
+    }
+
     private var totalIncome: Decimal {
-        incomeCategory?.actual ?? 0
+        (incomeCategory?.actual ?? 0) - nonEarnedIncomeAmount
     }
 
     private var totalPlannedIncome: Decimal {
@@ -557,10 +578,27 @@ struct MonthlyReportSheet: View {
 
     // MARK: - Trends
 
+    private var previousNonEarnedIncomeAmount: Decimal {
+        guard excludeNonEarned,
+              let prevIncomeCategory = previousBudget?.categories.values.first(where: { $0.categoryType.lowercased() == "income" })
+        else { return 0 }
+        return prevIncomeCategory.items.reduce(Decimal(0)) { sum, item in
+            let directNonEarned = item.transactions
+                .filter { $0.isNonEarned && $0.type == .income && !$0.isDeleted }
+                .reduce(Decimal(0)) { $0 + $1.amount }
+            let splitNonEarned = (item.splitTransactions ?? [])
+                .filter { $0.isNonEarned && $0.parentType == .income }
+                .reduce(Decimal(0)) { $0 + $1.amount }
+            return sum + directNonEarned + splitNonEarned
+        }
+    }
+
     private var incomeTrend: Double? {
         guard let prev = previousBudget,
-              let prevIncome = prev.categories.values.first(where: { $0.categoryType.lowercased() == "income" })?.actual,
-              prevIncome > 0 else { return nil }
+              let prevIncomeRaw = prev.categories.values.first(where: { $0.categoryType.lowercased() == "income" })?.actual
+        else { return nil }
+        let prevIncome = prevIncomeRaw - previousNonEarnedIncomeAmount
+        guard prevIncome > 0 else { return nil }
         return Double(truncating: ((totalIncome - prevIncome) / prevIncome * 100) as NSNumber)
     }
 

@@ -8,6 +8,7 @@ struct SplitRow: Identifiable {
     var budgetItemName: String?
     var amount: String
     var description: String
+    var isNonEarned: Bool = false
 
     var amountDecimal: Decimal? {
         Decimal(string: amount)
@@ -44,7 +45,8 @@ struct SplitTransactionSheet: View {
                 SplitRow(
                     budgetItemId: split.budgetItemId,
                     amount: "\(split.amount)",
-                    description: split.description ?? ""
+                    description: split.description ?? "",
+                    isNonEarned: split.isNonEarned
                 )
             })
         }
@@ -266,6 +268,14 @@ struct SplitTransactionSheet: View {
                 .padding(.vertical, 10)
                 .background(Color(.systemGray5))
                 .cornerRadius(8)
+
+            // Non-earned toggle (income transactions only)
+            if transaction.type == .income {
+                Toggle(isOn: $splitRows[index].isNonEarned) {
+                    Label("Non-earned", systemImage: "gift")
+                        .font(.subheadline)
+                }
+            }
         }
         .padding()
         .background(Color(.systemGray6))
@@ -326,7 +336,8 @@ struct SplitTransactionSheet: View {
             return SplitInput(
                 budgetItemId: itemId,
                 amount: amount,
-                description: row.description.isEmpty ? nil : row.description
+                description: row.description.isEmpty ? nil : row.description,
+                isNonEarned: row.isNonEarned ? true : nil
             )
         }
 

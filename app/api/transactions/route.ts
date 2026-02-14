@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
   const { userId } = authResult;
 
   const body = await request.json();
-  const { budgetItemId, linkedAccountId, date, description, amount, type, merchant, checkNumber } = body;
+  const { budgetItemId, linkedAccountId, date, description, amount, type, merchant, checkNumber, isNonEarned } = body;
 
   if (!budgetItemId || !date || !description || amount === undefined || !type) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
       type,
       merchant: merchant || null,
       checkNumber: checkNumber || null,
+      isNonEarned: isNonEarned || false,
     })
     .returning();
 
@@ -120,7 +121,7 @@ export async function PUT(request: NextRequest) {
   const { userId } = authResult;
 
   const body = await request.json();
-  const { id, budgetItemId, linkedAccountId, date, description, amount, type, merchant } = body;
+  const { id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, isNonEarned } = body;
 
   if (!id) {
     return NextResponse.json({ error: 'Missing transaction id' }, { status: 400 });
@@ -159,6 +160,9 @@ export async function PUT(request: NextRequest) {
   }
   if (merchant !== undefined) {
     updateData.merchant = merchant || null;
+  }
+  if (isNonEarned !== undefined) {
+    updateData.isNonEarned = isNonEarned;
   }
 
   const [updated] = await db
@@ -234,6 +238,7 @@ export async function GET(request: NextRequest) {
       amount: transaction.amount,
       type: transaction.type,
       merchant: transaction.merchant,
+      isNonEarned: transaction.isNonEarned,
     });
   }
 
@@ -282,6 +287,7 @@ export async function GET(request: NextRequest) {
       amount: txn.amount,
       type: txn.type,
       merchant: txn.merchant,
+      isNonEarned: txn.isNonEarned,
       deletedAt: txn.deletedAt,
     }));
 

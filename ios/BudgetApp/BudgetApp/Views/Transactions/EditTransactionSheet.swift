@@ -13,6 +13,7 @@ struct EditTransactionSheet: View {
     @State private var transactionType: TransactionType
     @State private var editedMerchant: String
     @State private var selectedBudgetItemId: Int?
+    @State private var isNonEarned: Bool
     @State private var isSaving = false
     @State private var showDeleteConfirmation = false
     @State private var showUnsplitConfirmation = false
@@ -31,6 +32,7 @@ struct EditTransactionSheet: View {
         self._transactionType = State(initialValue: transaction.type)
         self._editedMerchant = State(initialValue: transaction.merchant ?? "")
         self._selectedBudgetItemId = State(initialValue: transaction.budgetItemId)
+        self._isNonEarned = State(initialValue: transaction.isNonEarned)
     }
 
     var body: some View {
@@ -42,6 +44,15 @@ struct EditTransactionSheet: View {
                         Text("Income").tag(TransactionType.income)
                     }
                     .pickerStyle(.segmented)
+                    .onChange(of: transactionType) { _, newType in
+                        if newType != .income { isNonEarned = false }
+                    }
+
+                    if transactionType == .income {
+                        Toggle(isOn: $isNonEarned) {
+                            Label("Non-earned income", systemImage: "gift")
+                        }
+                    }
 
                     HStack {
                         Text("$")
@@ -234,7 +245,8 @@ struct EditTransactionSheet: View {
                     description: editedDescription,
                     amount: amountDecimal,
                     type: transactionType,
-                    merchant: editedMerchant.isEmpty ? nil : editedMerchant
+                    merchant: editedMerchant.isEmpty ? nil : editedMerchant,
+                    isNonEarned: isNonEarned
                 )
                 let updated = try await TransactionService.shared.updateTransaction(request)
                 await MainActor.run {

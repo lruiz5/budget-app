@@ -12,6 +12,7 @@ export interface Transaction {
   tellerTransactionId?: string | null;
   tellerAccountId?: string | null;
   status?: 'posted' | 'pending' | null;
+  isNonEarned?: boolean;
 }
 
 export interface SplitTransaction {
@@ -24,6 +25,7 @@ export interface SplitTransaction {
   parentMerchant?: string | null;
   parentDescription?: string;
   parentType?: 'income' | 'expense';
+  isNonEarned?: boolean;
 }
 
 export interface BudgetItem {

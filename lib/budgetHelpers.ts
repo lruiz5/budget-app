@@ -63,6 +63,7 @@ export function transformDbBudgetToAppBudget(dbBudget: any): Budget {
             linkedAccountId: t.linkedAccountId,
             type: t.type,
             merchant: t.merchant,
+            isNonEarned: t.isNonEarned || false,
           })),
           splitTransactions: (item.splitTransactions || []).map((s: any) => ({
             id: s.id.toString(),
@@ -73,6 +74,7 @@ export function transformDbBudgetToAppBudget(dbBudget: any): Budget {
             parentMerchant: s.parentTransaction?.merchant,
             parentDescription: s.parentTransaction?.description,
             parentType: s.parentTransaction?.type,
+            isNonEarned: s.isNonEarned || false,
           })),
         };
       };

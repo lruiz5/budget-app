@@ -44,6 +44,7 @@ export const transactions = pgTable('transactions', {
   tellerTransactionId: text('teller_transaction_id').unique(),
   tellerAccountId: text('teller_account_id'),
   status: text('status').$type<'posted' | 'pending'>(),
+  isNonEarned: boolean('is_non_earned').notNull().default(false),
   // Soft delete
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
@@ -56,6 +57,7 @@ export const splitTransactions = pgTable('split_transactions', {
   budgetItemId: integer('budget_item_id').notNull().references(() => budgetItems.id, { onDelete: 'cascade' }),
   amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
   description: text('description'), // Optional context like "household items"
+  isNonEarned: boolean('is_non_earned').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
 });
 

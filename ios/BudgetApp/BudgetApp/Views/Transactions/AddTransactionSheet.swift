@@ -12,6 +12,7 @@ struct AddTransactionSheet: View {
     @State private var transactionType: TransactionType = .expense
     @State private var merchant = ""
     @State private var selectedBudgetItemId: Int?
+    @State private var isNonEarned = false
     @State private var isSaving = false
     @State private var error: String?
 
@@ -26,6 +27,15 @@ struct AddTransactionSheet: View {
                         Text("Income").tag(TransactionType.income)
                     }
                     .pickerStyle(.segmented)
+                    .onChange(of: transactionType) { _, newType in
+                        if newType != .income { isNonEarned = false }
+                    }
+
+                    if transactionType == .income {
+                        Toggle(isOn: $isNonEarned) {
+                            Label("Non-earned income", systemImage: "gift")
+                        }
+                    }
 
                     HStack {
                         Text("$")
@@ -128,7 +138,8 @@ struct AddTransactionSheet: View {
                     description: finalDescription,
                     amount: amountDecimal,
                     type: transactionType,
-                    merchant: merchant.isEmpty ? nil : merchant
+                    merchant: merchant.isEmpty ? nil : merchant,
+                    isNonEarned: isNonEarned
                 )
                 let created = try await TransactionService.shared.createTransaction(request)
                 await MainActor.run {
