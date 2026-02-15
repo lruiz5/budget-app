@@ -8,6 +8,7 @@ interface SplitItem {
   budgetItemId: number;
   amount: number;
   description?: string;
+  isNonEarned?: boolean;
 }
 
 // Helper to verify transaction ownership (via budgetItem, linkedAccount, or split transactions)
@@ -134,6 +135,7 @@ export async function POST(request: NextRequest) {
           budgetItemId: split.budgetItemId,
           amount: String(split.amount),
           description: split.description || null,
+          isNonEarned: split.isNonEarned || false,
         })
         .returning();
       createdSplits.push(created);

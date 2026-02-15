@@ -311,11 +311,12 @@ struct SplitTransactionWithParent: Codable, Identifiable {
     let budgetItemId: Int
     var amount: Decimal
     let description: String?
+    let isNonEarned: Bool
     let parentType: TransactionType?
     let parentTransaction: Transaction?
 
     enum CodingKeys: String, CodingKey {
-        case id, parentTransactionId, budgetItemId, amount, description, parentTransaction
+        case id, parentTransactionId, budgetItemId, amount, description, isNonEarned, parentTransaction
     }
 
     func encode(to encoder: Encoder) throws {
@@ -325,6 +326,7 @@ struct SplitTransactionWithParent: Codable, Identifiable {
         try container.encode(budgetItemId, forKey: .budgetItemId)
         try container.encode(amount, forKey: .amount)
         try container.encodeIfPresent(description, forKey: .description)
+        try container.encode(isNonEarned, forKey: .isNonEarned)
         try container.encodeIfPresent(parentTransaction, forKey: .parentTransaction)
     }
 
@@ -334,6 +336,7 @@ struct SplitTransactionWithParent: Codable, Identifiable {
         parentTransactionId = try container.decode(Int.self, forKey: .parentTransactionId)
         budgetItemId = try container.decode(Int.self, forKey: .budgetItemId)
         description = try container.decodeIfPresent(String.self, forKey: .description)
+        isNonEarned = try container.decodeIfPresent(Bool.self, forKey: .isNonEarned) ?? false
 
         // Handle numeric string from PostgreSQL
         if let amountString = try? container.decode(String.self, forKey: .amount) {
