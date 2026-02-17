@@ -1,6 +1,6 @@
 import Foundation
 
-struct Transaction: Codable, Identifiable {
+struct Transaction: Codable, Identifiable, Equatable {
     let id: Int
     let budgetItemId: Int?
     let linkedAccountId: Int?
@@ -97,7 +97,7 @@ enum TransactionType: String, Codable {
     case expense
 }
 
-struct SplitTransaction: Codable, Identifiable {
+struct SplitTransaction: Codable, Identifiable, Equatable {
     let id: Int
     let parentTransactionId: Int
     let budgetItemId: Int

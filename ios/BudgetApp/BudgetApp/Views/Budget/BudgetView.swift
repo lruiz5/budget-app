@@ -115,13 +115,20 @@ struct BudgetView: View {
         List {
             // Summary Section
             Section {
-                BudgetSummaryCard(budget: budget, onUpdateBuffer: { newBuffer in
-                    Task { await viewModel.updateBuffer(newBuffer) }
-                })
+                BudgetSummaryCard(
+                    buffer: budget.buffer,
+                    incomePlanned: viewModel.incomePlanned,
+                    incomeActual: viewModel.incomeActual,
+                    expensePlanned: viewModel.expensePlanned,
+                    expenseActual: viewModel.expenseActual,
+                    onUpdateBuffer: { newBuffer in
+                        Task { await viewModel.updateBuffer(newBuffer) }
+                    }
+                )
             }
 
-            // Categories
-            ForEach(sortedCategories(budget.categories), id: \.id) { category in
+            // Categories — pre-sorted in ViewModel, not computed here
+            ForEach(viewModel.sortedCategories, id: \.id) { category in
                 CategorySection(
                     category: category,
                     onItemTap: { item in
@@ -174,7 +181,11 @@ struct BudgetView: View {
         .listStyle(.insetGrouped)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
-            LeftToBudgetBanner(budget: budget)
+            LeftToBudgetBanner(
+                buffer: budget.buffer,
+                incomePlanned: viewModel.incomePlanned,
+                expensePlanned: viewModel.expensePlanned
+            )
         }
     }
 
@@ -213,53 +224,21 @@ struct BudgetView: View {
     private func isCustomCategory(_ category: BudgetCategory) -> Bool {
         !Constants.defaultCategories.contains(category.categoryType.lowercased())
     }
-
-    private func sortedCategories(_ categories: [String: BudgetCategory]) -> [BudgetCategory] {
-        let defaultOrder = ["income", "giving", "household", "transportation", "food", "personal", "insurance", "saving"]
-
-        return categories.values.sorted { a, b in
-            let aIndex = defaultOrder.firstIndex(of: a.categoryType.lowercased()) ?? 100
-            let bIndex = defaultOrder.firstIndex(of: b.categoryType.lowercased()) ?? 100
-
-            if aIndex != bIndex {
-                return aIndex < bIndex
-            }
-            return a.order < b.order
-        }
-    }
 }
 
 // MARK: - Budget Summary Card
 
 struct BudgetSummaryCard: View {
-    let budget: Budget
+    let buffer: Decimal
+    let incomePlanned: Decimal
+    let incomeActual: Decimal
+    let expensePlanned: Decimal
+    let expenseActual: Decimal
     var onUpdateBuffer: ((Decimal) -> Void)?
 
     @State private var isEditingBuffer = false
     @State private var editedBufferText = ""
     @FocusState private var isBufferFocused: Bool
-
-    private var incomePlanned: Decimal {
-        budget.categories.values
-            .first { $0.categoryType.lowercased() == "income" }?.planned ?? 0
-    }
-
-    private var incomeActual: Decimal {
-        budget.categories.values
-            .first { $0.categoryType.lowercased() == "income" }?.actual ?? 0
-    }
-
-    private var expensePlanned: Decimal {
-        budget.categories.values
-            .filter { $0.categoryType.lowercased() != "income" }
-            .reduce(0) { $0 + $1.planned }
-    }
-
-    private var expenseActual: Decimal {
-        budget.categories.values
-            .filter { $0.categoryType.lowercased() != "income" }
-            .reduce(0) { $0 + $1.actual }
-    }
 
     var body: some View {
         HStack {
@@ -284,7 +263,7 @@ struct BudgetSummaryCard: View {
                             .onSubmit { commitBufferEdit() }
                     }
                 } else {
-                    Text(formatCurrency(budget.buffer))
+                    Text(formatCurrency(buffer))
                         .font(.title2)
                         .fontWeight(.semibold)
                 }
@@ -292,7 +271,7 @@ struct BudgetSummaryCard: View {
             .contentShape(Rectangle())
             .onTapGesture {
                 if !isEditingBuffer && onUpdateBuffer != nil {
-                    editedBufferText = "\(budget.buffer)"
+                    editedBufferText = "\(buffer)"
                     isEditingBuffer = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         isBufferFocused = true
@@ -409,25 +388,16 @@ struct MiniProgressRing: View {
 // MARK: - Left to Budget Banner
 
 struct LeftToBudgetBanner: View {
-    let budget: Budget
-
-    private var incomePlanned: Decimal {
-        budget.categories.values
-            .first { $0.categoryType.lowercased() == "income" }?.planned ?? 0
-    }
-
-    private var expensePlanned: Decimal {
-        budget.categories.values
-            .filter { $0.categoryType.lowercased() != "income" }
-            .reduce(0) { $0 + $1.planned }
-    }
+    let buffer: Decimal
+    let incomePlanned: Decimal
+    let expensePlanned: Decimal
 
     private var leftToBudget: Decimal {
-        budget.buffer + incomePlanned - expensePlanned
+        buffer + incomePlanned - expensePlanned
     }
 
     private var hasAnyPlanning: Bool {
-        budget.buffer > 0 || incomePlanned > 0 || expensePlanned > 0
+        buffer > 0 || incomePlanned > 0 || expensePlanned > 0
     }
 
     var body: some View {

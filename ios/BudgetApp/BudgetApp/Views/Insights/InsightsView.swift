@@ -25,6 +25,12 @@ struct InsightsView: View {
     @StateObject private var viewModel = InsightsViewModel()
     @State private var activeSheet: InsightsActiveSheet?
 
+    private static let utcCalendar: Calendar = {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        return cal
+    }()
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -100,11 +106,12 @@ struct InsightsView: View {
 
     @ViewBuilder
     private func budgetVsActualChart(_ budget: Budget) -> some View {
+        // Reads precomputed data — no heavy work here
+        let categoryData = viewModel.categoryChartData
+
         VStack(alignment: .leading, spacing: 12) {
             Text("Budget vs Actual")
                 .font(.headline)
-
-            let categoryData = viewModel.getCategoryChartData(from: budget)
 
             if categoryData.isEmpty {
                 Text("No spending data yet")
@@ -180,8 +187,9 @@ struct InsightsView: View {
 
     @ViewBuilder
     private func spendingPaceChart(_ budget: Budget) -> some View {
-        let dailyData = viewModel.getDailySpending(from: budget)
-        let totalPlanned = viewModel.totalPlannedExpenses(from: budget)
+        // Reads precomputed data — no heavy work here
+        let dailyData = viewModel.dailySpending
+        let totalPlannedAmt = viewModel.totalPlanned
 
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -215,7 +223,7 @@ struct InsightsView: View {
 
                     LineMark(
                         x: .value("Day", daysInMonth),
-                        y: .value("Amount", totalPlanned),
+                        y: .value("Amount", totalPlannedAmt),
                         series: .value("Series", "Ideal")
                     )
                     .foregroundStyle(.gray.opacity(0.5))
@@ -278,17 +286,13 @@ struct InsightsView: View {
 
     private func isCurrentMonth(_ budget: Budget) -> Bool {
         let now = Date()
-        var utcCalendar = Calendar(identifier: .gregorian)
-        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
-        let currentMonth = utcCalendar.component(.month, from: now) - 1  // 0-indexed
-        let currentYear = utcCalendar.component(.year, from: now)
+        let currentMonth = Self.utcCalendar.component(.month, from: now) - 1  // 0-indexed
+        let currentYear = Self.utcCalendar.component(.year, from: now)
         return budget.month == currentMonth && budget.year == currentYear
     }
 
     private func todayDay() -> Int {
-        var utcCalendar = Calendar(identifier: .gregorian)
-        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
-        return utcCalendar.component(.day, from: Date())
+        Self.utcCalendar.component(.day, from: Date())
     }
 
     private func formatCurrencyShort(_ value: Decimal) -> String {
@@ -303,16 +307,16 @@ struct InsightsView: View {
 
     @ViewBuilder
     private func spendingHeatmap(_ budget: Budget) -> some View {
-        let dailyData = viewModel.getDailySpending(from: budget)
-        let maxDailyAmount = dailyData.map(\.amount).max() ?? 0
+        // Reads precomputed data — getDailySpending no longer called here
+        let maxDailyAmount = viewModel.dailySpending.map(\.amount).max() ?? 0
 
         VStack(alignment: .leading, spacing: 12) {
             Text("Daily Spending")
                 .font(.headline)
 
-            let gridCells = buildHeatmapCells(budget: budget, dailyData: dailyData)
+            // heatmapCells pre-built in ViewModel — no rebuild on every render
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
-                ForEach(gridCells, id: \.id) { cell in
+                ForEach(viewModel.heatmapCells, id: \.id) { cell in
                     switch cell.type {
                     case .header(let text):
                         Text(text)
@@ -357,33 +361,6 @@ struct InsightsView: View {
         .cornerRadius(12)
     }
 
-    struct HeatmapCell {
-        let id: String
-        let type: HeatmapCellType
-    }
-
-    enum HeatmapCellType {
-        case header(String)
-        case empty
-        case day(InsightsViewModel.DailySpending)
-    }
-
-    private func buildHeatmapCells(budget: Budget, dailyData: [InsightsViewModel.DailySpending]) -> [HeatmapCell] {
-        var cells: [HeatmapCell] = []
-        let weekdays = ["S", "M", "T", "W", "T", "F", "S"]
-        for (i, w) in weekdays.enumerated() {
-            cells.append(HeatmapCell(id: "h\(i)", type: .header(w)))
-        }
-        let firstWeekday = firstWeekdayOfMonth(budget)
-        for i in 0..<firstWeekday {
-            cells.append(HeatmapCell(id: "e\(i)", type: .empty))
-        }
-        for day in dailyData {
-            cells.append(HeatmapCell(id: "d\(day.id)", type: .day(day)))
-        }
-        return cells
-    }
-
     @ViewBuilder
     private func heatmapCell(day: InsightsViewModel.DailySpending, maxAmount: Decimal, budget: Budget) -> some View {
         let isFuture = isFutureDay(day: day.id, budget: budget)
@@ -397,18 +374,6 @@ struct InsightsView: View {
                 .foregroundStyle(isFuture ? Color.secondary : (day.amount > 0 ? Color.white : Color.secondary))
         }
         .aspectRatio(1, contentMode: .fit)
-    }
-
-    private func firstWeekdayOfMonth(_ budget: Budget) -> Int {
-        var utcCalendar = Calendar(identifier: .gregorian)
-        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
-        var components = DateComponents()
-        components.year = budget.year
-        components.month = budget.month + 1  // 0-indexed to 1-indexed
-        components.day = 1
-        guard let date = utcCalendar.date(from: components) else { return 0 }
-        // weekday is 1=Sunday, 2=Monday, etc. We want 0-indexed offset
-        return utcCalendar.component(.weekday, from: date) - 1
     }
 
     private func isFutureDay(day: Int, budget: Budget) -> Bool {
@@ -438,11 +403,12 @@ struct InsightsView: View {
     // MARK: - Spending Trends Chart
 
     private var spendingTrendsChart: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        // Reads precomputed data — no heavy work here
+        let trendData = viewModel.spendingTrendData
+
+        return VStack(alignment: .leading, spacing: 12) {
             Text("Spending Trends")
                 .font(.headline)
-
-            let trendData = viewModel.getSpendingTrendData()
 
             if trendData.isEmpty {
                 Text("Not enough data for trends")

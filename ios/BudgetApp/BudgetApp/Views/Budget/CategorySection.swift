@@ -219,18 +219,15 @@ struct BudgetItemRow: View {
                 }
             }
 
-            // Full-width progress bar as visual divider
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                    Rectangle()
-                        .fill(item.isOverBudget ? Color.red : Color.green)
-                        .frame(width: geometry.size.width * progress)
-                }
+            // Full-width progress bar — scaleEffect avoids GeometryReader layout overhead
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color(.systemGray5))
+                Capsule()
+                    .fill(item.isOverBudget ? Color.red : Color.green)
+                    .scaleEffect(x: CGFloat(progress), anchor: .leading)
             }
             .frame(height: 2)
-            .clipShape(Capsule())
         }
         .padding(.vertical, 4)
         .onChange(of: isFieldFocused) { _, focused in
