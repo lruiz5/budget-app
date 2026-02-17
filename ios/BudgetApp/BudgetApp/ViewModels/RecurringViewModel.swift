@@ -12,10 +12,12 @@ class RecurringViewModel: ObservableObject {
     @Published var toastMessage: String?
     @Published var isToastError = false
 
+    @Published private(set) var upcomingPayments: [RecurringPayment] = []
+
     private let recurringService = RecurringService.shared
 
-    var upcomingPayments: [RecurringPayment] {
-        payments.filter { $0.isUpcoming && $0.isActive }
+    private func updateUpcomingPayments() {
+        upcomingPayments = payments.filter { $0.isUpcoming && $0.isActive }
             .sorted { $0.nextDueDate < $1.nextDueDate }
     }
 
@@ -36,6 +38,7 @@ class RecurringViewModel: ObservableObject {
     }
 
     private func saveToCache() async {
+        updateUpcomingPayments()
         await CacheManager.shared.save(payments, forKey: "recurring_payments")
     }
 
@@ -47,6 +50,7 @@ class RecurringViewModel: ObservableObject {
         // Load from cache first
         if let cached: [RecurringPayment] = await CacheManager.shared.load(forKey: "recurring_payments") {
             payments = cached
+            updateUpcomingPayments()
         }
 
         if payments.isEmpty {

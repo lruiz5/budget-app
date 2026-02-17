@@ -134,11 +134,25 @@ struct SplitTransactionSheet: View {
             }
             .task {
                 await budgetVM.loadBudget()
-                // Resolve budget item names for existing splits
-                if isEditMode, let budget = budgetVM.budget {
-                    for i in splitRows.indices {
-                        if let itemId = splitRows[i].budgetItemId {
-                            splitRows[i].budgetItemName = findItemName(itemId: itemId, in: budget)
+                // Fetch all splits from API to ensure we have the full set
+                // (item detail view only has splits for its own budget item)
+                if isEditMode {
+                    if let allSplits = try? await TransactionService.shared.getSplits(parentTransactionId: transaction.id), !allSplits.isEmpty {
+                        splitRows = allSplits.map { split in
+                            SplitRow(
+                                budgetItemId: split.budgetItemId,
+                                amount: "\(split.amount)",
+                                description: split.description ?? "",
+                                isNonEarned: split.isNonEarned
+                            )
+                        }
+                    }
+                    // Resolve budget item names
+                    if let budget = budgetVM.budget {
+                        for i in splitRows.indices {
+                            if let itemId = splitRows[i].budgetItemId {
+                                splitRows[i].budgetItemName = findItemName(itemId: itemId, in: budget)
+                            }
                         }
                     }
                 }
@@ -377,17 +391,11 @@ struct SplitTransactionSheet: View {
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: value as NSNumber) ?? "$0.00"
+        Formatters.currency.string(from: value as NSNumber) ?? "$0.00"
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        return formatter.string(from: date)
+        Formatters.dateMediumUTC.string(from: date)
     }
 }
 
@@ -437,10 +445,7 @@ struct BudgetItemPickerView: View {
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: value as NSNumber) ?? "$0.00"
+        Formatters.currency.string(from: value as NSNumber) ?? "$0.00"
     }
 }
 

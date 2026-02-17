@@ -338,10 +338,7 @@ struct BudgetSummaryCard: View {
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: value as NSNumber) ?? "$0.00"
+        Formatters.currency.string(from: value as NSNumber) ?? "$0.00"
     }
 }
 
@@ -405,11 +402,7 @@ struct MiniProgressRing: View {
         if num >= 1000 {
             return "$\(String(format: "%.1f", num / 1000))k"
         }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: value as NSNumber) ?? "$0"
+        return Formatters.currencyWhole.string(from: value as NSNumber) ?? "$0"
     }
 }
 
@@ -502,10 +495,7 @@ struct LeftToBudgetBanner: View {
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: value as NSNumber) ?? "$0.00"
+        Formatters.currency.string(from: value as NSNumber) ?? "$0.00"
     }
 }
 

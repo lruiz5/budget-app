@@ -14,11 +14,13 @@ class AccountsViewModel: ObservableObject {
     @Published var toastMessage: String?
     @Published var isToastError = false
 
+    @Published private(set) var groupedAccounts: [(key: String, value: [LinkedAccount])] = []
+
     private let accountsService = AccountsService.shared
 
-    var groupedAccounts: [(key: String, value: [LinkedAccount])] {
-        let grouped = Dictionary(grouping: accounts) { $0.institutionName }
-        return grouped.sorted { $0.key < $1.key }
+    private func updateGroupedAccounts() {
+        groupedAccounts = Dictionary(grouping: accounts) { $0.institutionName }
+            .sorted { $0.key < $1.key }
     }
 
     // MARK: - Toast Helper
@@ -46,6 +48,7 @@ class AccountsViewModel: ObservableObject {
         let cacheKey = "linked_accounts"
         if let cached: [LinkedAccount] = await CacheManager.shared.load(forKey: cacheKey) {
             accounts = cached
+            updateGroupedAccounts()
         }
 
         if accounts.isEmpty {
@@ -55,6 +58,7 @@ class AccountsViewModel: ObservableObject {
         do {
             let fresh = try await accountsService.getLinkedAccounts()
             accounts = fresh
+            updateGroupedAccounts()
             await CacheManager.shared.save(fresh, forKey: cacheKey)
         } catch {
             if accounts.isEmpty {
@@ -72,6 +76,7 @@ class AccountsViewModel: ObservableObject {
         do {
             _ = try await accountsService.unlinkAccount(id: id)
             accounts.removeAll { $0.id == id }
+            updateGroupedAccounts()
             await CacheManager.shared.save(accounts, forKey: "linked_accounts")
             showToast("Account unlinked", isError: false)
         } catch {
@@ -93,6 +98,7 @@ class AccountsViewModel: ObservableObject {
                 failCount += 1
             }
         }
+        updateGroupedAccounts()
         await CacheManager.shared.save(accounts, forKey: "linked_accounts")
         if failCount > 0 {
             showToast("Failed to unlink \(failCount) account(s)", isError: true)
@@ -129,6 +135,7 @@ class AccountsViewModel: ObservableObject {
                 enrollmentId: enrollmentId
             )
             accounts.append(contentsOf: newAccounts)
+            updateGroupedAccounts()
             await CacheManager.shared.save(accounts, forKey: "linked_accounts")
             showToast("Account linked", isError: false)
         } catch {

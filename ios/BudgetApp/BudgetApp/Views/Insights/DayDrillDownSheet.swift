@@ -76,17 +76,10 @@ struct DayDrillDownSheet: View {
     }
 
     private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        return formatter.string(from: date)
+        Formatters.dateLongUTC.string(from: date)
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: value as NSNumber) ?? "$0.00"
+        Formatters.currency.string(from: value as NSNumber) ?? "$0.00"
     }
 }

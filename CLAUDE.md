@@ -5,7 +5,7 @@
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
 **Web App:** v1.9.0 (stable)  |  **iOS App:** v0.12.0 (pre-release)
-**Last Session:** 2026-02-14
+**Last Session:** 2026-02-17
 
 ## Instructions for Claude
 
@@ -110,6 +110,10 @@ const { userId } = authResult;
 
 - **Read:** `parseFloat(String(value))` for arithmetic
 - **Write:** `String(value)` for DB inserts
+
+### iOS Formatter Pattern
+
+All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cached as static singletons in `Formatters` enum (`Utilities/Extensions.swift`). Never create inline formatter instances — always use `Formatters.currency`, `Formatters.yearMonthDay`, `Formatters.dateMediumUTC`, etc.
 
 ## UI Patterns
 

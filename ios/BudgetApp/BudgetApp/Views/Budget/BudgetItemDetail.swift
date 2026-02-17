@@ -93,9 +93,12 @@ struct BudgetItemDetail: View {
                         }
                     )
                 case .splitTransaction(let transaction):
+                    let existingSplits = (item.splitTransactions ?? [])
+                        .filter { $0.parentTransactionId == transaction.id }
+                        .map { SplitTransaction(id: $0.id, parentTransactionId: $0.parentTransactionId, budgetItemId: $0.budgetItemId, amount: $0.amount, description: $0.description, isNonEarned: $0.isNonEarned) }
                     SplitTransactionSheet(
                         transaction: transaction,
-                        existingSplits: transaction.splits ?? [],
+                        existingSplits: existingSplits,
                         onComplete: onUpdate
                     )
                 }
@@ -403,17 +406,11 @@ struct BudgetItemDetail: View {
     // MARK: - Helpers
 
     private func formatCurrency(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: value as NSNumber) ?? "$0.00"
+        Formatters.currency.string(from: value as NSNumber) ?? "$0.00"
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        return formatter.string(from: date)
+        Formatters.dateShortUTC.string(from: date)
     }
 }
 

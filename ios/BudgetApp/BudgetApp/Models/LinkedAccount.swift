@@ -54,14 +54,8 @@ struct LinkedAccount: Codable, Identifiable {
 
     var syncStartDateDisplay: String? {
         guard let syncStartDate else { return nil }
-        let inputFormatter = DateFormatter()
-        inputFormatter.dateFormat = "yyyy-MM-dd"
-        inputFormatter.timeZone = TimeZone(identifier: "UTC")
-        guard let date = inputFormatter.date(from: syncStartDate) else { return syncStartDate }
-        let outputFormatter = DateFormatter()
-        outputFormatter.dateStyle = .medium
-        outputFormatter.timeZone = TimeZone(identifier: "UTC")
-        return outputFormatter.string(from: date)
+        guard let date = Formatters.yearMonthDay.date(from: syncStartDate) else { return syncStartDate }
+        return Formatters.dateMediumUTC.string(from: date)
     }
 
     var lastSyncedDisplay: String {

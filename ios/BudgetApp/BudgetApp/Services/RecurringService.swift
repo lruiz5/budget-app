@@ -69,10 +69,7 @@ struct CreateRecurringRequest: Encodable {
         self.name = name
         self.amount = String(describing: amount)
         self.frequency = frequency.rawValue
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        self.nextDueDate = formatter.string(from: nextDueDate)
+        self.nextDueDate = Formatters.yearMonthDay.string(from: nextDueDate)
         self.categoryType = categoryType
         self.budgetItemId = budgetItemId
     }
@@ -93,10 +90,7 @@ struct UpdateRecurringRequest: Encodable {
         self.amount = amount.map { String(describing: $0) }
         self.frequency = frequency?.rawValue
         if let nextDueDate {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            self.nextDueDate = formatter.string(from: nextDueDate)
+            self.nextDueDate = Formatters.yearMonthDay.string(from: nextDueDate)
         } else {
             self.nextDueDate = nil
         }

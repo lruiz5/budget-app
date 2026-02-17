@@ -25,10 +25,7 @@ struct Transaction: Codable, Identifiable {
     }
 
     var displayAmount: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: amount as NSNumber) ?? "$0.00"
+        Formatters.currency.string(from: amount as NSNumber) ?? "$0.00"
     }
 
     // Memberwise initializer for previews and testing
@@ -77,32 +74,18 @@ struct Transaction: Codable, Identifiable {
 
         // Handle date - backend returns "YYYY-MM-DD" format, not full ISO8601
         let dateString = try container.decode(String.self, forKey: .date)
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
-        if let parsedDate = dateFormatter.date(from: dateString) {
+        if let parsedDate = Formatters.yearMonthDay.date(from: dateString) {
+            date = parsedDate
+        } else if let parsedDate = Formatters.iso8601.date(from: dateString) {
             date = parsedDate
         } else {
-            // Fallback to ISO8601 if date-only format fails
-            let iso8601Formatter = ISO8601DateFormatter()
-            if let parsedDate = iso8601Formatter.date(from: dateString) {
-                date = parsedDate
-            } else {
-                throw DecodingError.dataCorruptedError(forKey: .date, in: container, debugDescription: "Cannot parse date: \(dateString)")
-            }
+            throw DecodingError.dataCorruptedError(forKey: .date, in: container, debugDescription: "Cannot parse date: \(dateString)")
         }
 
         // Handle deletedAt - this uses full ISO8601 timestamp
         if let deletedAtString = try container.decodeIfPresent(String.self, forKey: .deletedAt) {
-            let iso8601Formatter = ISO8601DateFormatter()
-            iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let parsedDate = iso8601Formatter.date(from: deletedAtString) {
-                deletedAt = parsedDate
-            } else {
-                // Try without fractional seconds
-                iso8601Formatter.formatOptions = [.withInternetDateTime]
-                deletedAt = iso8601Formatter.date(from: deletedAtString)
-            }
+            deletedAt = Formatters.iso8601WithFractional.date(from: deletedAtString)
+                ?? Formatters.iso8601.date(from: deletedAtString)
         } else {
             deletedAt = nil
         }

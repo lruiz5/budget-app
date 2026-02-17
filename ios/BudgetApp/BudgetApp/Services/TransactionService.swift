@@ -78,10 +78,7 @@ struct CreateTransactionRequest: Encodable {
 
     init(budgetItemId: Int, date: Date, description: String, amount: Decimal, type: TransactionType, merchant: String? = nil, isNonEarned: Bool = false) {
         self.budgetItemId = budgetItemId
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        self.date = formatter.string(from: date)
+        self.date = Formatters.yearMonthDay.string(from: date)
         self.description = description
         self.amount = String(describing: amount)
         self.type = type.rawValue
@@ -122,10 +119,7 @@ struct UpdateTransactionRequest: Encodable {
         self.id = id
         self.budgetItemId = budgetItemId
         if let date = date {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            self.date = formatter.string(from: date)
+            self.date = Formatters.yearMonthDay.string(from: date)
         } else {
             self.date = nil
         }
