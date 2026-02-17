@@ -23,6 +23,19 @@ class TransactionsViewModel: ObservableObject {
     @Published var budgetCategories: [BudgetCategory] = []
     @Published var linkedAccounts: [LinkedAccount] = []
 
+    // Memoized item-id → name lookup — updated whenever budgetCategories changes
+    @Published var budgetItemNameMap: [Int: String] = [:]
+
+    private func updateBudgetItemNameMap() {
+        var map: [Int: String] = [:]
+        for category in budgetCategories {
+            for item in category.items {
+                map[item.id] = item.name
+            }
+        }
+        budgetItemNameMap = map
+    }
+
     private let transactionService = TransactionService.shared
     private let accountsService = AccountsService.shared
     private let sharedDate = SharedDateViewModel.shared
@@ -93,6 +106,7 @@ class TransactionsViewModel: ObservableObject {
         }
         if let cachedCategories: [BudgetCategory] = await CacheManager.shared.load(forKey: "budget_categories_\(month)_\(year)") {
             budgetCategories = cachedCategories
+            updateBudgetItemNameMap()
         }
         if let cachedAccounts: [LinkedAccount] = await CacheManager.shared.load(forKey: "linked_accounts") {
             linkedAccounts = cachedAccounts
@@ -115,6 +129,7 @@ class TransactionsViewModel: ObservableObject {
 
             // Expose categories for filter sheet
             budgetCategories = budget.sortedCategoryKeys.compactMap { budget.categories[$0] }
+            updateBudgetItemNameMap()
 
             // Extract all transactions from budget items
             var categorized: [Transaction] = []

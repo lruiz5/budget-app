@@ -535,6 +535,15 @@ async function seed() {
   await db
     .delete(userOnboarding)
     .where(eq(userOnboarding.userId, DEMO_USER_ID));
+  // Delete transactions linked to this user's accounts before deleting the accounts
+  // (uncategorized transactions have budgetItemId=null so they don't cascade with budget deletion)
+  const existingAccounts = await db
+    .select({ id: linkedAccounts.id })
+    .from(linkedAccounts)
+    .where(eq(linkedAccounts.userId, DEMO_USER_ID));
+  for (const acct of existingAccounts) {
+    await db.delete(transactions).where(eq(transactions.linkedAccountId, acct.id));
+  }
   await db
     .delete(linkedAccounts)
     .where(eq(linkedAccounts.userId, DEMO_USER_ID));

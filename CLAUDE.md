@@ -153,6 +153,7 @@ Auth (Clerk), budget viewing with categories/items, month navigation, transactio
 | Buffer Flow wrong values | Underspent/Overspent only from expense categories (not income). Saving excluded from report totals |
 | Quick Assign wrong month | Budget item IDs are per-month. Client validates suggestions against current month's items + generates own merchant→item map. Server uses name-based lookup |
 | Teller pending→posted duplicates | Teller issues new IDs when pending settles as posted (tips). Sync fuzzy-matches stale pending by merchant+date (7d) to update instead of insert, preserving categorization |
+| seed-demo.ts FK error on linked_accounts | Uncategorized transactions (`budgetItemId=null`) survive budget cascade-delete and still reference `linked_accounts.id`. Fix: delete transactions per account before deleting the account. |
 
 ## Development Commands
 
@@ -178,5 +179,4 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 **Next iOS work:**
 - App Store assets (screenshots, description, keywords)
 - TestFlight beta testing
-- Performance optimization
 - Accessibility improvements (VoiceOver, Dynamic Type)

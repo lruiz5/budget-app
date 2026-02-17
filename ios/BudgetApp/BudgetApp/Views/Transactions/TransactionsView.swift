@@ -33,7 +33,60 @@ struct TransactionsView: View {
     @State private var filterMaxAmount = ""
     @State private var filterAccountIds: Set<Int> = []
 
+    // Cached filter results — recomputed via onChange instead of on every render
+    @State private var cachedGrouped: [(key: Date, value: [Transaction])] = []
+    @State private var cachedTabCount: Int = 0
+
+    private static let utcCalendar: Calendar = {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        return cal
+    }()
+
+    // Split into layered computed properties so Swift's type-checker can handle each independently.
+
     var body: some View {
+        withSheet
+    }
+
+    // Layer 4: sheet presentation
+    private var withSheet: some View {
+        withFilterObservers
+            .sheet(item: $activeSheet) { sheet in
+                sheetContent(for: sheet)
+            }
+    }
+
+    // Layer 3: filter-state onChange observers
+    private var withFilterObservers: some View {
+        withDataObservers
+            .onChange(of: filterType) { _, _ in recomputeFiltered() }
+            .onChange(of: filterCategoryIds) { _, _ in recomputeFiltered() }
+            .onChange(of: filterMinAmount) { _, _ in recomputeFiltered() }
+            .onChange(of: filterMaxAmount) { _, _ in recomputeFiltered() }
+            .onChange(of: filterAccountIds) { _, _ in recomputeFiltered() }
+    }
+
+    // Layer 2: data + lifecycle observers
+    private var withDataObservers: some View {
+        coreContent
+            .onAppear { recomputeFiltered() }
+            .onChange(of: selectedFilter) { _, newValue in
+                if newValue == .deleted && viewModel.deletedTransactions.isEmpty && !viewModel.isLoadingDeleted {
+                    Task { await viewModel.loadDeletedTransactions() }
+                }
+                recomputeFiltered()
+            }
+            .onChange(of: viewModel.budgetCategories.map(\.id)) { _, _ in
+                filterCategoryIds.removeAll()
+            }
+            .onChange(of: viewModel.transactions) { _, _ in recomputeFiltered() }
+            .onChange(of: viewModel.deletedTransactions) { _, _ in recomputeFiltered() }
+            .onChange(of: searchText) { _, _ in recomputeFiltered() }
+    }
+
+    // Layer 1: VStack content + toolbar + core modifiers
+    private var coreContent: some View {
         VStack(spacing: 0) {
             // Tab Picker
             Picker("Filter", selection: $selectedFilter) {
@@ -54,7 +107,7 @@ struct TransactionsView: View {
                 Spacer()
                 ProgressView("Loading transactions...")
                 Spacer()
-            } else if currentTransactions.isEmpty {
+            } else if cachedGrouped.isEmpty {
                 emptyStateView
             } else {
                 transactionList
@@ -69,20 +122,14 @@ struct TransactionsView: View {
                     Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 }
             }
-
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     Task { await viewModel.syncAllAccounts() }
                 } label: {
-                    if viewModel.isSyncing {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                    }
+                    syncButtonLabel
                 }
                 .disabled(viewModel.isSyncing)
             }
-
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     activeSheet = .addTransaction
@@ -102,54 +149,58 @@ struct TransactionsView: View {
                 await viewModel.loadDeletedTransactions()
             }
         }
-        .onChange(of: selectedFilter) { _, newValue in
-            if newValue == .deleted && viewModel.deletedTransactions.isEmpty && !viewModel.isLoadingDeleted {
-                Task { await viewModel.loadDeletedTransactions() }
-            }
+    }
+
+    // MARK: - Toolbar / Sheet Helpers (extracted to aid Swift type-checker)
+
+    @ViewBuilder
+    private var syncButtonLabel: some View {
+        if viewModel.isSyncing {
+            ProgressView()
+        } else {
+            Image(systemName: "arrow.triangle.2.circlepath")
         }
-        .onChange(of: viewModel.budgetCategories.map(\.id)) { _, _ in
-            // Clear category filter on month change (category IDs differ per month)
-            filterCategoryIds.removeAll()
-        }
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .addTransaction:
-                AddTransactionSheet(onSave: {
-                    Task { await viewModel.loadTransactions() }
-                })
-            case .editTransaction(let transaction):
-                EditTransactionSheet(transaction: transaction, onUpdate: {
-                    Task {
-                        await viewModel.loadTransactions()
-                        if selectedFilter == .deleted {
-                            await viewModel.loadDeletedTransactions()
-                        }
+    }
+
+    @ViewBuilder
+    private func sheetContent(for sheet: TransactionActiveSheet) -> some View {
+        switch sheet {
+        case .addTransaction:
+            AddTransactionSheet(onSave: {
+                Task { await viewModel.loadTransactions() }
+            })
+        case .editTransaction(let transaction):
+            EditTransactionSheet(transaction: transaction, onUpdate: {
+                Task {
+                    await viewModel.loadTransactions()
+                    if selectedFilter == .deleted {
+                        await viewModel.loadDeletedTransactions()
                     }
-                })
-            case .categorizeTransaction(let transaction):
-                CategorizeTransactionSheet(transaction: transaction) { budgetItemId in
-                    await viewModel.categorizeTransaction(transactionId: transaction.id, budgetItemId: budgetItemId)
                 }
-            case .splitTransaction(let transaction):
-                SplitTransactionSheet(
-                    transaction: transaction,
-                    existingSplits: transaction.splits ?? [],
-                    onComplete: {
-                        Task { await viewModel.loadTransactions() }
-                    }
-                )
-            case .filterOptions:
-                TransactionFilterSheet(
-                    filterType: $filterType,
-                    filterCategoryIds: $filterCategoryIds,
-                    filterMinAmount: $filterMinAmount,
-                    filterMaxAmount: $filterMaxAmount,
-                    filterAccountIds: $filterAccountIds,
-                    budgetCategories: viewModel.budgetCategories,
-                    linkedAccounts: viewModel.linkedAccounts,
-                    selectedTab: selectedFilter
-                )
+            })
+        case .categorizeTransaction(let transaction):
+            CategorizeTransactionSheet(transaction: transaction) { budgetItemId in
+                await viewModel.categorizeTransaction(transactionId: transaction.id, budgetItemId: budgetItemId)
             }
+        case .splitTransaction(let transaction):
+            SplitTransactionSheet(
+                transaction: transaction,
+                existingSplits: transaction.splits ?? [],
+                onComplete: {
+                    Task { await viewModel.loadTransactions() }
+                }
+            )
+        case .filterOptions:
+            TransactionFilterSheet(
+                filterType: $filterType,
+                filterCategoryIds: $filterCategoryIds,
+                filterMinAmount: $filterMinAmount,
+                filterMaxAmount: $filterMaxAmount,
+                filterAccountIds: $filterAccountIds,
+                budgetCategories: viewModel.budgetCategories,
+                linkedAccounts: viewModel.linkedAccounts,
+                selectedTab: selectedFilter
+            )
         }
     }
 
@@ -164,19 +215,22 @@ struct TransactionsView: View {
         }
     }
 
-    private var tabFilteredTransactions: [Transaction] {
+    // MARK: - Filter Pipeline (runs only when data or filters change, not on every render)
+
+    private func recomputeFiltered() {
+        // Tab filter
+        let tabData: [Transaction]
         switch selectedFilter {
         case .uncategorized:
-            return viewModel.uncategorizedTransactions.filter { $0.budgetItemId == nil && !$0.isDeleted }
+            tabData = viewModel.uncategorizedTransactions.filter { $0.budgetItemId == nil && !$0.isDeleted }
         case .tracked:
-            return viewModel.categorizedTransactions.filter { $0.budgetItemId != nil || $0.isSplit }
+            tabData = viewModel.categorizedTransactions.filter { $0.budgetItemId != nil || $0.isSplit }
         case .deleted:
-            return viewModel.deletedTransactions
+            tabData = viewModel.deletedTransactions
         }
-    }
+        cachedTabCount = tabData.count
 
-    private var currentTransactions: [Transaction] {
-        var result = tabFilteredTransactions
+        var result = tabData
 
         // Text search (merchant, description, amount)
         if !searchText.isEmpty {
@@ -224,31 +278,23 @@ struct TransactionsView: View {
             }
         }
 
-        return result
-    }
-
-    // MARK: - Budget Item Lookup
-
-    private var budgetItemNameMap: [Int: String] {
-        var map: [Int: String] = [:]
-        for category in viewModel.budgetCategories {
-            for item in category.items {
-                map[item.id] = item.name
-            }
+        // Group by date using shared UTC calendar and sort descending
+        let grouped = Dictionary(grouping: result) { transaction in
+            Self.utcCalendar.startOfDay(for: transaction.date)
         }
-        return map
+        cachedGrouped = grouped.sorted { $0.key > $1.key }
     }
 
     // MARK: - Transaction List
 
     private var transactionList: some View {
         List {
-            ForEach(groupedByDate, id: \.key) { date, transactions in
+            ForEach(cachedGrouped, id: \.key) { date, transactions in
                 Section(header: Text(formatDate(date))) {
                     ForEach(transactions) { transaction in
                         TransactionRow(transaction: transaction, budgetItemName: transaction.isSplit
-                            ? transaction.splits?.compactMap { budgetItemNameMap[$0.budgetItemId] }.joined(separator: ", ")
-                            : budgetItemNameMap[transaction.budgetItemId ?? -1])
+                            ? transaction.splits?.compactMap { viewModel.budgetItemNameMap[$0.budgetItemId] }.joined(separator: ", ")
+                            : viewModel.budgetItemNameMap[transaction.budgetItemId ?? -1])
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 if transaction.isSplit {
@@ -313,15 +359,6 @@ struct TransactionsView: View {
             }
         }
         .listStyle(.insetGrouped)
-    }
-
-    private var groupedByDate: [(key: Date, value: [Transaction])] {
-        var utcCalendar = Calendar.current
-        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
-        let grouped = Dictionary(grouping: currentTransactions) { transaction in
-            utcCalendar.startOfDay(for: transaction.date)
-        }
-        return grouped.sorted { $0.key > $1.key }
     }
 
     // MARK: - Filter Chip Bar
@@ -411,13 +448,9 @@ struct TransactionsView: View {
 
     // MARK: - Empty State
 
-    private var hasTabData: Bool {
-        !tabFilteredTransactions.isEmpty
-    }
-
     private var emptyStateView: some View {
         Group {
-            if hasTabData {
+            if cachedTabCount > 0 {
                 // Filters produced zero results but tab has data
                 ContentUnavailableView {
                     Label("No Matching Transactions", systemImage: "magnifyingglass")

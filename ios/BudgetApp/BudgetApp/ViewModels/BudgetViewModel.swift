@@ -12,6 +12,15 @@ class BudgetViewModel: ObservableObject {
     @Published var toastMessage: String?
     @Published var isToastError = false
 
+    // Precomputed — updated once after each load, not on every render
+    @Published var sortedCategories: [BudgetCategory] = []
+    @Published var incomePlanned: Decimal = 0
+    @Published var incomeActual: Decimal = 0
+    @Published var expensePlanned: Decimal = 0
+    @Published var expenseActual: Decimal = 0
+
+    private static let defaultCategoryOrder = ["income", "giving", "household", "transportation", "food", "personal", "insurance", "saving"]
+
     private let budgetService = BudgetService.shared
     private let sharedDate = SharedDateViewModel.shared
     
@@ -42,6 +51,7 @@ class BudgetViewModel: ObservableObject {
         let cacheKey = "budget_\(month)_\(year)"
         if let cached: Budget = await CacheManager.shared.load(forKey: cacheKey) {
             budget = cached
+            updateComputedData()
         }
 
         // Only show loading spinner if no cached data
@@ -52,6 +62,7 @@ class BudgetViewModel: ObservableObject {
         do {
             let fresh = try await budgetService.getBudget(month: month, year: year)
             budget = fresh
+            updateComputedData()
             await CacheManager.shared.save(fresh, forKey: cacheKey)
         } catch let apiError as APIError {
             #if DEBUG
@@ -66,6 +77,45 @@ class BudgetViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    // MARK: - Precomputed Data (runs once after each load, not on every render)
+
+    private func updateComputedData() {
+        guard let budget = budget else {
+            sortedCategories = []
+            incomePlanned = 0
+            incomeActual = 0
+            expensePlanned = 0
+            expenseActual = 0
+            return
+        }
+        let order = Self.defaultCategoryOrder
+        sortedCategories = budget.categories.values.sorted { a, b in
+            let aIdx = order.firstIndex(of: a.categoryType.lowercased()) ?? 100
+            let bIdx = order.firstIndex(of: b.categoryType.lowercased()) ?? 100
+            if aIdx != bIdx { return aIdx < bIdx }
+            return a.order < b.order
+        }
+
+        // Single-pass aggregate computation for summary card + banner
+        var iPlanned: Decimal = 0
+        var iActual: Decimal = 0
+        var ePlanned: Decimal = 0
+        var eActual: Decimal = 0
+        for cat in budget.categories.values {
+            if cat.categoryType.lowercased() == "income" {
+                iPlanned = cat.planned
+                iActual = cat.actual
+            } else {
+                ePlanned += cat.planned
+                eActual += cat.actual
+            }
+        }
+        incomePlanned = iPlanned
+        incomeActual = iActual
+        expensePlanned = ePlanned
+        expenseActual = eActual
     }
 
     // MARK: - Toast Helper
