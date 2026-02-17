@@ -82,18 +82,12 @@ struct Budget: Codable, Identifiable {
 
         // Handle createdAt - may have fractional seconds
         let createdAtString = try container.decode(String.self, forKey: .createdAt)
-        let iso8601Formatter = ISO8601DateFormatter()
-        iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let parsedDate = iso8601Formatter.date(from: createdAtString) {
+        if let parsedDate = Formatters.iso8601WithFractional.date(from: createdAtString) {
+            createdAt = parsedDate
+        } else if let parsedDate = Formatters.iso8601.date(from: createdAtString) {
             createdAt = parsedDate
         } else {
-            // Try without fractional seconds
-            iso8601Formatter.formatOptions = [.withInternetDateTime]
-            if let parsedDate = iso8601Formatter.date(from: createdAtString) {
-                createdAt = parsedDate
-            } else {
-                throw DecodingError.dataCorruptedError(forKey: .createdAt, in: container, debugDescription: "Cannot parse date: \(createdAtString)")
-            }
+            throw DecodingError.dataCorruptedError(forKey: .createdAt, in: container, debugDescription: "Cannot parse date: \(createdAtString)")
         }
 
         // Handle numeric string from PostgreSQL

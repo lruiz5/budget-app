@@ -57,15 +57,17 @@ class InsightsViewModel: ObservableObject {
             isLoading = true
         }
 
-        // Fetch fresh data from network
+        // Fetch fresh data from network (parallel)
+        let t0 = monthsToLoad[0], t1 = monthsToLoad[1], t2 = monthsToLoad[2]
+        async let b0: Budget? = try? budgetService.getBudget(month: t0.month, year: t0.year)
+        async let b1: Budget? = try? budgetService.getBudget(month: t1.month, year: t1.year)
+        async let b2: Budget? = try? budgetService.getBudget(month: t2.month, year: t2.year)
+
         var loadedBudgets: [Budget] = []
-        for target in monthsToLoad {
-            do {
-                let budget = try await budgetService.getBudget(month: target.month, year: target.year)
+        for budget in await [b0, b1, b2] {
+            if let budget {
                 loadedBudgets.append(budget)
-                await CacheManager.shared.save(budget, forKey: "budget_\(target.month)_\(target.year)")
-            } catch {
-                // Skip months without budgets
+                await CacheManager.shared.save(budget, forKey: "budget_\(budget.month)_\(budget.year)")
             }
         }
 
@@ -290,12 +292,10 @@ class InsightsViewModel: ObservableObject {
 
     private func shortMonthName(_ month: Int) -> String {
         // month is 0-indexed (0=Jan), DateComponents.month is 1-indexed
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM"
         var components = DateComponents()
         components.month = month + 1
         if let date = Calendar.current.date(from: components) {
-            return formatter.string(from: date)
+            return Formatters.shortMonthName.string(from: date)
         }
         return ""
     }

@@ -464,10 +464,7 @@ struct TransactionsView: View {
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        return formatter.string(from: date)
+        Formatters.dateMediumUTC.string(from: date)
     }
 }
 
@@ -612,10 +609,7 @@ struct CategorizeTransactionSheet: View {
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: value as NSNumber) ?? "$0.00"
+        Formatters.currency.string(from: value as NSNumber) ?? "$0.00"
     }
 }
 

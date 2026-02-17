@@ -121,11 +121,7 @@ struct CategoryDrillDownSheet: View {
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: value as NSNumber) ?? "$0"
+        Formatters.currencyWhole.string(from: value as NSNumber) ?? "$0"
     }
 
     private func abs(_ value: Decimal) -> Decimal {

@@ -56,24 +56,15 @@ struct RecurringPayment: Codable, Identifiable {
 
         // Parse nextDueDate - API returns as "YYYY-MM-DD" string
         if let dateString = try? container.decode(String.self, forKey: .nextDueDate) {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            nextDueDate = formatter.date(from: dateString) ?? Date()
+            nextDueDate = Formatters.yearMonthDay.date(from: dateString) ?? Date()
         } else {
             nextDueDate = try container.decode(Date.self, forKey: .nextDueDate)
         }
 
         // Parse createdAt - may be absent or ISO8601
         if let createdString = try? container.decode(String.self, forKey: .createdAt) {
-            let isoFormatter = ISO8601DateFormatter()
-            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let date = isoFormatter.date(from: createdString) {
-                createdAt = date
-            } else {
-                isoFormatter.formatOptions = [.withInternetDateTime]
-                createdAt = isoFormatter.date(from: createdString)
-            }
+            createdAt = Formatters.iso8601WithFractional.date(from: createdString)
+                ?? Formatters.iso8601.date(from: createdString)
         } else {
             createdAt = nil
         }

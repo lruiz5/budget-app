@@ -10,16 +10,13 @@ struct MonthYearPicker: View {
     @State private var tempYear: Int = 2026
 
     private var displayText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-
         var components = DateComponents()
         // month is 0-indexed (Jan=0), but DateComponents expects 1-indexed
         components.month = month + 1
         components.year = year
 
         if let date = Calendar.current.date(from: components) {
-            return formatter.string(from: date)
+            return Formatters.monthYear.string(from: date)
         }
         return "\(month)/\(year)"
     }
@@ -162,25 +159,21 @@ struct MonthYearPicker: View {
     }
 
     private var tempMonthName: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM"
         var components = DateComponents()
         // tempMonth is 0-indexed, DateComponents expects 1-indexed
         components.month = tempMonth + 1
         if let date = Calendar.current.date(from: components) {
-            return formatter.string(from: date)
+            return Formatters.monthName.string(from: date)
         }
         return ""
     }
 
     private func shortMonthName(_ m: Int) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM"
         var components = DateComponents()
         // m is 0-indexed, DateComponents expects 1-indexed
         components.month = m + 1
         if let date = Calendar.current.date(from: components) {
-            return formatter.string(from: date)
+            return Formatters.shortMonthName.string(from: date)
         }
         return ""
     }

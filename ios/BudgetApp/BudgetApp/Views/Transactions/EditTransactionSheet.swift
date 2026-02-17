@@ -226,10 +226,7 @@ struct EditTransactionSheet: View {
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: value as NSNumber) ?? "$0.00"
+        Formatters.currency.string(from: value as NSNumber) ?? "$0.00"
     }
 
     private func saveTransaction() {
