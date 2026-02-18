@@ -376,8 +376,8 @@ All notable changes to the Budget App iOS application.
 - [x] Comprehensive error handling and user feedback
 - [x] Transaction search & filters
 - [x] Offline support with local caching
-- [ ] App Store assets (screenshots, description, keywords)
-- [ ] TestFlight beta testing
+- [x] App Store assets (screenshots, description, keywords, privacy policy)
+- [ ] TestFlight beta testing (requires Apple Developer membership renewal)
 - [ ] Performance optimization
 - [ ] Accessibility improvements (VoiceOver, Dynamic Type)
 

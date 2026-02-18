@@ -4,8 +4,8 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.9.0 (stable)  |  **iOS App:** v0.12.0 (pre-release)
-**Last Session:** 2026-02-17
+**Web App:** v1.9.0 (stable)  |  **iOS App:** v0.12.0 (pre-release) — **iOS app name: Happy Tusk**
+**Last Session:** 2026-02-18
 
 ## Instructions for Claude
 
@@ -117,28 +117,15 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 ## UI Patterns
 
-### Colors (Web)
+**Web colors:** `globals.css` tokens — Income=`text-success`, Expense/Over=`text-danger`, Primary=`bg-primary`
+**Category emojis:** Income💰 Giving🤲 Household🏠 Transportation🚗 Food🍽️ Personal👤 Insurance🛡️ Saving💵 Custom=📁
+**iOS budget page:** Summary card (Buffer + `MiniProgressRing` for income/expenses). Bottom banner: gray/orange/green/red by allocation state. Progress bars as 2px Capsule dividers. Collapsible category headers.
 
-Semantic CSS tokens in `globals.css` — see `DESIGN_SYSTEM.md`. Income=`text-success`, Expense=`text-danger`, Over budget=`text-danger`, Primary=`bg-primary`.
+## Working Features
 
-### Category Emojis
+**Web (v1.9.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller), recurring payments, budget copy/reset, insights (D3 charts + Sankey), monthly report, onboarding, tablet responsive.
 
-Income💰 Giving🤲 Household🏠 Transportation🚗 Food🍽️ Personal👤 Insurance🛡️ Saving💵 Custom=stored emoji or 📁
-
-### iOS Budget Page
-
-- Summary card shows Buffer (tap-to-edit) + Income/Expenses progress rings (`MiniProgressRing`)
-- Sticky bottom banner: "Start planning" (gray) / "Left to Budget" (orange) / "Every dollar is assigned!" (green) / "Over budgeted" (red)
-- Progress bars as dividers between items (2px, green/red Capsule)
-- Category headers collapsible with chevron
-
-## Working Features (Web)
-
-Auth (Clerk), multi-user, onboarding (6-step), full budget CRUD, custom categories (name+emoji), transactions (add/edit/soft-delete/restore), split transactions (create+edit), bank integration (Teller), recurring payments (auto-reset, auto-create, linking), budget item detail sidebar, monthly report with Buffer Flow + Left to Budget, copy/reset budget, insights charts (D3: bar, line, Sankey), tablet responsive + mobile block, transaction categorization suggestions, month/year URL persistence, previous month transactions
-
-## Working Features (iOS)
-
-Auth (Clerk), budget viewing with categories/items, month navigation, transaction viewing + categorization + editing, transaction creation (from item detail or transactions tab), budget item detail (progress ring, edit name/planned, view/add/edit transactions), bank account linking (Teller Connect via WKWebView), transaction sync from linked accounts, per-account sync toggle (half-sheet with streaming on/off), accounts viewing with institution grouping + unlink + institution icons, pull-to-refresh, sticky "Left to Budget" banner, budget summary progress rings (income/expenses), progress bar dividers, split transactions (create from item detail), recurring payment management (CRUD, contribute, mark as paid/reset, category picker), custom category creation (name+emoji picker, long-press delete), budget copy from previous month, budget reset (zero out / replace with previous month), monthly report sheet (7 sections with trends + non-earned income filter), insights charts (budget vs actual bars, spending pace burn-down with per-category drilldown, daily spending heatmap, spending trends), inline budget item editing (tap name or planned amount), onboarding flow (6-step purely educational — no live data created), comprehensive error handling (toast notifications for all mutations, network error wrapping, server error message parsing), transaction search & filters (text search on merchant/description/amount, type/category/amount range/account filters, filter chips with dismiss), offline support (cache-then-network loading, offline mutation guards, floating offline banner, cache clear on sign-out), non-earned income marking (per-transaction + per-split toggle for income type)
+**iOS (v0.12.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling. See `ios/BudgetApp/CHANGELOG.md`.
 
 ## Common Issues
 
@@ -177,8 +164,9 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 **Pending migration:** `isNonEarned` column rename — run SQL migration before `db:push`
 
 **Next iOS work:**
-- App Store Connect setup (bundle ID, app record, listing copy, privacy policy)
+- Renew Apple Developer membership ($99/yr) — required for TestFlight + App Store upload
+- App Store Connect: create app record with bundle ID `com.happytusk.app`
 - TestFlight beta testing
 - Accessibility improvements (VoiceOver, Dynamic Type)
 
-**App Store assets:** Screenshots done — `ios/screenshots/image1-6.jpg` (6 captioned JPGs, 6.7" device)
+**App Store assets:** Done — `ios/APP_STORE_LISTING.md` (listing copy, keywords, URLs). Screenshots: `ios/screenshots/image1-6.jpg`. Privacy policy: `/privacy` (public route, no auth). Icon: `ios/BudgetApp/BudgetApp/Assets.xcassets/AppIcon.appiconset/`
