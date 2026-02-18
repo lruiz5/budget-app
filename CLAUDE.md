@@ -177,6 +177,8 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 **Pending migration:** `isNonEarned` column rename — run SQL migration before `db:push`
 
 **Next iOS work:**
-- App Store assets (screenshots, description, keywords)
+- App Store Connect setup (bundle ID, app record, listing copy, privacy policy)
 - TestFlight beta testing
 - Accessibility improvements (VoiceOver, Dynamic Type)
+
+**App Store assets:** Screenshots done — `ios/screenshots/image1-6.jpg` (6 captioned JPGs, 6.7" device)
