@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct CategorySection: View {
     let category: BudgetCategory
@@ -12,6 +13,8 @@ struct CategorySection: View {
 
     @State private var isExpanded = true
     @State private var orderedItems: [BudgetItem] = []
+    @State private var activeSwipeItemId: Int?
+    @State private var draggingItem: BudgetItem?
 
     private var progress: Double {
         guard category.planned > 0 else { return 0 }
@@ -23,29 +26,45 @@ struct CategorySection: View {
     }
 
     var body: some View {
-        Section {
+        VStack(spacing: 0) {
+            categoryHeader
+                .padding(.horizontal, 16)
+
             if isExpanded {
                 ForEach(orderedItems) { item in
-                    BudgetItemRow(item: item, onQuickEditPlanned: onUpdatePlanned, onQuickEditName: onUpdateName)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            onItemTap(item)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            if let onDeleteItem {
-                                Button(role: .destructive) {
-                                    onDeleteItem(item.id)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                    if let onDeleteItem {
+                        SwipeToDeleteRow(
+                            itemId: item.id,
+                            activeSwipeItemId: $activeSwipeItemId,
+                            onDelete: { onDeleteItem(item.id) }
+                        ) {
+                            BudgetItemRow(item: item, onQuickEditPlanned: onUpdatePlanned, onQuickEditName: onUpdateName)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    onItemTap(item)
                                 }
-                                .tint(.red)
-                            }
                         }
-                        .listRowSeparator(.hidden)
-                }
-                .onMove { source, destination in
-                    orderedItems.move(fromOffsets: source, toOffset: destination)
-                    onReorderItems?(orderedItems.map { $0.id })
+                        .onDrag {
+                            draggingItem = item
+                            return NSItemProvider(object: String(item.id) as NSString)
+                        }
+                        .onDrop(of: [.text], delegate: ItemReorderDelegate(
+                            item: item,
+                            items: $orderedItems,
+                            draggingItem: $draggingItem,
+                            onReorder: { ids in onReorderItems?(ids) }
+                        ))
+                    } else {
+                        BudgetItemRow(item: item, onQuickEditPlanned: onUpdatePlanned, onQuickEditName: onUpdateName)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onItemTap(item)
+                            }
+                    }
                 }
 
                 Button {
@@ -55,10 +74,12 @@ struct CategorySection: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
-        } header: {
-            categoryHeader
         }
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
         .onAppear {
             orderedItems = category.items.sorted { $0.order < $1.order }
         }
@@ -97,7 +118,7 @@ struct CategorySection: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 8)
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -137,7 +158,7 @@ struct BudgetItemRow: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
             HStack {
                 if isEditingName {
                     TextField("Item name", text: $editedNameText)
@@ -229,7 +250,7 @@ struct BudgetItemRow: View {
             }
             .frame(height: 2)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .onChange(of: isFieldFocused) { _, focused in
             if !focused && isEditingPlanned {
                 commitPlannedEdit()
@@ -267,7 +288,7 @@ struct BudgetItemRow: View {
 }
 
 #Preview {
-    List {
+    ScrollView {
         CategorySection(
             category: BudgetCategory(
                 id: 1,
