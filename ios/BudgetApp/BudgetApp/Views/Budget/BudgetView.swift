@@ -49,12 +49,6 @@ struct BudgetView: View {
                     }
                 )
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                EditButton()
-            }
-        }
-        .refreshable {
-            await viewModel.loadBudget()
         }
         .task {
             await viewModel.loadBudget()
@@ -112,9 +106,9 @@ struct BudgetView: View {
 
     @ViewBuilder
     private func budgetContent(_ budget: Budget) -> some View {
-        List {
-            // Summary Section
-            Section {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                // Summary Section
                 BudgetSummaryCard(
                     buffer: budget.buffer,
                     incomePlanned: viewModel.incomePlanned,
@@ -125,61 +119,76 @@ struct BudgetView: View {
                         Task { await viewModel.updateBuffer(newBuffer) }
                     }
                 )
-            }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            // Categories — pre-sorted in ViewModel, not computed here
-            ForEach(viewModel.sortedCategories, id: \.id) { category in
-                CategorySection(
-                    category: category,
-                    onItemTap: { item in
-                        activeSheet = .itemDetail(item)
-                    },
-                    onAddItem: {
-                        activeSheet = .addItem(categoryId: category.id)
-                    },
-                    onDeleteItem: { itemId in
-                        Task { await viewModel.deleteItem(id: itemId) }
-                    },
-                    onReorderItems: { itemIds in
-                        Task { await viewModel.reorderItems(itemIds: itemIds) }
-                    },
-                    onUpdatePlanned: { id, planned in
-                        Task { await viewModel.updateItem(id: id, name: nil, planned: planned) }
-                    },
-                    onUpdateName: { id, name in
-                        Task { await viewModel.updateItem(id: id, name: name, planned: nil) }
-                    },
-                    onDeleteCategory: isCustomCategory(category) ? {
-                        categoryToDelete = category
-                        showDeleteCategoryConfirmation = true
-                    } : nil
-                )
-            }
+                // Categories — pre-sorted in ViewModel, not computed here
+                ForEach(viewModel.sortedCategories, id: \.id) { category in
+                    CategorySection(
+                        category: category,
+                        onItemTap: { item in
+                            activeSheet = .itemDetail(item)
+                        },
+                        onAddItem: {
+                            activeSheet = .addItem(categoryId: category.id)
+                        },
+                        onDeleteItem: { itemId in
+                            Task { await viewModel.deleteItem(id: itemId) }
+                        },
+                        onReorderItems: { itemIds in
+                            Task { await viewModel.reorderItems(itemIds: itemIds) }
+                        },
+                        onUpdatePlanned: { id, planned in
+                            Task { await viewModel.updateItem(id: id, name: nil, planned: planned) }
+                        },
+                        onUpdateName: { id, name in
+                            Task { await viewModel.updateItem(id: id, name: name, planned: nil) }
+                        },
+                        onDeleteCategory: isCustomCategory(category) ? {
+                            categoryToDelete = category
+                            showDeleteCategoryConfirmation = true
+                        } : nil
+                    )
+                }
 
-            // Add Category button
-            Section {
+                // Add Category button
                 Button {
                     activeSheet = .addCategory
                 } label: {
                     Label("Add Category", systemImage: "plus.circle.fill")
                         .font(.subheadline)
                         .foregroundStyle(.blue)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                 }
-            }
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            // Reset Budget button
-            Section {
+                // Reset Budget button
                 Button {
                     activeSheet = .resetBudget
                 } label: {
                     Label("Reset Budget", systemImage: "arrow.counterclockwise")
                         .font(.subheadline)
                         .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                 }
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
-        .listStyle(.insetGrouped)
+        .background(Color(.systemGroupedBackground))
         .scrollDismissesKeyboard(.interactively)
+        .refreshable {
+            await viewModel.loadBudget()
+        }
         .safeAreaInset(edge: .bottom) {
             LeftToBudgetBanner(
                 buffer: budget.buffer,

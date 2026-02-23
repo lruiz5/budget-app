@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var networkMonitor: NetworkMonitor
+    @StateObject private var transactionsViewModel = TransactionsViewModel()
     @State private var selectedTab = 0
 
     var body: some View {
@@ -12,11 +13,12 @@ struct ContentView: View {
                 }
                 .tag(0)
 
-            TransactionsTab()
+            TransactionsTab(viewModel: transactionsViewModel)
                 .tabItem {
                     Label("Transactions", systemImage: "list.bullet.rectangle.fill")
                 }
                 .tag(1)
+                .badge(transactionsViewModel.uncategorizedTransactions.count)
 
             AccountsTab()
                 .tabItem {
@@ -80,8 +82,8 @@ struct BudgetTab: View {
 }
 
 struct TransactionsTab: View {
-    @StateObject private var viewModel = TransactionsViewModel()
-    
+    @ObservedObject var viewModel: TransactionsViewModel
+
     var body: some View {
         NavigationStack {
             TransactionsView(viewModel: viewModel)

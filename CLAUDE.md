@@ -5,7 +5,7 @@
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
 **Web App:** v1.9.0 (stable)  |  **iOS App:** v0.12.0 (pre-release) — **iOS app name: Happy Tusk**
-**Last Session:** 2026-02-18
+**Last Session:** 2026-02-23
 
 ## Instructions for Claude
 
@@ -119,7 +119,7 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 **Web colors:** `globals.css` tokens — Income=`text-success`, Expense/Over=`text-danger`, Primary=`bg-primary`
 **Category emojis:** Income💰 Giving🤲 Household🏠 Transportation🚗 Food🍽️ Personal👤 Insurance🛡️ Saving💵 Custom=📁
-**iOS budget page:** Summary card (Buffer + `MiniProgressRing` for income/expenses). Bottom banner: gray/orange/green/red by allocation state. Progress bars as 2px Capsule dividers. Collapsible category headers.
+**iOS budget page:** `ScrollView` + `LazyVStack` (not `List`) for custom card corner radii. Summary card (Buffer + `MiniProgressRing`). Bottom banner: gray/orange/green/red by allocation state. Progress bars as 2px Capsule dividers. Collapsible category headers. Custom `SwipeToDeleteRow` (DragGesture) + `ItemReorderDelegate` (onDrag/onDrop) since List modifiers unavailable.
 
 ## Working Features
 
