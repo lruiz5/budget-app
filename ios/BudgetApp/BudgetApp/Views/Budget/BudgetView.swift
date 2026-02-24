@@ -23,6 +23,7 @@ struct BudgetView: View {
     @State private var activeSheet: BudgetActiveSheet?
     @State private var categoryToDelete: BudgetCategory?
     @State private var showDeleteCategoryConfirmation = false
+    @State private var isTrayExpanded = false
 
     var body: some View {
         Group {
@@ -149,7 +150,10 @@ struct BudgetView: View {
                         onDeleteCategory: isCustomCategory(category) ? {
                             categoryToDelete = category
                             showDeleteCategoryConfirmation = true
-                        } : nil
+                        } : nil,
+                        onAssignTransaction: { txnId, itemId in
+                            Task { await viewModel.assignTransaction(transactionId: txnId, toBudgetItemId: itemId) }
+                        }
                     )
                 }
 
@@ -188,6 +192,16 @@ struct BudgetView: View {
         .scrollDismissesKeyboard(.interactively)
         .refreshable {
             await viewModel.loadBudget()
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if !viewModel.uncategorizedTransactions.isEmpty {
+                FloatingTransactionPill(
+                    transactions: viewModel.uncategorizedTransactions,
+                    isExpanded: $isTrayExpanded
+                )
+                .padding(.bottom, 2) // sit just above the banner
+                .padding(.trailing, 4)
+            }
         }
         .safeAreaInset(edge: .bottom) {
             LeftToBudgetBanner(

@@ -10,11 +10,13 @@ struct CategorySection: View {
     var onUpdatePlanned: ((Int, Decimal) -> Void)?
     var onUpdateName: ((Int, String) -> Void)?
     let onDeleteCategory: (() -> Void)?
+    var onAssignTransaction: ((Int, Int) -> Void)?
 
     @State private var isExpanded = true
     @State private var orderedItems: [BudgetItem] = []
     @State private var activeSwipeItemId: Int?
     @State private var draggingItem: BudgetItem?
+    @State private var highlightedDropTargetId: Int?
 
     private var progress: Double {
         guard category.planned > 0 else { return 0 }
@@ -46,15 +48,23 @@ struct CategorySection: View {
                                     onItemTap(item)
                                 }
                         }
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.green, lineWidth: 2)
+                                .opacity(highlightedDropTargetId == item.id ? 1 : 0)
+                                .animation(.easeInOut(duration: 0.15), value: highlightedDropTargetId)
+                        )
                         .onDrag {
                             draggingItem = item
                             return NSItemProvider(object: String(item.id) as NSString)
                         }
-                        .onDrop(of: [.text], delegate: ItemReorderDelegate(
+                        .onDrop(of: [.text], delegate: BudgetItemDropDelegate(
                             item: item,
                             items: $orderedItems,
                             draggingItem: $draggingItem,
-                            onReorder: { ids in onReorderItems?(ids) }
+                            highlightedDropTargetId: $highlightedDropTargetId,
+                            onReorder: { ids in onReorderItems?(ids) },
+                            onAssignTransaction: onAssignTransaction
                         ))
                     } else {
                         BudgetItemRow(item: item, onQuickEditPlanned: onUpdatePlanned, onQuickEditName: onUpdateName)
@@ -307,7 +317,8 @@ struct BudgetItemRow: View {
             onReorderItems: nil,
             onUpdatePlanned: nil,
             onUpdateName: nil,
-            onDeleteCategory: nil
+            onDeleteCategory: nil,
+            onAssignTransaction: nil
         )
     }
 }

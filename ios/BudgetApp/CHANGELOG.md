@@ -6,6 +6,29 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.13.0] - 2026-02-23 - Drag-to-Categorize from Budget Page
+
+### Added
+
+- **Floating transaction pill** — orange capsule badge on budget page shows count of uncategorized transactions. Tap to expand into a horizontal scrollable row of draggable transaction chips
+- **Drag-to-assign** — long-press any transaction chip from the pill, drag onto a budget line item to categorize it. Green border highlight on valid drop targets, haptic feedback on success
+- **Combined drop delegate** — `BudgetItemDropDelegate` handles both item reorder (existing) and transaction assignment (new) by discriminating payloads (`"txn:123"` prefix vs plain item ID)
+- **Optimistic UI** — transaction immediately removed from pill on drop, rolled back if API fails
+- **Uncategorized transaction loading** — `BudgetViewModel` now fetches uncategorized transactions after budget loads, with ±7 day date range filter and split-parent exclusion
+
+### Files Added
+
+- `Views/Budget/UncategorizedTray.swift` — `FloatingTransactionPill` (collapsed badge + expanded chip row) and `TransactionChip` views
+
+### Files Modified
+
+- `Views/Components/ItemReorderDelegate.swift` — renamed delegate to `BudgetItemDropDelegate`, added transaction assignment handling via `NSItemProvider` payload discrimination
+- `ViewModels/BudgetViewModel.swift` — added `uncategorizedTransactions`, `loadUncategorizedTransactions()`, `assignTransaction()`, `filterTransactionsToDateRange()`
+- `Views/Budget/CategorySection.swift` — added `onAssignTransaction` callback, `highlightedDropTargetId` state, green border overlay on drop targets
+- `Views/Budget/BudgetView.swift` — integrated `FloatingTransactionPill` as `.overlay(alignment: .bottomTrailing)`, wired `onAssignTransaction` to each `CategorySection`
+
+---
+
 ## [0.12.0] - 2026-02-12 - Offline Support, Caching & Split Transaction Fixes
 
 ### Added
