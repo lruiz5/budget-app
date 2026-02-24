@@ -4,7 +4,7 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.9.0 (stable)  |  **iOS App:** v0.12.0 (pre-release) — **iOS app name: Happy Tusk**
+**Web App:** v1.9.0 (stable)  |  **iOS App:** v0.13.0 (pre-release) — **iOS app name: Happy Tusk**
 **Last Session:** 2026-02-23
 
 ## Instructions for Claude
@@ -119,13 +119,13 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 **Web colors:** `globals.css` tokens — Income=`text-success`, Expense/Over=`text-danger`, Primary=`bg-primary`
 **Category emojis:** Income💰 Giving🤲 Household🏠 Transportation🚗 Food🍽️ Personal👤 Insurance🛡️ Saving💵 Custom=📁
-**iOS budget page:** `ScrollView` + `LazyVStack` (not `List`) for custom card corner radii. Summary card (Buffer + `MiniProgressRing`). Bottom banner: gray/orange/green/red by allocation state. Progress bars as 2px Capsule dividers. Collapsible category headers. Custom `SwipeToDeleteRow` (DragGesture) + `ItemReorderDelegate` (onDrag/onDrop) since List modifiers unavailable.
+**iOS budget page:** `ScrollView` + `LazyVStack` (not `List`) for custom card corner radii. Summary card (Buffer + `MiniProgressRing`). Bottom banner: gray/orange/green/red by allocation state. Progress bars as 2px Capsule dividers. Collapsible category headers. Custom `SwipeToDeleteRow` (DragGesture) + `BudgetItemDropDelegate` (onDrag/onDrop, handles both reorder and transaction assignment). Floating pill tray (`FloatingTransactionPill`) for drag-to-categorize uncategorized transactions.
 
 ## Working Features
 
 **Web (v1.9.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller), recurring payments, budget copy/reset, insights (D3 charts + Sankey), monthly report, onboarding, tablet responsive.
 
-**iOS (v0.12.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling. See `ios/BudgetApp/CHANGELOG.md`.
+**iOS (v0.13.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page. See `ios/BudgetApp/CHANGELOG.md`.
 
 ## Common Issues
 
@@ -159,7 +159,7 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 **Web:** v1.9.0 — stable, production-ready on Vercel
 
-**iOS:** v0.12.0 — pre-release. Offline support & caching. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.13.0 — pre-release. Drag-to-categorize on budget page. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 
 **Pending migration:** `isNonEarned` column rename — run SQL migration before `db:push`
 

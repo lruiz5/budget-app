@@ -1,5 +1,7 @@
 import Foundation
 import Combine
+import SwiftUI
+import UIKit
 
 @MainActor
 class BudgetViewModel: ObservableObject {
@@ -19,9 +21,14 @@ class BudgetViewModel: ObservableObject {
     @Published var expensePlanned: Decimal = 0
     @Published var expenseActual: Decimal = 0
 
+    // Uncategorized transactions for drag-to-assign tray
+    @Published var uncategorizedTransactions: [Transaction] = []
+
     private static let defaultCategoryOrder = ["income", "giving", "household", "transportation", "food", "personal", "insurance", "saving"]
 
     private let budgetService = BudgetService.shared
+    private let accountsService = AccountsService.shared
+    private let transactionService = TransactionService.shared
     private let sharedDate = SharedDateViewModel.shared
     
     var selectedMonth: Int {
@@ -77,6 +84,93 @@ class BudgetViewModel: ObservableObject {
         }
 
         isLoading = false
+
+        // Load uncategorized transactions for the drag-to-assign tray
+        await loadUncategorizedTransactions()
+    }
+
+    // MARK: - Uncategorized Transactions (for drag-to-assign tray)
+
+    private func loadUncategorizedTransactions() async {
+        let month = selectedMonth
+        let year = selectedYear
+
+        do {
+            let allUncategorized = try await accountsService.getUncategorizedTransactions(month: month, year: year)
+            var filtered = filterTransactionsToDateRange(allUncategorized, month: month, year: year)
+
+            // Remove split parents using budget data
+            if let budget = budget {
+                var splitParentIds = Set<Int>()
+                for category in budget.categories.values {
+                    for item in category.items {
+                        for split in item.splitTransactions ?? [] {
+                            splitParentIds.insert(split.parentTransactionId)
+                        }
+                    }
+                }
+                filtered.removeAll { splitParentIds.contains($0.id) }
+            }
+
+            uncategorizedTransactions = filtered
+        } catch {
+            #if DEBUG
+            print("Failed to load uncategorized transactions: \(error)")
+            #endif
+        }
+    }
+
+    func assignTransaction(transactionId: Int, toBudgetItemId: Int) async {
+        guard requireOnline() else { return }
+
+        // Optimistic removal
+        let removed = uncategorizedTransactions.first { $0.id == transactionId }
+        withAnimation(.easeOut(duration: 0.3)) {
+            uncategorizedTransactions.removeAll { $0.id == transactionId }
+        }
+
+        do {
+            let request = UpdateTransactionRequest(id: transactionId, budgetItemId: toBudgetItemId)
+            _ = try await transactionService.updateTransaction(request)
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            await loadBudget()
+        } catch {
+            // Rollback — re-add transaction to tray
+            if let removed {
+                uncategorizedTransactions.append(removed)
+            }
+            showToast(error.localizedDescription, isError: true)
+        }
+    }
+
+    // Filter transactions to ±7 days around the given month
+    private func filterTransactionsToDateRange(_ transactions: [Transaction], month: Int, year: Int) -> [Transaction] {
+        var utcCalendar = Calendar.current
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+
+        var monthStartComponents = DateComponents()
+        monthStartComponents.year = year
+        monthStartComponents.month = month + 1 // DateComponents uses 1-indexed months
+        monthStartComponents.day = 1
+        guard let monthStart = utcCalendar.date(from: monthStartComponents) else {
+            return transactions
+        }
+        guard let monthEnd = utcCalendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart) else {
+            return transactions
+        }
+        guard var rangeStart = utcCalendar.date(byAdding: .day, value: -7, to: monthStart) else {
+            return transactions
+        }
+        rangeStart = utcCalendar.startOfDay(for: rangeStart)
+        guard var rangeEnd = utcCalendar.date(byAdding: .day, value: 7, to: monthEnd) else {
+            return transactions
+        }
+        rangeEnd = utcCalendar.date(bySettingHour: 23, minute: 59, second: 59, of: rangeEnd) ?? rangeEnd
+
+        return transactions.filter { txn in
+            let txnDate = utcCalendar.startOfDay(for: txn.date)
+            return txnDate >= rangeStart && txnDate <= rangeEnd
+        }
     }
 
     // MARK: - Precomputed Data (runs once after each load, not on every render)
