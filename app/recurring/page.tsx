@@ -59,6 +59,8 @@ function RecurringPage() {
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(
     null,
   );
+  const [adjustingPaymentId, setAdjustingPaymentId] = useState<number | null>(null);
+  const [adjustAmount, setAdjustAmount] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -166,6 +168,31 @@ function RecurringPage() {
     });
     setShowAddForm(false);
     setEditingPayment(null);
+  };
+
+  const handleAdjustFunding = async (payment: RecurringPayment) => {
+    const desired = parseFloat(adjustAmount);
+    if (isNaN(desired) || desired < 0) return;
+
+    // newAdjustment = desired - (currentFundedAmount - currentAdjustment)
+    // This computes the offset needed from the raw calculated amount
+    const rawCalculated = payment.fundedAmount - payment.fundingAdjustment;
+    const newAdjustment = desired - rawCalculated;
+
+    try {
+      const response = await fetch("/api/recurring-payments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: payment.id, fundingAdjustment: newAdjustment }),
+      });
+      if (response.ok) {
+        fetchPayments();
+        setAdjustingPaymentId(null);
+        setAdjustAmount("");
+      }
+    } catch (error) {
+      console.error("Error adjusting funding:", error);
+    }
   };
 
   const startEditing = (payment: RecurringPayment) => {
@@ -459,7 +486,36 @@ function RecurringPage() {
 
                   {/* Funding Progress */}
                   <div>
-                    {payment.isPaid ? (
+                    {adjustingPaymentId === payment.id ? (
+                      <div className="flex items-center gap-2 py-2">
+                        <span className="text-sm text-text-secondary">Set funded amount:</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={adjustAmount}
+                          onChange={(e) => setAdjustAmount(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleAdjustFunding(payment);
+                            if (e.key === "Escape") { setAdjustingPaymentId(null); setAdjustAmount(""); }
+                          }}
+                          className="w-28 px-2 py-1 text-sm border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleAdjustFunding(payment)}
+                          className="px-3 py-1 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => { setAdjustingPaymentId(null); setAdjustAmount(""); }}
+                          className="px-3 py-1 text-sm border border-border-strong text-text-secondary rounded-lg hover:bg-surface-secondary transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : payment.isPaid ? (
                       <div className="flex items-center gap-2 py-2">
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-success-light text-success rounded-full">
                           <FaCheck size={12} />
@@ -469,14 +525,30 @@ function RecurringPage() {
                           {fmtCurrency(payment.fundedAmount)} of{" "}
                           {fmtCurrency(payment.amount)}
                         </span>
+                        <button
+                          onClick={() => { setAdjustingPaymentId(payment.id); setAdjustAmount(payment.fundedAmount.toFixed(2)); }}
+                          className="p-1 text-text-tertiary hover:text-text-secondary transition-colors"
+                          title="Adjust funding"
+                        >
+                          <FaEdit size={12} />
+                        </button>
                       </div>
                     ) : (
                       <>
                         <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="text-text-secondary">
-                            {fmtCurrency(payment.fundedAmount)} of{" "}
-                            {fmtCurrency(payment.amount)}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-text-secondary">
+                              {fmtCurrency(payment.fundedAmount)} of{" "}
+                              {fmtCurrency(payment.amount)}
+                            </span>
+                            <button
+                              onClick={() => { setAdjustingPaymentId(payment.id); setAdjustAmount(payment.fundedAmount.toFixed(2)); }}
+                              className="p-1 text-text-tertiary hover:text-text-secondary transition-colors"
+                              title="Adjust funding"
+                            >
+                              <FaEdit size={10} />
+                            </button>
+                          </div>
                           <span className="font-medium text-text-secondary">
                             {payment.percentFunded.toFixed(0)}% funded
                           </span>

@@ -35,9 +35,12 @@ function transformToRecurringPayment(
   const monthsInCycle = getMonthsInCycle(record.frequency as RecurringFrequency);
   const amountNum = parseFloat(String(record.amount));
   const monthlyContribution = amountNum / monthsInCycle;
+  const fundingAdjustment = parseFloat(String(record.fundingAdjustment)) || 0;
 
   // Use calculated funded amount from transactions if provided, otherwise use DB value
-  const fundedAmount = calculatedFundedAmount !== undefined ? calculatedFundedAmount : parseFloat(String(record.fundedAmount));
+  // Apply manual funding adjustment offset
+  const rawFundedAmount = calculatedFundedAmount !== undefined ? calculatedFundedAmount : parseFloat(String(record.fundedAmount));
+  const fundedAmount = Math.max(0, rawFundedAmount + fundingAdjustment);
 
   // For monthly: progress is against the monthly amount (same as total)
   // For non-monthly: progress is against the TOTAL amount (cumulative across months)
@@ -54,6 +57,7 @@ function transformToRecurringPayment(
     frequency: record.frequency as RecurringFrequency,
     nextDueDate: record.nextDueDate,
     fundedAmount: fundedAmount,
+    fundingAdjustment: fundingAdjustment,
     categoryType: record.categoryType as CategoryType | null,
     isActive: record.isActive,
     createdAt: record.createdAt || undefined,
@@ -176,7 +180,7 @@ export async function PUT(request: NextRequest) {
   const { userId } = authResult;
 
   const body = await request.json();
-  const { id, name, amount, frequency, nextDueDate, fundedAmount, categoryType, isActive } = body;
+  const { id, name, amount, frequency, nextDueDate, fundedAmount, fundingAdjustment, categoryType, isActive } = body;
 
   if (!id) {
     return NextResponse.json({ error: 'Missing payment id' }, { status: 400 });
@@ -200,6 +204,7 @@ export async function PUT(request: NextRequest) {
   if (frequency !== undefined) updates.frequency = frequency;
   if (nextDueDate !== undefined) updates.nextDueDate = nextDueDate;
   if (fundedAmount !== undefined) updates.fundedAmount = String(parseFloat(fundedAmount));
+  if (fundingAdjustment !== undefined) updates.fundingAdjustment = String(parseFloat(fundingAdjustment));
   if (categoryType !== undefined) updates.categoryType = categoryType || null;
   if (isActive !== undefined) updates.isActive = isActive;
 

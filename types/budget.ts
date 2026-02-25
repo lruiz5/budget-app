@@ -82,6 +82,7 @@ export interface RecurringPayment {
   frequency: RecurringFrequency;
   nextDueDate: string; // ISO date string
   fundedAmount: number; // Amount saved toward this payment
+  fundingAdjustment: number; // Manual offset to correct calculated funding
   categoryType?: CategoryType | null;
   isActive: boolean;
   createdAt?: Date;

@@ -152,6 +152,7 @@ export const recurringPayments = pgTable('recurring_payments', {
   frequency: text('frequency').notNull().$type<'monthly' | 'quarterly' | 'semi-annually' | 'annually'>(),
   nextDueDate: text('next_due_date').notNull(), // ISO date string
   fundedAmount: numeric('funded_amount', { precision: 10, scale: 2 }).notNull().default('0'),
+  fundingAdjustment: numeric('funding_adjustment', { precision: 10, scale: 2 }).notNull().default('0'),
   categoryType: text('category_type').$type<'income' | 'giving' | 'household' | 'transportation' | 'food' | 'personal' | 'insurance' | 'saving'>(),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),

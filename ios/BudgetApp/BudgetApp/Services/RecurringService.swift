@@ -83,8 +83,9 @@ struct UpdateRecurringRequest: Encodable {
     let nextDueDate: String?
     let categoryType: String?
     let isActive: Bool?
+    let fundingAdjustment: String?
 
-    init(id: Int, name: String? = nil, amount: Decimal? = nil, frequency: PaymentFrequency? = nil, nextDueDate: Date? = nil, categoryType: String? = nil, isActive: Bool? = nil) {
+    init(id: Int, name: String? = nil, amount: Decimal? = nil, frequency: PaymentFrequency? = nil, nextDueDate: Date? = nil, categoryType: String? = nil, isActive: Bool? = nil, fundingAdjustment: Decimal? = nil) {
         self.id = id
         self.name = name
         self.amount = amount.map { String(describing: $0) }
@@ -96,6 +97,7 @@ struct UpdateRecurringRequest: Encodable {
         }
         self.categoryType = categoryType
         self.isActive = isActive
+        self.fundingAdjustment = fundingAdjustment.map { String(describing: $0) }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -107,10 +109,11 @@ struct UpdateRecurringRequest: Encodable {
         try container.encodeIfPresent(nextDueDate, forKey: .nextDueDate)
         try container.encodeIfPresent(categoryType, forKey: .categoryType)
         try container.encodeIfPresent(isActive, forKey: .isActive)
+        try container.encodeIfPresent(fundingAdjustment, forKey: .fundingAdjustment)
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, amount, frequency, nextDueDate, categoryType, isActive
+        case id, name, amount, frequency, nextDueDate, categoryType, isActive, fundingAdjustment
     }
 }
 
