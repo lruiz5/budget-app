@@ -30,9 +30,9 @@ struct MonthYearPicker: View {
         } label: {
             HStack(spacing: 4) {
                 Text(displayText)
-                    .font(.headline)
+                    .font(.outfitHeadline)
                 Image(systemName: "chevron.down")
-                    .font(.caption)
+                    .font(.outfitCaption)
             }
         }
         .buttonStyle(.plain)
@@ -50,7 +50,7 @@ struct MonthYearPicker: View {
                         goToPreviousMonth()
                     } label: {
                         Image(systemName: "chevron.left")
-                            .font(.title2)
+                            .font(.outfitTitle2)
                     }
 
                     Spacer()
@@ -58,10 +58,10 @@ struct MonthYearPicker: View {
                     // Current Selection
                     VStack {
                         Text(tempMonthName)
-                            .font(.title)
+                            .font(.outfitTitle)
                             .fontWeight(.bold)
                         Text(String(tempYear))
-                            .font(.title2)
+                            .font(.outfitTitle2)
                             .foregroundStyle(.secondary)
                     }
 
@@ -72,30 +72,45 @@ struct MonthYearPicker: View {
                         goToNextMonth()
                     } label: {
                         Image(systemName: "chevron.right")
-                            .font(.title2)
+                            .font(.outfitTitle2)
                     }
                 }
                 .padding(.horizontal, 40)
                 .padding(.top, 20)
 
-                // Month Grid (0-indexed: Jan=0, Dec=11)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
-                    ForEach(0..<12, id: \.self) { m in
-                        Button {
-                            tempMonth = m
-                        } label: {
-                            Text(shortMonthName(m))
-                                .font(.body)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(tempMonth == m ? Color.green : Color(.systemGray5))
-                                .foregroundStyle(tempMonth == m ? .white : .primary)
-                                .cornerRadius(8)
+                // Month strip (0-indexed: Jan=0, Dec=11)
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(0..<12, id: \.self) { m in
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        tempMonth = m
+                                    }
+                                } label: {
+                                    Text(shortMonthName(m))
+                                        .font(.outfitBody)
+                                        .frame(width: 90)
+                                        .padding(.vertical, 12)
+                                        .background(tempMonth == m ? Color.green : Color(.systemGray5))
+                                        .foregroundStyle(tempMonth == m ? .white : .primary)
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
+                                .id(m)
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal)
+                    }
+                    .onAppear {
+                        proxy.scrollTo(tempMonth, anchor: .center)
+                    }
+                    .onChange(of: tempMonth) { _, newMonth in
+                        withAnimation {
+                            proxy.scrollTo(newMonth, anchor: .center)
+                        }
                     }
                 }
-                .padding(.horizontal)
 
                 // Year Selector
                 HStack {
@@ -103,11 +118,11 @@ struct MonthYearPicker: View {
                         tempYear -= 1
                     } label: {
                         Image(systemName: "minus.circle")
-                            .font(.title2)
+                            .font(.outfitTitle2)
                     }
 
                     Text(String(tempYear))
-                        .font(.title2)
+                        .font(.outfitTitle2)
                         .fontWeight(.semibold)
                         .frame(width: 80)
 
@@ -115,7 +130,7 @@ struct MonthYearPicker: View {
                         tempYear += 1
                     } label: {
                         Image(systemName: "plus.circle")
-                            .font(.title2)
+                            .font(.outfitTitle2)
                     }
                 }
                 .padding(.vertical)
@@ -129,13 +144,12 @@ struct MonthYearPicker: View {
                     tempYear = calendar.component(.year, from: now)
                 } label: {
                     Text("Go to Today")
-                        .font(.body)
+                        .font(.outfitBody)
                 }
                 .buttonStyle(.bordered)
 
                 Spacer()
             }
-            .navigationTitle("Select Month")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -155,7 +169,7 @@ struct MonthYearPicker: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.fraction(0.4), .medium])
     }
 
     private var tempMonthName: String {

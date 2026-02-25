@@ -5,6 +5,7 @@ struct EditTransactionSheet: View {
     let onUpdate: () -> Void
     var onTransactionUpdated: ((Transaction) -> Void)? = nil
     var onTransactionDeleted: ((Int) -> Void)? = nil
+    var onSplit: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var editedDescription: String
@@ -14,6 +15,7 @@ struct EditTransactionSheet: View {
     @State private var editedMerchant: String
     @State private var selectedBudgetItemId: Int?
     @State private var isNonEarned: Bool
+    @State private var tagCategoryType: String
     @State private var isSaving = false
     @State private var showDeleteConfirmation = false
     @State private var showUnsplitConfirmation = false
@@ -21,11 +23,12 @@ struct EditTransactionSheet: View {
 
     @StateObject private var budgetVM = BudgetViewModel()
 
-    init(transaction: Transaction, onUpdate: @escaping () -> Void, onTransactionUpdated: ((Transaction) -> Void)? = nil, onTransactionDeleted: ((Int) -> Void)? = nil) {
+    init(transaction: Transaction, onUpdate: @escaping () -> Void, onTransactionUpdated: ((Transaction) -> Void)? = nil, onTransactionDeleted: ((Int) -> Void)? = nil, onSplit: (() -> Void)? = nil) {
         self.transaction = transaction
         self.onUpdate = onUpdate
         self.onTransactionUpdated = onTransactionUpdated
         self.onTransactionDeleted = onTransactionDeleted
+        self.onSplit = onSplit
         self._editedDescription = State(initialValue: transaction.description)
         self._editedAmount = State(initialValue: "\(transaction.amount)")
         self._selectedDate = State(initialValue: transaction.date)
@@ -33,6 +36,7 @@ struct EditTransactionSheet: View {
         self._editedMerchant = State(initialValue: transaction.merchant ?? "")
         self._selectedBudgetItemId = State(initialValue: transaction.budgetItemId)
         self._isNonEarned = State(initialValue: transaction.isNonEarned)
+        self._tagCategoryType = State(initialValue: transaction.tagCategoryType ?? "")
     }
 
     var body: some View {
@@ -70,7 +74,7 @@ struct EditTransactionSheet: View {
                 if transaction.isSplit {
                     Section("Split Transaction") {
                         Label("This transaction is split across multiple budget items", systemImage: "arrow.triangle.branch")
-                            .font(.subheadline)
+                            .font(.outfitSubheadline)
                             .foregroundStyle(.secondary)
 
                         if let splits = transaction.splits {
@@ -98,6 +102,15 @@ struct EditTransactionSheet: View {
                     }
                 } else {
                     Section("Category") {
+                        if let onSplit {
+                            Button {
+                                dismiss()
+                                onSplit()
+                            } label: {
+                                Label("Split Transaction", systemImage: "arrow.triangle.branch")
+                                    .foregroundStyle(.purple)
+                            }
+                        }
                         if budgetVM.isLoading {
                             HStack {
                                 Spacer()
@@ -107,7 +120,7 @@ struct EditTransactionSheet: View {
                         } else if let error = budgetVM.error {
                             VStack(spacing: 8) {
                                 Text(error)
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.red)
                                 Button("Retry") {
                                     Task { await budgetVM.loadBudget() }
@@ -147,6 +160,19 @@ struct EditTransactionSheet: View {
                                             }
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if let budget = budgetVM.budget {
+                    Section("Report As (optional)") {
+                        Picker("Category", selection: $tagCategoryType) {
+                            Text("None — use budget item category").tag("")
+                            ForEach(budget.sortedCategoryKeys, id: \.self) { key in
+                                if let category = budget.categories[key] {
+                                    Text(category.displayName).tag(key)
                                 }
                             }
                         }
@@ -243,7 +269,8 @@ struct EditTransactionSheet: View {
                     amount: amountDecimal,
                     type: transactionType,
                     merchant: editedMerchant.isEmpty ? nil : editedMerchant,
-                    isNonEarned: isNonEarned
+                    isNonEarned: isNonEarned,
+                    tagCategoryType: tagCategoryType.isEmpty ? nil : tagCategoryType
                 )
                 let updated = try await TransactionService.shared.updateTransaction(request)
                 await MainActor.run {

@@ -69,15 +69,15 @@ struct SpendingPaceDrillDownSheet: View {
                     } label: {
                         HStack(spacing: 4) {
                             Text(risk.category.categoryEmoji)
-                                .font(.caption)
+                                .font(.outfitCaption)
                             Text(risk.category.name)
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .fontWeight(.medium)
                             Text("·")
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .foregroundStyle(.secondary)
                             Text("\(pacePercent)%")
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(risk.paceRatio > 1.0 ? .red : .green)
                         }
@@ -105,19 +105,19 @@ struct SpendingPaceDrillDownSheet: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Planned")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(category.planned))
-                        .font(.title3)
+                        .font(.outfitTitle3)
                         .fontWeight(.semibold)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Actual")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(category.actual))
-                        .font(.title3)
+                        .font(.outfitTitle3)
                         .fontWeight(.semibold)
                         .foregroundStyle(category.actual > category.planned ? .red : .primary)
                 }
@@ -128,9 +128,9 @@ struct SpendingPaceDrillDownSheet: View {
                 Spacer()
                 HStack(spacing: 6) {
                     Image(systemName: paceRatio > 1.0 ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                     Text(paceRatio > 1.0 ? "\(pacePercent)% of pace — on track to overspend" : "\(pacePercent)% of pace — on track")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .fontWeight(.medium)
                 }
                 .foregroundStyle(paceRatio > 1.0 ? .red : .green)
@@ -151,7 +151,7 @@ struct SpendingPaceDrillDownSheet: View {
 
         VStack(alignment: .leading, spacing: 12) {
             Text("\(category.displayName) Burn-Down")
-                .font(.subheadline)
+                .font(.outfitSubheadline)
                 .fontWeight(.medium)
 
             if dailyData.allSatisfy({ $0.amount == 0 }) {
@@ -206,7 +206,7 @@ struct SpendingPaceDrillDownSheet: View {
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                                 .annotation(position: .top, alignment: .center) {
                                     Text("Today")
-                                        .font(.caption2)
+                                        .font(.outfitCaption2)
                                         .foregroundStyle(.orange)
                                 }
                         }

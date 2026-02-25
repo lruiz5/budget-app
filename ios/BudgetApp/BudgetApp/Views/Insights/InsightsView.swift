@@ -82,11 +82,11 @@ struct InsightsView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Monthly Report")
-                        .font(.headline)
+                        .font(.outfitHeadline)
                         .foregroundStyle(.primary)
 
                     Text("View detailed breakdown")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.secondary)
                 }
 
@@ -111,7 +111,7 @@ struct InsightsView: View {
 
         VStack(alignment: .leading, spacing: 12) {
             Text("Budget vs Actual")
-                .font(.headline)
+                .font(.outfitHeadline)
 
             if categoryData.isEmpty {
                 Text("No spending data yet")
@@ -126,16 +126,16 @@ struct InsightsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text(item.category)
-                                    .font(.subheadline)
+                                    .font(.outfitSubheadline)
                                     .fontWeight(.medium)
                                 Spacer()
                                 HStack(spacing: 4) {
                                     Text(formatCurrency(item.actual))
-                                        .font(.subheadline)
+                                        .font(.outfitSubheadline)
                                         .fontWeight(.semibold)
                                         .foregroundStyle(item.actual > item.planned ? .red : .primary)
                                     Image(systemName: "chevron.right")
-                                        .font(.caption2)
+                                        .font(.outfitCaption2)
                                         .foregroundStyle(.tertiary)
                                 }
                             }
@@ -157,7 +157,7 @@ struct InsightsView: View {
 
                             HStack {
                                 Text("Planned: \(formatCurrency(item.planned))")
-                                    .font(.caption2)
+                                    .font(.outfitCaption2)
                                     .foregroundStyle(.secondary)
                                 Spacer()
                             }
@@ -194,11 +194,11 @@ struct InsightsView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Spending Pace")
-                    .font(.headline)
+                    .font(.outfitHeadline)
                 Spacer()
                 if !dailyData.allSatisfy({ $0.amount == 0 }) {
                     Image(systemName: "chevron.right")
-                        .font(.caption2)
+                        .font(.outfitCaption2)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -255,7 +255,7 @@ struct InsightsView: View {
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                                 .annotation(position: .top, alignment: .center) {
                                     Text("Today")
-                                        .font(.caption2)
+                                        .font(.outfitCaption2)
                                         .foregroundStyle(.orange)
                                 }
                         }
@@ -312,7 +312,7 @@ struct InsightsView: View {
 
         VStack(alignment: .leading, spacing: 12) {
             Text("Daily Spending")
-                .font(.headline)
+                .font(.outfitHeadline)
 
             // heatmapCells pre-built in ViewModel — no rebuild on every render
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
@@ -320,7 +320,7 @@ struct InsightsView: View {
                     switch cell.type {
                     case .header(let text):
                         Text(text)
-                            .font(.caption2)
+                            .font(.outfitCaption2)
                             .fontWeight(.medium)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
@@ -344,7 +344,7 @@ struct InsightsView: View {
             HStack(spacing: 4) {
                 Spacer()
                 Text("Less")
-                    .font(.caption2)
+                    .font(.outfitCaption2)
                     .foregroundStyle(.secondary)
                 ForEach(0..<5, id: \.self) { level in
                     RoundedRectangle(cornerRadius: 2)
@@ -352,7 +352,7 @@ struct InsightsView: View {
                         .frame(width: 12, height: 12)
                 }
                 Text("More")
-                    .font(.caption2)
+                    .font(.outfitCaption2)
                     .foregroundStyle(.secondary)
             }
         }
@@ -370,7 +370,7 @@ struct InsightsView: View {
                 .fill(isFuture ? Color(.systemGray5) : heatmapColor(amount: day.amount, max: maxAmount))
 
             Text("\(day.id)")
-                .font(.system(size: 10))
+                .font(.outfit(10))
                 .foregroundStyle(isFuture ? Color.secondary : (day.amount > 0 ? Color.white : Color.secondary))
         }
         .aspectRatio(1, contentMode: .fit)
@@ -408,7 +408,7 @@ struct InsightsView: View {
 
         return VStack(alignment: .leading, spacing: 12) {
             Text("Spending Trends")
-                .font(.headline)
+                .font(.outfitHeadline)
 
             if trendData.isEmpty {
                 Text("Not enough data for trends")

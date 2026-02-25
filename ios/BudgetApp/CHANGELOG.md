@@ -6,6 +6,57 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.15.0] - 2026-02-25 - Tag Reclassification
+
+### Added
+
+- **"Report As" tag** — tag any transaction with a different category type to reclassify it in reports/insights without moving the transaction from its budget item
+- **Emoji badge** on transaction rows when tagged (shows target category emoji)
+- **Insights adjustments** — category charts and spending trends apply tag reclassification adjustments
+
+### Files Modified
+
+- `Models/Transaction.swift` — added `tagCategoryType: String?` property, CodingKeys, decoder, memberwise init
+- `Models/Budget.swift` — refactored `categoryEmoji` into static `emojiForCategoryType(_:customEmoji:)` for reuse
+- `Services/TransactionService.swift` — added `tagCategoryType` to `CreateTransactionRequest` and `UpdateTransactionRequest`
+- `Views/Transactions/AddTransactionSheet.swift` — "Report As" Picker section
+- `Views/Transactions/EditTransactionSheet.swift` — "Report As" Picker, pre-populated
+- `Views/Transactions/TransactionsView.swift` — emoji badge on `TransactionRow`
+- `ViewModels/InsightsViewModel.swift` — `getTagAdjustments(from:)` helper, applied in chart data methods
+
+---
+
+## [0.14.0] - 2026-02-24 - Custom Font, Tap-to-Categorize, Split from Categorize
+
+### Added
+
+- **Tap-to-categorize** — tapping a transaction chip in the floating pill opens the categorize sheet (same as transactions tab), in addition to existing drag-to-assign
+- **Split from categorize sheet** — "Split Transaction" button at top of `CategorizeTransactionSheet`, available on both budget page and transactions tab
+- **Split from edit sheet** — "Split Transaction" button in `EditTransactionSheet` Category section for non-split transactions
+- **Custom font (Outfit)** — applied globally via UIKit appearance + root SwiftUI modifier. All 269 `.font()` calls across 32 view files converted to Outfit equivalents. `Font` extension helpers in `Extensions.swift` (`.outfitHeadline`, `.outfitBody`, `.outfit(size)`, etc.)
+
+### Changed
+
+- **MonthYearPicker** — removed redundant "Select Month" title, replaced vertical month grid with horizontal scrollable strip (~3 months visible), reduced sheet height with `.fraction(0.4)` detent
+
+### Files Added
+
+- `Outfit.ttf` — custom font file
+
+### Files Modified
+
+- `Utilities/Extensions.swift` — added `Font` extension with Outfit semantic aliases
+- `BudgetAppApp.swift` — added UIKit appearance for Outfit, root-level `.font()` modifier
+- `Views/Budget/UncategorizedTray.swift` — added `onChipTap` callback to `FloatingTransactionPill`
+- `Views/Budget/BudgetView.swift` — added `.categorizeTransaction` and `.splitTransaction` sheet cases, wired tap-to-categorize
+- `Views/Transactions/TransactionsView.swift` — added `onSplit` to `CategorizeTransactionSheet`, wired split from categorize and edit sheets
+- `Views/Transactions/EditTransactionSheet.swift` — added `onSplit` parameter and split button in Category section
+- `Views/Budget/BudgetItemDetail.swift` — wired `onSplit` on `EditTransactionSheet`
+- `Views/Components/MonthYearPicker.swift` — horizontal month scroll, removed nav title, smaller detent
+- All 32 view files — font replacements to Outfit
+
+---
+
 ## [0.13.0] - 2026-02-23 - Drag-to-Categorize from Budget Page
 
 ### Added

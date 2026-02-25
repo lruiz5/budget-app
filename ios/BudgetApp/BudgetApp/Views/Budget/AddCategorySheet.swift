@@ -25,14 +25,14 @@ struct AddCategorySheet: View {
                             Text("Emoji")
                             Spacer()
                             Text(selectedEmoji)
-                                .font(.title2)
+                                .font(.outfitTitle2)
                         }
                     }
                 }
 
                 Section {
                     Text("Custom categories appear between default categories and Saving.")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -59,7 +59,7 @@ struct AddCategorySheet: View {
         ForEach(Self.emojiGroups, id: \.label) { group in
             VStack(alignment: .leading, spacing: 4) {
                 Text(group.label)
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 6) {
@@ -68,7 +68,7 @@ struct AddCategorySheet: View {
                             selectedEmoji = emoji
                         } label: {
                             Text(emoji)
-                                .font(.title3)
+                                .font(.outfitTitle3)
                                 .frame(width: 36, height: 36)
                                 .background(
                                     selectedEmoji == emoji

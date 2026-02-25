@@ -9,6 +9,18 @@ struct BudgetAppApp: App {
     @State private var showAuth = false
     @State private var hasCompletedOnboarding: Bool?
 
+    init() {
+        // Apply Outfit globally to UIKit-backed components (nav bars, tab bars, alerts, etc.)
+        let body = UIFont(name: "Outfit", size: 17) ?? .systemFont(ofSize: 17)
+        let headline = UIFont(name: "Outfit", size: 17) ?? .boldSystemFont(ofSize: 17)
+        let largeTitle = UIFont(name: "Outfit", size: 34) ?? .systemFont(ofSize: 34)
+
+        UILabel.appearance().font = body
+        UINavigationBar.appearance().titleTextAttributes = [.font: headline]
+        UINavigationBar.appearance().largeTitleTextAttributes = [.font: largeTitle]
+        UITabBarItem.appearance().setTitleTextAttributes([.font: UIFont(name: "Outfit", size: 10) ?? .systemFont(ofSize: 10)], for: .normal)
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -56,6 +68,7 @@ struct BudgetAppApp: App {
                         }
                 }
             }
+            .font(.custom("Outfit", size: 17))
             .environmentObject(NetworkMonitor.shared)
             .environment(\.clerk, clerk)
             .task {
@@ -87,15 +100,15 @@ struct SignInLandingView: View {
             // Logo/Header
             VStack(spacing: 12) {
                 Image(systemName: "dollarsign.circle.fill")
-                    .font(.system(size: 80))
+                    .font(.outfit(80))
                     .foregroundStyle(.green)
 
                 Text("Budget App")
-                    .font(.largeTitle)
+                    .font(.outfitLargeTitle)
                     .fontWeight(.bold)
 
                 Text("Zero-based budgeting made simple")
-                    .font(.body)
+                    .font(.outfitBody)
                     .foregroundStyle(.secondary)
             }
 
@@ -125,11 +138,11 @@ private struct SplashView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "dollarsign.circle.fill")
-                .font(.system(size: 80))
+                .font(.outfit(80))
                 .foregroundStyle(.green)
 
             Text("Budget App")
-                .font(.largeTitle)
+                .font(.outfitLargeTitle)
                 .fontWeight(.bold)
 
             ProgressView()

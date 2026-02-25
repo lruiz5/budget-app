@@ -65,7 +65,7 @@ struct MonthlyReportSheet: View {
     private var overallSummarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Overall Summary")
-                .font(.headline)
+                .font(.outfitHeadline)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 // Total Income
@@ -110,11 +110,11 @@ struct MonthlyReportSheet: View {
     private func summaryCard(label: String, value: String, tint: Color, trend: Double?, trendInverted: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.caption)
+                .font(.outfitCaption)
                 .foregroundStyle(tint)
 
             Text(value)
-                .font(.title3)
+                .font(.outfitTitle3)
                 .fontWeight(.bold)
                 .foregroundStyle(tint)
 
@@ -122,9 +122,9 @@ struct MonthlyReportSheet: View {
                 let isPositiveTrend = trendInverted ? trend <= 0 : trend >= 0
                 HStack(spacing: 2) {
                     Image(systemName: trend >= 0 ? "arrow.up" : "arrow.down")
-                        .font(.caption2)
+                        .font(.outfitCaption2)
                     Text("\(String(format: "%.1f", Swift.abs(trend)))% vs last month")
-                        .font(.caption2)
+                        .font(.outfitCaption2)
                 }
                 .foregroundStyle(isPositiveTrend ? .green : .red)
             }
@@ -155,7 +155,7 @@ struct MonthlyReportSheet: View {
                         .foregroundStyle(totalIncome >= totalPlannedIncome ? .green : .red)
                 }
             }
-            .font(.caption)
+            .font(.outfitCaption)
             .padding(12)
             .background(Color(.systemGray6))
             .cornerRadius(10)
@@ -176,7 +176,7 @@ struct MonthlyReportSheet: View {
                         .foregroundStyle(totalExpenses <= totalPlannedExpenses ? .green : .red)
                 }
             }
-            .font(.caption)
+            .font(.outfitCaption)
             .padding(12)
             .background(Color(.systemGray6))
             .cornerRadius(10)
@@ -188,7 +188,7 @@ struct MonthlyReportSheet: View {
     private var bufferFlowSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Buffer Flow")
-                .font(.headline)
+                .font(.outfitHeadline)
 
             VStack(spacing: 8) {
                 flowRow(label: "+ Underspent", value: formatCurrency(totalUnderspent), color: .green)
@@ -216,7 +216,7 @@ struct MonthlyReportSheet: View {
             Text(totalExpenses == 0 && totalIncome == 0
                  ? "Start adding transactions to see how next month\u{2019}s buffer changes over time."
                  : "This shows how your buffer would change based on this month\u{2019}s spending and income patterns.")
-                .font(.caption2)
+                .font(.outfitCaption2)
                 .foregroundStyle(.secondary)
         }
     }
@@ -236,11 +236,11 @@ struct MonthlyReportSheet: View {
     private var categoryBreakdownSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Category Breakdown")
-                .font(.headline)
+                .font(.outfitHeadline)
 
             if totalExpenses == 0 {
                 Text("No spending recorded yet. The breakdown below shows your planned amounts.")
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
             }
 
@@ -261,20 +261,20 @@ struct MonthlyReportSheet: View {
 
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Planned").font(.caption2).foregroundStyle(.secondary)
-                    Text(formatCurrency(cat.planned)).font(.caption).fontWeight(.semibold)
+                    Text("Planned").font(.outfitCaption2).foregroundStyle(.secondary)
+                    Text(formatCurrency(cat.planned)).font(.outfitCaption).fontWeight(.semibold)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Actual").font(.caption2).foregroundStyle(.secondary)
-                    Text(formatCurrency(cat.actual)).font(.caption).fontWeight(.semibold)
+                    Text("Actual").font(.outfitCaption2).foregroundStyle(.secondary)
+                    Text(formatCurrency(cat.actual)).font(.outfitCaption).fontWeight(.semibold)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(cat.difference >= 0 ? "Under" : "Over")
-                        .font(.caption2)
+                        .font(.outfitCaption2)
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(abs(cat.difference)))
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .fontWeight(.semibold)
                         .foregroundStyle(cat.difference >= 0 ? .green : .red)
                 }
@@ -294,18 +294,18 @@ struct MonthlyReportSheet: View {
             HStack {
                 Spacer()
                 Text("\(Int(cat.percentUsed))% used")
-                    .font(.caption2)
+                    .font(.outfitCaption2)
                     .foregroundStyle(.secondary)
             }
 
             if let trend = categoryTrend(for: cat.categoryType) {
                 HStack(spacing: 4) {
                     Image(systemName: Swift.abs(trend) < 1 ? "minus" : (trend > 0 ? "arrow.up" : "arrow.down"))
-                        .font(.caption2)
+                        .font(.outfitCaption2)
                     Text(Swift.abs(trend) < 1
                          ? "About the same as last month"
                          : "\(Int(Swift.abs(trend)))% \(trend > 0 ? "more" : "less") than last month")
-                        .font(.caption2)
+                        .font(.outfitCaption2)
                 }
                 .foregroundStyle(Swift.abs(trend) < 1 ? Color.secondary : (trend > 0 ? Color.red : Color.green))
             }
@@ -326,14 +326,14 @@ struct MonthlyReportSheet: View {
     private var topSpendingItemsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Top Spending Items")
-                .font(.headline)
+                .font(.outfitHeadline)
 
             if topSpendingItems.isEmpty {
                 VStack(spacing: 4) {
                     Text("No spending recorded yet this month.")
                         .foregroundStyle(.secondary)
                     Text("Add transactions to see your top spending items here.")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity)
@@ -345,16 +345,16 @@ struct MonthlyReportSheet: View {
                     ForEach(Array(topSpendingItems.enumerated()), id: \.element.id) { index, item in
                         HStack {
                             Text("\(index + 1)")
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .foregroundStyle(.secondary)
                                 .frame(width: 24, alignment: .leading)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.name)
-                                    .font(.subheadline)
+                                    .font(.outfitSubheadline)
                                     .fontWeight(.medium)
                                 Text(item.category)
-                                    .font(.caption2)
+                                    .font(.outfitCaption2)
                                     .foregroundStyle(.secondary)
                             }
 
@@ -362,11 +362,11 @@ struct MonthlyReportSheet: View {
 
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text(formatCurrency(item.actual))
-                                    .font(.subheadline)
+                                    .font(.outfitSubheadline)
                                     .fontWeight(.medium)
                                     .foregroundStyle(item.actual > item.planned ? .red : .primary)
                                 Text("\(String(format: "%.1f", item.percentOfTotal))% of total")
-                                    .font(.caption2)
+                                    .font(.outfitCaption2)
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -392,23 +392,23 @@ struct MonthlyReportSheet: View {
         if !underspentCategories.isEmpty && totalExpenses > 0 {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Potential Reallocation")
-                    .font(.headline)
+                    .font(.outfitHeadline)
 
                 Text("These categories were under 50% utilized. Consider adjusting next month\u{2019}s budget.")
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                     ForEach(underspentCategories) { cat in
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(cat.emoji) \(cat.name)")
-                                .font(.subheadline)
+                                .font(.outfitSubheadline)
                                 .fontWeight(.medium)
                             Text("\(formatCurrency(cat.actual)) of \(formatCurrency(cat.planned)) used")
-                                .font(.caption2)
+                                .font(.outfitCaption2)
                                 .foregroundStyle(.secondary)
                             Text("\(formatCurrency(cat.difference)) unused")
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .foregroundStyle(.orange)
                                 .fontWeight(.medium)
                         }
@@ -526,13 +526,30 @@ struct MonthlyReportSheet: View {
         totalUnderspent - totalOverspent + leftToBudget
     }
 
+    // Tag reclassification adjustments for reporting
+    private var tagAdjustments: [String: Decimal] {
+        var adjustments: [String: Decimal] = [:]
+        for (catKey, category) in budget.categories {
+            for item in category.items {
+                for t in item.transactions where t.tagCategoryType != nil && t.tagCategoryType != catKey {
+                    let amt: Decimal = t.type == .expense ? t.amount : -t.amount
+                    adjustments[catKey, default: 0] -= amt
+                    adjustments[t.tagCategoryType!, default: 0] += amt
+                }
+            }
+        }
+        return adjustments
+    }
+
     // Category summaries (excludes income, includes saving, sorted by actual desc)
+    // Applies tag reclassification: tagged transactions shift amounts between categories
     private var categorySummaries: [CategorySummary] {
-        budget.categories.values
+        let adj = tagAdjustments
+        return budget.categories.values
             .filter { $0.categoryType.lowercased() != "income" }
             .map { cat in
                 let planned = cat.planned
-                let actual = cat.actual
+                let actual = cat.actual + (adj[cat.categoryType] ?? 0)
                 let difference = planned - actual
                 let percentUsed = planned > 0 ? Double(truncating: (actual / planned * 100) as NSNumber) : 0
 

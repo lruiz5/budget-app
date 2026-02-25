@@ -11,20 +11,20 @@ struct OnboardingCompleteStep: View {
                     Spacer().frame(height: 40)
 
                     Text("🎉")
-                        .font(.system(size: 64))
+                        .font(.outfit(64))
 
                     Text("You're All Set!")
-                        .font(.largeTitle)
+                        .font(.outfitLargeTitle)
                         .fontWeight(.bold)
 
                     Text("Head to your budget to set things up for real.")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.secondary)
 
                     // Summary card
                     VStack(spacing: 12) {
                         Text("What you practiced")
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -50,7 +50,7 @@ struct OnboardingCompleteStep: View {
                     // Next steps
                     VStack(spacing: 12) {
                         Text("What's next?")
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -94,10 +94,10 @@ struct OnboardingCompleteStep: View {
                 .foregroundStyle(.green)
                 .frame(width: 24)
             Text(label)
-                .font(.subheadline)
+                .font(.outfitSubheadline)
             Spacer()
             Text(value)
-                .font(.subheadline)
+                .font(.outfitSubheadline)
                 .fontWeight(.medium)
                 .foregroundStyle(valueColor)
         }
@@ -109,7 +109,7 @@ struct OnboardingCompleteStep: View {
                 .foregroundStyle(.green)
                 .frame(width: 24)
             Text(text)
-                .font(.caption)
+                .font(.outfitCaption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -27,7 +27,7 @@ struct AddBudgetItemSheet: View {
 
                 Section {
                     Text("This item will be added to the selected category.")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                 }
             }

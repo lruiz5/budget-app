@@ -13,13 +13,33 @@ function getExpenseCategoryKeys(budget: Budget): string[] {
  * Transform a budget into category-level chart data
  * Excludes income category for expense-focused charts
  */
+/** Calculate tag reclassification adjustments for reporting */
+function getTagAdjustments(budget: Budget): Record<string, number> {
+  const adjustments: Record<string, number> = {};
+  Object.entries(budget.categories).forEach(([catKey, category]) => {
+    category.items.forEach((item) => {
+      item.transactions.forEach((t) => {
+        if (t.tagCategoryType && t.tagCategoryType !== catKey) {
+          const amt = t.type === 'expense' ? t.amount : -t.amount;
+          adjustments[catKey] = (adjustments[catKey] || 0) - amt;
+          adjustments[t.tagCategoryType] = (adjustments[t.tagCategoryType] || 0) + amt;
+        }
+      });
+    });
+  });
+  return adjustments;
+}
+
 export function transformBudgetToCategoryData(budget: Budget | null): CategoryChartData[] {
   if (!budget) return [];
+
+  const tagAdj = getTagAdjustments(budget);
 
   return getExpenseCategoryKeys(budget).map((key) => {
     const category = budget.categories[key];
     const planned = category.items.reduce((sum, item) => sum + item.planned, 0);
-    const actual = category.items.reduce((sum, item) => sum + item.actual, 0);
+    const baseActual = category.items.reduce((sum, item) => sum + item.actual, 0);
+    const actual = baseActual + (tagAdj[key] || 0);
 
     return {
       key,
@@ -41,10 +61,12 @@ export function transformBudgetsToTrendData(budgets: Budget[]): MonthlyTrendData
 
   return budgets.map((budget) => {
     const categories: Record<string, number> = {};
+    const tagAdj = getTagAdjustments(budget);
 
     getExpenseCategoryKeys(budget).forEach((key) => {
       const category = budget.categories[key];
-      categories[key] = category.items.reduce((sum, item) => sum + item.actual, 0);
+      const baseActual = category.items.reduce((sum, item) => sum + item.actual, 0);
+      categories[key] = baseActual + (tagAdj[key] || 0);
     });
 
     return {

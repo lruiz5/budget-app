@@ -12,11 +12,12 @@ import {
   FaPlus,
 } from "react-icons/fa";
 import { HiOutlineScissors } from "react-icons/hi2";
-import AddTransactionModal, { TransactionToEdit } from "./AddTransactionModal";
+import AddTransactionModal, { TransactionToEdit, CategoryOption } from "./AddTransactionModal";
 import SplitTransactionModal, { ExistingSplit } from "./SplitTransactionModal";
 import { useToast } from "@/contexts/ToastContext";
 import { useUncategorizedCount } from "@/contexts/UncategorizedCountContext";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { getCategoryEmoji } from "@/lib/chartColors";
 
 interface SelectedBudgetItem {
   item: BudgetItem;
@@ -427,6 +428,14 @@ export default function BudgetSummary({
     return categories.filter((c) => c.items.length > 0);
   };
 
+  const getCategoryOptions = (): CategoryOption[] => {
+    return Object.entries(budget.categories).map(([key, category]) => ({
+      key,
+      name: category.name,
+      emoji: category.emoji,
+    }));
+  };
+
   const handleAddTransaction = async (transaction: {
     budgetItemId: string;
     linkedAccountId?: number;
@@ -435,6 +444,7 @@ export default function BudgetSummary({
     amount: number;
     type: "income" | "expense";
     merchant?: string;
+    tagCategoryType?: string;
   }) => {
     try {
       const response = await fetch("/api/transactions", {
@@ -460,6 +470,7 @@ export default function BudgetSummary({
     amount: number;
     type: "income" | "expense";
     merchant?: string;
+    tagCategoryType?: string;
   }) => {
     try {
       const response = await fetch("/api/transactions", {
@@ -509,6 +520,7 @@ export default function BudgetSummary({
         amount: transaction.amount,
         type: transaction.type,
         merchant: transaction.merchant,
+        tagCategoryType: transaction.tagCategoryType,
       });
       setIsAddModalOpen(true);
     }
@@ -1195,9 +1207,16 @@ export default function BudgetSummary({
                                 </span>
                               )}
                             </div>
-                            <p className="text-base text-text-primary truncate mt-1">
-                              {transaction.merchant || transaction.description}
-                            </p>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <p className="text-base text-text-primary truncate">
+                                {transaction.merchant || transaction.description}
+                              </p>
+                              {!isSplit && 'tagCategoryType' in transaction && transaction.tagCategoryType && (
+                                <span className="text-xs bg-surface-secondary px-1.5 py-0.5 rounded whitespace-nowrap" title={`Reports as: ${transaction.tagCategoryType}`}>
+                                  {getCategoryEmoji(transaction.tagCategoryType, budget.categories[transaction.tagCategoryType]?.emoji)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <span className="text-base font-medium text-text-primary ml-3">
                             ${formatCurrency(Math.abs(transaction.amount))}
@@ -1275,6 +1294,7 @@ export default function BudgetSummary({
         onEditTransaction={handleEditTransaction}
         onDeleteTransaction={handleDeleteFromModal}
         budgetItems={getAllBudgetItems()}
+        categories={getCategoryOptions()}
         linkedAccounts={linkedAccounts}
         transactionToEdit={transactionToEdit}
       />

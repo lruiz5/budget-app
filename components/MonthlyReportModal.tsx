@@ -146,12 +146,28 @@ export default function MonthlyReportModal({ isOpen, onClose, budget }: MonthlyR
   // Projected next buffer = underspent - overspent + left to budget
   const theoreticalNextBuffer = totalUnderspent - totalOverspent + leftToBudget;
 
-  // Category summaries
+  // Calculate tag reclassification adjustments
+  // Tagged transactions have their amounts shifted from their budget item's category to the tagged category
+  const tagAdjustments: Record<string, number> = {};
+  Object.entries(budget.categories).forEach(([catKey, category]) => {
+    category.items.forEach((item) => {
+      item.transactions.forEach((t) => {
+        if (t.tagCategoryType && t.tagCategoryType !== catKey) {
+          const amt = t.type === 'expense' ? t.amount : -t.amount;
+          tagAdjustments[catKey] = (tagAdjustments[catKey] || 0) - amt;
+          tagAdjustments[t.tagCategoryType] = (tagAdjustments[t.tagCategoryType] || 0) + amt;
+        }
+      });
+    });
+  });
+
+  // Category summaries (with tag reclassification applied to actuals)
   const categorySummaries: CategorySummary[] = Object.entries(budget.categories)
     .filter(([key]) => key !== 'income')
     .map(([key, category]) => {
       const planned = category.items.reduce((sum, item) => sum + item.planned, 0);
-      const actual = category.items.reduce((sum, item) => sum + item.actual, 0);
+      const baseActual = category.items.reduce((sum, item) => sum + item.actual, 0);
+      const actual = baseActual + (tagAdjustments[key] || 0);
       const difference = planned - actual;
       const percentUsed = planned > 0 ? (actual / planned) * 100 : 0;
 

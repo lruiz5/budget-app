@@ -33,9 +33,22 @@
 		54B7B5C92F32BDE2006D5BE2 /* BudgetAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BudgetAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		546EF7BB2F4D83A900895A24 /* Exceptions for "BudgetApp" folder in "BudgetApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 54B7B5B12F32BDE1006D5BE2 /* BudgetApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		54B7B5B42F32BDE1006D5BE2 /* BudgetApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				546EF7BB2F4D83A900895A24 /* Exceptions for "BudgetApp" folder in "BudgetApp" target */,
+			);
 			path = BudgetApp;
 			sourceTree = "<group>";
 		};
@@ -409,6 +422,8 @@
 				DEVELOPMENT_TEAM = VGZGTYTT7T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BudgetApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -441,6 +456,8 @@
 				DEVELOPMENT_TEAM = VGZGTYTT7T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BudgetApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

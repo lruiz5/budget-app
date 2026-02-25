@@ -45,6 +45,7 @@ export const transactions = pgTable('transactions', {
   tellerAccountId: text('teller_account_id'),
   status: text('status').$type<'posted' | 'pending'>(),
   isNonEarned: boolean('is_non_earned').notNull().default(false),
+  tagCategoryType: text('tag_category_type'), // Optional reporting tag — reclassifies in Insights/Reports
   // Soft delete
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),

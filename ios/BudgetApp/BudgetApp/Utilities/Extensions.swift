@@ -168,6 +168,25 @@ extension Color {
     static let underBudget = Color.green
 }
 
+// MARK: - Custom Font
+
+extension Font {
+    static func outfit(_ size: CGFloat) -> Font {
+        .custom("Outfit", size: size)
+    }
+
+    // Semantic aliases matching SwiftUI's built-in text styles
+    static let outfitLargeTitle = Font.custom("Outfit", size: 34)
+    static let outfitTitle = Font.custom("Outfit", size: 28)
+    static let outfitTitle2 = Font.custom("Outfit", size: 22)
+    static let outfitTitle3 = Font.custom("Outfit", size: 20)
+    static let outfitHeadline = Font.custom("Outfit", size: 17)
+    static let outfitBody = Font.custom("Outfit", size: 17)
+    static let outfitSubheadline = Font.custom("Outfit", size: 15)
+    static let outfitCaption = Font.custom("Outfit", size: 12)
+    static let outfitCaption2 = Font.custom("Outfit", size: 11)
+}
+
 // MARK: - View Extensions
 
 extension View {

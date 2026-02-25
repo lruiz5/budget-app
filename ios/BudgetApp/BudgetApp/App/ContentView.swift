@@ -37,9 +37,9 @@ struct ContentView: View {
             if !networkMonitor.isConnected {
                 HStack(spacing: 6) {
                     Image(systemName: "wifi.slash")
-                        .font(.caption2)
+                        .font(.outfitCaption2)
                     Text("Offline — View Only")
-                        .font(.caption2)
+                        .font(.outfitCaption2)
                         .fontWeight(.semibold)
                 }
                 .foregroundStyle(.white)

@@ -12,13 +12,13 @@ struct DayDrillDownSheet: View {
                     // Total spending header
                     VStack(spacing: 4) {
                         Text("Total Spent")
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.secondary)
                         Text(formatCurrency(totalAmount))
-                            .font(.title)
+                            .font(.outfitTitle)
                             .fontWeight(.bold)
                         Text("\(transactions.count) transaction\(transactions.count == 1 ? "" : "s")")
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
@@ -32,11 +32,11 @@ struct DayDrillDownSheet: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(transaction.merchant ?? transaction.description)
-                                        .font(.subheadline)
+                                        .font(.outfitSubheadline)
                                         .lineLimit(1)
                                     if transaction.merchant != nil && !transaction.description.isEmpty {
                                         Text(transaction.description)
-                                            .font(.caption)
+                                            .font(.outfitCaption)
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
                                     }
@@ -45,7 +45,7 @@ struct DayDrillDownSheet: View {
                                 Spacer()
 
                                 Text(formatCurrency(transaction.amount))
-                                    .font(.subheadline)
+                                    .font(.outfitSubheadline)
                                     .fontWeight(.medium)
                             }
                             .padding(.vertical, 8)

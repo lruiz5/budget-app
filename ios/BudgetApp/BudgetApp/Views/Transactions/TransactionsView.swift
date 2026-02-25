@@ -177,11 +177,15 @@ struct TransactionsView: View {
                         await viewModel.loadDeletedTransactions()
                     }
                 }
+            }, onSplit: {
+                activeSheet = .splitTransaction(transaction)
             })
         case .categorizeTransaction(let transaction):
-            CategorizeTransactionSheet(transaction: transaction) { budgetItemId in
+            CategorizeTransactionSheet(transaction: transaction, onCategorize: { budgetItemId in
                 await viewModel.categorizeTransaction(transactionId: transaction.id, budgetItemId: budgetItemId)
-            }
+            }, onSplit: {
+                activeSheet = .splitTransaction(transaction)
+            })
         case .splitTransaction(let transaction):
             SplitTransactionSheet(
                 transaction: transaction,
@@ -429,7 +433,7 @@ struct TransactionsView: View {
                 Button("Clear All") {
                     clearAllFilters()
                 }
-                .font(.caption)
+                .font(.outfitCaption)
                 .foregroundStyle(.secondary)
             }
             .padding(.horizontal)
@@ -526,13 +530,24 @@ struct TransactionRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(transaction.merchant ?? transaction.description)
-                    .font(.body)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(transaction.merchant ?? transaction.description)
+                        .font(.outfitBody)
+                        .lineLimit(1)
+
+                    if let tag = transaction.tagCategoryType, !tag.isEmpty {
+                        Text(BudgetCategory.emojiForCategoryType(tag))
+                            .font(.outfitCaption2)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(4)
+                    }
+                }
 
                 if transaction.isDeleted {
                     Label("Deleted", systemImage: "trash")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.red)
                 } else if transaction.isSplit {
                     HStack(spacing: 4) {
@@ -542,14 +557,14 @@ struct TransactionRow: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
-                    .font(.caption)
+                    .font(.outfitCaption)
                 } else if let itemName = budgetItemName {
                     Text(itemName)
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                 } else if transaction.budgetItemId == nil, transaction.suggestedBudgetItemId != nil {
                     Text("Swipe right to categorize")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.blue)
                 }
             }
@@ -557,7 +572,7 @@ struct TransactionRow: View {
             Spacer()
 
             Text(transaction.displayAmount)
-                .font(.body)
+                .font(.outfitBody)
                 .fontWeight(.medium)
                 .foregroundStyle(transaction.type == .income ? .green : .primary)
         }
@@ -570,6 +585,7 @@ struct TransactionRow: View {
 struct CategorizeTransactionSheet: View {
     let transaction: Transaction
     let onCategorize: (Int) async -> Void
+    var onSplit: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var budgetVM = BudgetViewModel()
@@ -582,6 +598,17 @@ struct CategorizeTransactionSheet: View {
                     ProgressView("Loading categories...")
                 } else if let budget = budgetVM.budget {
                     List {
+                        if let onSplit {
+                            Section {
+                                Button {
+                                    dismiss()
+                                    onSplit()
+                                } label: {
+                                    Label("Split Transaction", systemImage: "arrow.triangle.branch")
+                                        .foregroundStyle(.purple)
+                                }
+                            }
+                        }
                         ForEach(budget.sortedCategoryKeys, id: \.self) { key in
                             if let category = budget.categories[key] {
                                 Section(category.displayName) {
@@ -599,10 +626,10 @@ struct CategorizeTransactionSheet: View {
                                                 Spacer()
                                                 VStack(alignment: .trailing, spacing: 2) {
                                                     Text(formatCurrency(item.remaining))
-                                                        .font(.caption)
+                                                        .font(.outfitCaption)
                                                         .foregroundStyle(.secondary)
                                                     Text("remaining")
-                                                        .font(.caption2)
+                                                        .font(.outfitCaption2)
                                                         .foregroundStyle(.tertiary)
                                                 }
                                             }
@@ -655,13 +682,13 @@ struct FilterChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(label)
-                .font(.caption)
+                .font(.outfitCaption)
                 .lineLimit(1)
             Button {
                 onRemove()
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.caption)
+                    .font(.outfitCaption)
             }
         }
         .padding(.horizontal, 10)

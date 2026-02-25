@@ -13,6 +13,7 @@ export interface Transaction {
   tellerAccountId?: string | null;
   status?: 'posted' | 'pending' | null;
   isNonEarned?: boolean;
+  tagCategoryType?: string | null;
 }
 
 export interface SplitTransaction {

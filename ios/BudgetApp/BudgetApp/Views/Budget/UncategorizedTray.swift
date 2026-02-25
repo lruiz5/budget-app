@@ -3,6 +3,7 @@ import SwiftUI
 struct FloatingTransactionPill: View {
     let transactions: [Transaction]
     @Binding var isExpanded: Bool
+    var onChipTap: ((Transaction) -> Void)?
 
     var body: some View {
         HStack(spacing: 8) {
@@ -12,6 +13,9 @@ struct FloatingTransactionPill: View {
                     HStack(spacing: 8) {
                         ForEach(transactions) { txn in
                             TransactionChip(transaction: txn)
+                                .onTapGesture {
+                                    onChipTap?(txn)
+                                }
                                 .onDrag {
                                     NSItemProvider(object: "txn:\(txn.id)" as NSString)
                                 }
@@ -29,7 +33,7 @@ struct FloatingTransactionPill: View {
                     }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
+                        .font(.outfitTitle3)
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -43,9 +47,9 @@ struct FloatingTransactionPill: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "tray.full.fill")
-                            .font(.caption)
+                            .font(.outfitCaption)
                         Text("\(transactions.count)")
-                            .font(.subheadline)
+                            .font(.outfitSubheadline)
                             .fontWeight(.semibold)
                     }
                     .foregroundStyle(.white)
@@ -74,11 +78,11 @@ private struct TransactionChip: View {
                     let name = transaction.merchant ?? String(transaction.description.prefix(12))
                     return name.count > 6 ? String(name.prefix(6)) + "..." : name
                 }())
-                .font(.caption)
+                .font(.outfitCaption)
                 .fontWeight(.medium)
                 .lineLimit(1)
             Text(transaction.displayAmount)
-                .font(.caption)
+                .font(.outfitCaption)
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 12)

@@ -12,12 +12,12 @@ struct OnboardingItemsStep: View {
             ScrollView {
                 VStack(spacing: 16) {
                     Text("Create Budget Items")
-                        .font(.title2)
+                        .font(.outfitTitle2)
                         .fontWeight(.bold)
                         .padding(.top, 24)
 
                     Text("Practice adding line items for your spending. Tap a suggestion to auto-fill, or type your own.")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
@@ -31,7 +31,7 @@ struct OnboardingItemsStep: View {
                             Text("Total: \(viewModel.totalPlanned.formatted())")
                                 .fontWeight(.semibold)
                         }
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .padding(12)
                         .background(Color.green.opacity(0.1))
                         .cornerRadius(10)
@@ -48,7 +48,7 @@ struct OnboardingItemsStep: View {
 
                     if let error = viewModel.error {
                         Text(error)
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.red)
                             .padding(.horizontal, 24)
                     }
@@ -113,13 +113,13 @@ struct OnboardingItemsStep: View {
             } label: {
                 HStack {
                     Text(displayName)
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
 
                     if !categoryItems.isEmpty {
                         Text("\(categoryItems.count)")
-                            .font(.caption2)
+                            .font(.outfitCaption2)
                             .fontWeight(.bold)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
@@ -131,7 +131,7 @@ struct OnboardingItemsStep: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
@@ -145,12 +145,12 @@ struct OnboardingItemsStep: View {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(.green)
-                                .font(.caption)
+                                .font(.outfitCaption)
                             Text(item.name)
-                                .font(.caption)
+                                .font(.outfitCaption)
                             Spacer()
                             Text(item.planned.formatted())
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, 12)
@@ -166,7 +166,7 @@ struct OnboardingItemsStep: View {
                                         itemPlanned = String(describing: suggestion.planned)
                                     } label: {
                                         Text("\(suggestion.name) \(suggestion.planned.formatted())")
-                                            .font(.caption)
+                                            .font(.outfitCaption)
                                             .padding(.horizontal, 10)
                                             .padding(.vertical, 6)
                                             .background(Color.green.opacity(0.12))
@@ -182,15 +182,15 @@ struct OnboardingItemsStep: View {
                     // Add item input
                     HStack(spacing: 8) {
                         TextField("Item name", text: $itemName)
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .textFieldStyle(.roundedBorder)
 
                         HStack(spacing: 2) {
                             Text("$")
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .foregroundStyle(.secondary)
                             TextField("0", text: $itemPlanned)
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .keyboardType(.decimalPad)
                                 .frame(width: 60)
                                 .textFieldStyle(.roundedBorder)

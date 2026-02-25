@@ -4,8 +4,8 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.9.0 (stable)  |  **iOS App:** v0.13.0 (pre-release) — **iOS app name: Happy Tusk**
-**Last Session:** 2026-02-23
+**Web App:** v1.10.0 (stable)  |  **iOS App:** v0.15.0 (pre-release) — **iOS app name: Happy Tusk**
+**Last Session:** 2026-02-25
 
 ## Instructions for Claude
 
@@ -71,7 +71,7 @@ Budget (month/year) → Buffer + Categories (Income, Giving, Household, Transpor
 | budgets | id, **userId**, month, year, buffer | Monthly containers |
 | budget_categories | id, budgetId, categoryType, name, order, emoji | Includes custom cats |
 | budget_items | id, categoryId, name, planned, order, **recurringPaymentId** | Line items |
-| transactions | id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, **isNonEarned**, deletedAt | Soft delete |
+| transactions | id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, **isNonEarned**, **tagCategoryType**, deletedAt | Soft delete, tag reclassifies in reports |
 | split_transactions | id, parentTransactionId, budgetItemId, amount, description, **isNonEarned** | Split across items |
 | recurring_payments | id, **userId**, name, amount, frequency, nextDueDate, fundedAmount, categoryType | Auto-reset on GET |
 | linked_accounts | id, **userId**, tellerAccountId, accessToken, institutionName, **syncEnabled**, syncStartDate | Teller bank accounts, per-account sync toggle |
@@ -115,6 +115,10 @@ const { userId } = authResult;
 
 All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cached as static singletons in `Formatters` enum (`Utilities/Extensions.swift`). Never create inline formatter instances — always use `Formatters.currency`, `Formatters.yearMonthDay`, `Formatters.dateMediumUTC`, etc.
 
+### iOS Font Pattern
+
+**Custom font: Outfit** (web uses Outfit). Applied globally via UIKit appearance in `BudgetAppApp.init()` + root `.font(.custom("Outfit", size: 17))`. All views use `Font` extension helpers: `.outfitHeadline`, `.outfitBody`, `.outfitCaption`, `.outfit(size)`, etc. Defined in `Extensions.swift`. Never use bare `.font(.outfitHeadline)` — always use `.font(.outfitHeadline)`.
+
 ## UI Patterns
 
 **Web colors:** `globals.css` tokens — Income=`text-success`, Expense/Over=`text-danger`, Primary=`bg-primary`
@@ -123,9 +127,9 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 ## Working Features
 
-**Web (v1.9.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller), recurring payments, budget copy/reset, insights (D3 charts + Sankey), monthly report, onboarding, tablet responsive.
+**Web (v1.10.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller), recurring payments, budget copy/reset, insights (D3 charts + Sankey), monthly report, tag reclassification, onboarding, tablet responsive.
 
-**iOS (v0.13.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page. See `ios/BudgetApp/CHANGELOG.md`.
+**iOS (v0.15.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification. See `ios/BudgetApp/CHANGELOG.md`.
 
 ## Common Issues
 
@@ -157,11 +161,11 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 ## Current State & Next Steps
 
-**Web:** v1.9.0 — stable, production-ready on Vercel
+**Web:** v1.10.0 — stable, production-ready on Vercel
 
-**iOS:** v0.13.0 — pre-release. Drag-to-categorize on budget page. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.15.0 — pre-release. Tag reclassification, custom Outfit font, tap-to-categorize, split from categorize/edit sheets. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 
-**Pending migration:** `isNonEarned` column rename — run SQL migration before `db:push`
+**Pending migration:** `tag_category_type` column — run `ALTER TABLE transactions ADD COLUMN tag_category_type text;` in Supabase SQL Editor, then `db:push` to confirm no drift
 
 **Next iOS work:**
 - Renew Apple Developer membership ($99/yr) — required for TestFlight + App Store upload

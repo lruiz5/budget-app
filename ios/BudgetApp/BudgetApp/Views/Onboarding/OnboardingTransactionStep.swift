@@ -8,16 +8,16 @@ struct OnboardingTransactionStep: View {
             ScrollView {
                 VStack(spacing: 20) {
                     Image(systemName: "creditcard.fill")
-                        .font(.system(size: 40))
+                        .font(.outfit(40))
                         .foregroundStyle(.green)
                         .padding(.top, 24)
 
                     Text("Add Your First Transaction")
-                        .font(.title2)
+                        .font(.outfitTitle2)
                         .fontWeight(.bold)
 
                     Text("Record a recent purchase to see how transactions work. You can skip this step if you prefer.")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
@@ -56,12 +56,12 @@ struct OnboardingTransactionStep: View {
                         // Budget item picker
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Budget Item")
-                                .font(.subheadline)
+                                .font(.outfitSubheadline)
                                 .foregroundStyle(.secondary)
 
                             if viewModel.createdItems.isEmpty {
                                 Text("No budget items created yet")
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.secondary)
                                     .padding(12)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -86,7 +86,7 @@ struct OnboardingTransactionStep: View {
                         if !suggestedTransactions.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Suggestions")
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.secondary)
 
                                 ForEach(suggestedTransactions, id: \.description) { suggestion in
@@ -97,10 +97,10 @@ struct OnboardingTransactionStep: View {
                                     } label: {
                                         HStack {
                                             Text(suggestion.description)
-                                                .font(.caption)
+                                                .font(.outfitCaption)
                                             Spacer()
                                             Text(suggestion.amount.formatted())
-                                                .font(.caption)
+                                                .font(.outfitCaption)
                                                 .foregroundStyle(.secondary)
                                         }
                                         .padding(10)
@@ -116,7 +116,7 @@ struct OnboardingTransactionStep: View {
 
                     if let error = viewModel.error {
                         Text(error)
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.red)
                             .padding(.horizontal, 24)
                     }
@@ -173,7 +173,7 @@ struct OnboardingTransactionStep: View {
                     }
                 } label: {
                     Text("Skip this step")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.bottom, 4)
