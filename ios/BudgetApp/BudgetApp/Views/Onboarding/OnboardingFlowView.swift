@@ -31,7 +31,7 @@ struct OnboardingFlowView: View {
         VStack(spacing: 12) {
             HStack {
                 Text("Step \(viewModel.currentStep) of \(viewModel.totalSteps)")
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
                 Spacer()
                 if viewModel.currentStep < viewModel.totalSteps {
@@ -41,7 +41,7 @@ struct OnboardingFlowView: View {
                             onComplete()
                         }
                     }
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
                 }
             }

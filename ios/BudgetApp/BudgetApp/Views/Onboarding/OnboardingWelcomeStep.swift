@@ -9,16 +9,16 @@ struct OnboardingWelcomeStep: View {
 
             VStack(spacing: 20) {
                 Image(systemName: "hand.wave.fill")
-                    .font(.system(size: 72))
+                    .font(.outfit(72))
                     .foregroundStyle(.green)
 
                 Text("Welcome to Budget App!")
-                    .font(.largeTitle)
+                    .font(.outfitLargeTitle)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
 
                 Text("Take control of your money with zero-based budgeting. We'll help you set up your first budget in just a few minutes.")
-                    .font(.body)
+                    .font(.outfitBody)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)

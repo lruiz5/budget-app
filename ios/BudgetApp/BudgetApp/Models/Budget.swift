@@ -122,7 +122,11 @@ struct BudgetCategory: Codable, Identifiable {
     }
 
     var categoryEmoji: String {
-        switch categoryType.lowercased() {
+        Self.emojiForCategoryType(categoryType, customEmoji: emoji)
+    }
+
+    static func emojiForCategoryType(_ type: String, customEmoji: String? = nil) -> String {
+        switch type.lowercased() {
         case "income": return "💰"
         case "giving": return "🤲"
         case "household": return "🏠"
@@ -131,7 +135,7 @@ struct BudgetCategory: Codable, Identifiable {
         case "personal": return "👤"
         case "insurance": return "🛡️"
         case "saving": return "💵"
-        default: return emoji ?? "📁"
+        default: return customEmoji ?? "📁"
         }
     }
 

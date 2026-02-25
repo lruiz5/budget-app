@@ -59,19 +59,19 @@ struct CategoryDrillDownSheet: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Planned")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(category.planned))
-                        .font(.title3)
+                        .font(.outfitTitle3)
                         .fontWeight(.semibold)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Actual")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(category.actual))
-                        .font(.title3)
+                        .font(.outfitTitle3)
                         .fontWeight(.semibold)
                         .foregroundStyle(category.actual > category.planned ? .red : .primary)
                 }
@@ -81,7 +81,7 @@ struct CategoryDrillDownSheet: View {
             HStack {
                 Spacer()
                 Text(diff >= 0 ? "\(formatCurrency(diff)) under budget" : "\(formatCurrency(abs(diff))) over budget")
-                    .font(.subheadline)
+                    .font(.outfitSubheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(diff >= 0 ? .green : .red)
                 Spacer()
@@ -95,7 +95,7 @@ struct CategoryDrillDownSheet: View {
     private func itemRow(_ item: BudgetItem) -> some View {
         HStack {
             Text(item.name)
-                .font(.subheadline)
+                .font(.outfitSubheadline)
                 .lineLimit(1)
 
             Spacer()
@@ -103,17 +103,17 @@ struct CategoryDrillDownSheet: View {
             VStack(alignment: .trailing, spacing: 2) {
                 HStack(spacing: 12) {
                     Text(formatCurrency(item.planned))
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(item.actual))
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(item.isOverBudget ? .red : .primary)
                 }
 
                 let diff = item.planned - item.actual
                 Text(diff >= 0 ? "\(formatCurrency(diff)) left" : "\(formatCurrency(abs(diff))) over")
-                    .font(.caption2)
+                    .font(.outfitCaption2)
                     .foregroundStyle(diff >= 0 ? .green : .red)
             }
         }

@@ -14,15 +14,15 @@ struct SettingsView: View {
                 Section {
                     HStack {
                         Image(systemName: "person.circle.fill")
-                            .font(.largeTitle)
+                            .font(.outfitLargeTitle)
                             .foregroundStyle(.green)
 
                         VStack(alignment: .leading) {
                             Text(userDisplayName)
-                                .font(.headline)
+                                .font(.outfitHeadline)
                             if let email = userEmail {
                                 Text(email)
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.secondary)
                             }
                         }

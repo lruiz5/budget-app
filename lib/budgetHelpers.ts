@@ -64,6 +64,7 @@ export function transformDbBudgetToAppBudget(dbBudget: any): Budget {
             type: t.type,
             merchant: t.merchant,
             isNonEarned: t.isNonEarned || false,
+            tagCategoryType: t.tagCategoryType || null,
           })),
           splitTransactions: (item.splitTransactions || []).map((s: any) => ({
             id: s.id.toString(),

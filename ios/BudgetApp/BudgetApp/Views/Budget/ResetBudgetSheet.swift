@@ -35,7 +35,7 @@ struct ResetBudgetSheet: View {
         List {
             Section {
                 Text("How would you like to reset your budget?")
-                    .font(.subheadline)
+                    .font(.outfitSubheadline)
                     .foregroundStyle(.secondary)
             }
 
@@ -45,11 +45,11 @@ struct ResetBudgetSheet: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Zero out all planned amounts")
-                            .font(.body)
+                            .font(.outfitBody)
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                         Text("Keep your categories and items, but set all planned amounts to $0.00")
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
@@ -60,11 +60,11 @@ struct ResetBudgetSheet: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Replace with last month's budget")
-                            .font(.body)
+                            .font(.outfitBody)
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                         Text("Delete current items and copy everything from \(previousMonthName)")
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
@@ -80,7 +80,7 @@ struct ResetBudgetSheet: View {
         List {
             Section {
                 Text(confirmationText(for: mode))
-                    .font(.subheadline)
+                    .font(.outfitSubheadline)
                     .foregroundStyle(.secondary)
             }
 

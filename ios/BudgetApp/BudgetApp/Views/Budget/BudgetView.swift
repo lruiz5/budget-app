@@ -7,6 +7,8 @@ enum BudgetActiveSheet: Identifiable {
     case addItem(categoryId: Int)
     case addCategory
     case resetBudget
+    case categorizeTransaction(Transaction)
+    case splitTransaction(Transaction)
 
     var id: String {
         switch self {
@@ -14,6 +16,8 @@ enum BudgetActiveSheet: Identifiable {
         case .addItem(let catId): return "add-\(catId)"
         case .addCategory: return "add-category"
         case .resetBudget: return "reset-budget"
+        case .categorizeTransaction(let t): return "categorize-\(t.id)"
+        case .splitTransaction(let t): return "split-\(t.id)"
         }
     }
 }
@@ -83,6 +87,20 @@ struct BudgetView: View {
                         await viewModel.resetBudget(mode: mode)
                     })
                 }
+            case .categorizeTransaction(let transaction):
+                CategorizeTransactionSheet(transaction: transaction, onCategorize: { budgetItemId in
+                    await viewModel.assignTransaction(transactionId: transaction.id, toBudgetItemId: budgetItemId)
+                }, onSplit: {
+                    activeSheet = .splitTransaction(transaction)
+                })
+            case .splitTransaction(let transaction):
+                SplitTransactionSheet(
+                    transaction: transaction,
+                    existingSplits: transaction.splits ?? [],
+                    onComplete: {
+                        Task { await viewModel.loadBudget() }
+                    }
+                )
             }
         }
         .confirmationDialog(
@@ -162,7 +180,7 @@ struct BudgetView: View {
                     activeSheet = .addCategory
                 } label: {
                     Label("Add Category", systemImage: "plus.circle.fill")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.blue)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
@@ -176,7 +194,7 @@ struct BudgetView: View {
                     activeSheet = .resetBudget
                 } label: {
                     Label("Reset Budget", systemImage: "arrow.counterclockwise")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
@@ -197,7 +215,10 @@ struct BudgetView: View {
             if !viewModel.uncategorizedTransactions.isEmpty {
                 FloatingTransactionPill(
                     transactions: viewModel.uncategorizedTransactions,
-                    isExpanded: $isTrayExpanded
+                    isExpanded: $isTrayExpanded,
+                    onChipTap: { transaction in
+                        activeSheet = .categorizeTransaction(transaction)
+                    }
                 )
                 .padding(.bottom, 2) // sit just above the banner
                 .padding(.trailing, 4)
@@ -268,17 +289,17 @@ struct BudgetSummaryCard: View {
             // Buffer (tappable to edit)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Buffer")
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
 
                 if isEditingBuffer {
                     HStack(spacing: 2) {
                         Text("$")
-                            .font(.title3)
+                            .font(.outfitTitle3)
                             .foregroundStyle(.secondary)
                         TextField("0.00", text: $editedBufferText)
                             .keyboardType(.decimalPad)
-                            .font(.title3)
+                            .font(.outfitTitle3)
                             .fontWeight(.semibold)
                             .frame(width: 80)
                             .textFieldStyle(.roundedBorder)
@@ -287,7 +308,7 @@ struct BudgetSummaryCard: View {
                     }
                 } else {
                     Text(formatCurrency(buffer))
-                        .font(.title2)
+                        .font(.outfitTitle2)
                         .fontWeight(.semibold)
                 }
             }
@@ -377,17 +398,17 @@ struct MiniProgressRing: View {
                     .rotationEffect(.degrees(-90))
 
                 Text(percentText)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.outfit(11)).fontWeight(.semibold)
                     .foregroundStyle(isOver ? .red : .primary)
             }
             .frame(width: 44, height: 44)
 
             Text(label)
-                .font(.caption2)
+                .font(.outfitCaption2)
                 .foregroundStyle(.secondary)
 
             Text(formatCompact(actual))
-                .font(.caption2)
+                .font(.outfitCaption2)
                 .fontWeight(.medium)
                 .foregroundStyle(isOver ? .red : .primary)
         }
@@ -426,10 +447,10 @@ struct LeftToBudgetBanner: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: iconName)
-                .font(.subheadline)
+                .font(.outfitSubheadline)
 
             Text(bannerText)
-                .font(.subheadline)
+                .font(.outfitSubheadline)
                 .fontWeight(.medium)
         }
         .frame(maxWidth: .infinity)

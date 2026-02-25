@@ -14,7 +14,7 @@ struct ToastView: View {
                 .foregroundStyle(.white)
 
             Text(message)
-                .font(.subheadline)
+                .font(.outfitSubheadline)
                 .fontWeight(.medium)
                 .foregroundStyle(.white)
         }

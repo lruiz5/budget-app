@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { BudgetItem } from '@/types/budget';
+import { getCategoryEmoji } from '@/lib/chartColors';
 
 interface LinkedAccount {
   id: number;
@@ -9,6 +10,12 @@ interface LinkedAccount {
   institutionName: string;
   lastFour: string;
   accountSubtype: string;
+}
+
+export interface CategoryOption {
+  key: string;
+  name: string;
+  emoji?: string | null;
 }
 
 export interface TransactionToEdit {
@@ -20,6 +27,7 @@ export interface TransactionToEdit {
   amount: number;
   type: 'income' | 'expense';
   merchant?: string | null;
+  tagCategoryType?: string | null;
 }
 
 interface AddTransactionModalProps {
@@ -33,6 +41,7 @@ interface AddTransactionModalProps {
     amount: number;
     type: 'income' | 'expense';
     merchant?: string;
+    tagCategoryType?: string;
   }) => void;
   onEditTransaction?: (transaction: {
     id: number;
@@ -43,9 +52,11 @@ interface AddTransactionModalProps {
     amount: number;
     type: 'income' | 'expense';
     merchant?: string;
+    tagCategoryType?: string;
   }) => void;
   onDeleteTransaction?: (id: number) => void;
   budgetItems: { category: string; items: BudgetItem[] }[];
+  categories?: CategoryOption[];
   linkedAccounts?: LinkedAccount[];
   transactionToEdit?: TransactionToEdit | null;
 }
@@ -57,6 +68,7 @@ export default function AddTransactionModal({
   onEditTransaction,
   onDeleteTransaction,
   budgetItems,
+  categories = [],
   linkedAccounts = [],
   transactionToEdit,
 }: AddTransactionModalProps) {
@@ -66,6 +78,7 @@ export default function AddTransactionModal({
   const [merchant, setMerchant] = useState('');
   const [linkedAccountId, setLinkedAccountId] = useState<string>('');
   const [budgetItemId, setBudgetItemId] = useState('');
+  const [tagCategoryType, setTagCategoryType] = useState<string>('');
 
   const isEditMode = !!transactionToEdit;
 
@@ -78,6 +91,7 @@ export default function AddTransactionModal({
       setMerchant(transactionToEdit.merchant || '');
       setLinkedAccountId(transactionToEdit.linkedAccountId?.toString() || '');
       setBudgetItemId(transactionToEdit.budgetItemId?.toString() || '');
+      setTagCategoryType(transactionToEdit.tagCategoryType || '');
     } else {
       // Reset form for new transaction
       setType('expense');
@@ -86,6 +100,7 @@ export default function AddTransactionModal({
       setMerchant('');
       setLinkedAccountId('');
       setBudgetItemId('');
+      setTagCategoryType('');
     }
   }, [transactionToEdit, isOpen]);
 
@@ -108,6 +123,7 @@ export default function AddTransactionModal({
       amount: parseFloat(amount),
       type,
       merchant: merchant.trim() || undefined,
+      tagCategoryType: tagCategoryType || undefined,
     };
 
     if (isEditMode && onEditTransaction) {
@@ -126,6 +142,7 @@ export default function AddTransactionModal({
     setMerchant('');
     setLinkedAccountId('');
     setBudgetItemId('');
+    setTagCategoryType('');
     onClose();
   };
 
@@ -280,6 +297,27 @@ export default function AddTransactionModal({
               ))}
             </select>
           </div>
+
+          {/* Report As Tag (optional) */}
+          {categories.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">
+                Report as <span className="text-text-tertiary text-xs">(optional)</span>
+              </label>
+              <select
+                value={tagCategoryType}
+                onChange={(e) => setTagCategoryType(e.target.value)}
+                className="w-full px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
+              >
+                <option value="">None — use budget item category</option>
+                {categories.map((cat) => (
+                  <option key={cat.key} value={cat.key}>
+                    {getCategoryEmoji(cat.key, cat.emoji)} {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex gap-3 mt-6">
             <button

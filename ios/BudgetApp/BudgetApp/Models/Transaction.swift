@@ -14,6 +14,7 @@ struct Transaction: Codable, Identifiable, Equatable {
     var suggestedBudgetItemId: Int?
     let fromPreviousMonth: Bool?
     let isNonEarned: Bool
+    let tagCategoryType: String?
     var splits: [SplitTransaction]?
 
     var isDeleted: Bool {
@@ -29,7 +30,7 @@ struct Transaction: Codable, Identifiable, Equatable {
     }
 
     // Memberwise initializer for previews and testing
-    init(id: Int, budgetItemId: Int? = nil, linkedAccountId: Int? = nil, date: Date = Date(), description: String, amount: Decimal, type: TransactionType, merchant: String? = nil, tellerId: String? = nil, deletedAt: Date? = nil, suggestedBudgetItemId: Int? = nil, fromPreviousMonth: Bool? = nil, isNonEarned: Bool = false, splits: [SplitTransaction]? = nil) {
+    init(id: Int, budgetItemId: Int? = nil, linkedAccountId: Int? = nil, date: Date = Date(), description: String, amount: Decimal, type: TransactionType, merchant: String? = nil, tellerId: String? = nil, deletedAt: Date? = nil, suggestedBudgetItemId: Int? = nil, fromPreviousMonth: Bool? = nil, isNonEarned: Bool = false, tagCategoryType: String? = nil, splits: [SplitTransaction]? = nil) {
         self.id = id
         self.budgetItemId = budgetItemId
         self.linkedAccountId = linkedAccountId
@@ -43,12 +44,13 @@ struct Transaction: Codable, Identifiable, Equatable {
         self.suggestedBudgetItemId = suggestedBudgetItemId
         self.fromPreviousMonth = fromPreviousMonth
         self.isNonEarned = isNonEarned
+        self.tagCategoryType = tagCategoryType
         self.splits = splits
     }
 
     enum CodingKeys: String, CodingKey {
         case id, budgetItemId, linkedAccountId, date, description, amount, type, merchant
-        case tellerId, deletedAt, suggestedBudgetItemId, fromPreviousMonth, isNonEarned, splits
+        case tellerId, deletedAt, suggestedBudgetItemId, fromPreviousMonth, isNonEarned, tagCategoryType, splits
     }
 
     init(from decoder: Decoder) throws {
@@ -63,6 +65,7 @@ struct Transaction: Codable, Identifiable, Equatable {
         suggestedBudgetItemId = try container.decodeIfPresent(Int.self, forKey: .suggestedBudgetItemId)
         fromPreviousMonth = try container.decodeIfPresent(Bool.self, forKey: .fromPreviousMonth)
         isNonEarned = try container.decodeIfPresent(Bool.self, forKey: .isNonEarned) ?? false
+        tagCategoryType = try container.decodeIfPresent(String.self, forKey: .tagCategoryType)
         splits = try container.decodeIfPresent([SplitTransaction].self, forKey: .splits)
 
         // Handle numeric string from PostgreSQL

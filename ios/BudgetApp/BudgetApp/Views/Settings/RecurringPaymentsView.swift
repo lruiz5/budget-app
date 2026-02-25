@@ -161,17 +161,17 @@ struct RecurringPaymentRow: View {
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(payment.name)
-                            .font(.body)
+                            .font(.outfitBody)
                             .fontWeight(.medium)
 
                         HStack(spacing: 4) {
                             Text(payment.frequency.displayName)
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .foregroundStyle(.secondary)
 
                             if payment.frequency != .monthly {
                                 Text("(\(formatCurrency(payment.monthlyContribution))/mo)")
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -183,12 +183,12 @@ struct RecurringPaymentRow: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     HStack(spacing: 4) {
                         Text(formatCurrency(payment.amount))
-                            .font(.body)
+                            .font(.outfitBody)
                             .fontWeight(.medium)
 
                         if payment.progress >= 1.0 {
                             Text("Paid")
-                                .font(.caption2)
+                                .font(.outfitCaption2)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 6)
@@ -198,7 +198,7 @@ struct RecurringPaymentRow: View {
                     }
 
                     Text("Due \(formatDate(payment.nextDueDate))")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(dueDateColor)
                 }
             }
@@ -209,13 +209,13 @@ struct RecurringPaymentRow: View {
 
                 HStack {
                     Text("\(formatCurrency(payment.fundedAmount)) saved")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
 
                     Spacer()
 
                     Text("\(formatCurrency(payment.remaining)) to go")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -395,13 +395,13 @@ struct EditRecurringPaymentSheet: View {
 
                         HStack {
                             Text("\(formatCurrency(payment.fundedAmount)) of \(formatCurrency(payment.amount))")
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .foregroundStyle(.secondary)
 
                             Spacer()
 
                             Text("\(Int(payment.progress * 100))%")
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .foregroundStyle(.secondary)
                         }
                     }

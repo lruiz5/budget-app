@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
   const { userId } = authResult;
 
   const body = await request.json();
-  const { budgetItemId, linkedAccountId, date, description, amount, type, merchant, checkNumber, isNonEarned } = body;
+  const { budgetItemId, linkedAccountId, date, description, amount, type, merchant, checkNumber, isNonEarned, tagCategoryType } = body;
 
   if (!budgetItemId || !date || !description || amount === undefined || !type) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
       merchant: merchant || null,
       checkNumber: checkNumber || null,
       isNonEarned: isNonEarned || false,
+      tagCategoryType: tagCategoryType || null,
     })
     .returning();
 
@@ -121,7 +122,7 @@ export async function PUT(request: NextRequest) {
   const { userId } = authResult;
 
   const body = await request.json();
-  const { id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, isNonEarned } = body;
+  const { id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, isNonEarned, tagCategoryType } = body;
 
   if (!id) {
     return NextResponse.json({ error: 'Missing transaction id' }, { status: 400 });
@@ -163,6 +164,9 @@ export async function PUT(request: NextRequest) {
   }
   if (isNonEarned !== undefined) {
     updateData.isNonEarned = isNonEarned;
+  }
+  if (tagCategoryType !== undefined) {
+    updateData.tagCategoryType = tagCategoryType || null;
   }
 
   const [updated] = await db
@@ -239,6 +243,7 @@ export async function GET(request: NextRequest) {
       type: transaction.type,
       merchant: transaction.merchant,
       isNonEarned: transaction.isNonEarned,
+      tagCategoryType: transaction.tagCategoryType,
     });
   }
 
@@ -288,6 +293,7 @@ export async function GET(request: NextRequest) {
       type: txn.type,
       merchant: txn.merchant,
       isNonEarned: txn.isNonEarned,
+      tagCategoryType: txn.tagCategoryType,
       deletedAt: txn.deletedAt,
     }));
 

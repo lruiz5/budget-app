@@ -75,8 +75,9 @@ struct CreateTransactionRequest: Encodable {
     let type: String
     let merchant: String?
     let isNonEarned: Bool?
+    let tagCategoryType: String?
 
-    init(budgetItemId: Int, date: Date, description: String, amount: Decimal, type: TransactionType, merchant: String? = nil, isNonEarned: Bool = false) {
+    init(budgetItemId: Int, date: Date, description: String, amount: Decimal, type: TransactionType, merchant: String? = nil, isNonEarned: Bool = false, tagCategoryType: String? = nil) {
         self.budgetItemId = budgetItemId
         self.date = Formatters.yearMonthDay.string(from: date)
         self.description = description
@@ -84,6 +85,7 @@ struct CreateTransactionRequest: Encodable {
         self.type = type.rawValue
         self.merchant = merchant
         self.isNonEarned = isNonEarned ? true : nil
+        self.tagCategoryType = tagCategoryType
     }
 }
 
@@ -96,9 +98,10 @@ struct UpdateTransactionRequest: Encodable {
     let type: String?
     let merchant: String?
     let isNonEarned: Bool?
+    let tagCategoryType: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, budgetItemId, date, description, amount, type, merchant, isNonEarned
+        case id, budgetItemId, date, description, amount, type, merchant, isNonEarned, tagCategoryType
     }
 
     // Custom encoding to OMIT nil fields (not encode as null)
@@ -113,9 +116,10 @@ struct UpdateTransactionRequest: Encodable {
         try container.encodeIfPresent(type, forKey: .type)
         try container.encodeIfPresent(merchant, forKey: .merchant)
         try container.encodeIfPresent(isNonEarned, forKey: .isNonEarned)
+        try container.encodeIfPresent(tagCategoryType, forKey: .tagCategoryType)
     }
 
-    init(id: Int, budgetItemId: Int? = nil, date: Date? = nil, description: String? = nil, amount: Decimal? = nil, type: TransactionType? = nil, merchant: String? = nil, isNonEarned: Bool? = nil) {
+    init(id: Int, budgetItemId: Int? = nil, date: Date? = nil, description: String? = nil, amount: Decimal? = nil, type: TransactionType? = nil, merchant: String? = nil, isNonEarned: Bool? = nil, tagCategoryType: String? = nil) {
         self.id = id
         self.budgetItemId = budgetItemId
         if let date = date {
@@ -128,6 +132,7 @@ struct UpdateTransactionRequest: Encodable {
         self.type = type?.rawValue
         self.merchant = merchant
         self.isNonEarned = isNonEarned
+        self.tagCategoryType = tagCategoryType
     }
 }
 

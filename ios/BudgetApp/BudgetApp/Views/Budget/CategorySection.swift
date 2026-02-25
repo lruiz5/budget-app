@@ -81,7 +81,7 @@ struct CategorySection: View {
                     onAddItem()
                 } label: {
                     Label("Add Item", systemImage: "plus.circle")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 16)
@@ -108,24 +108,24 @@ struct CategorySection: View {
         } label: {
             HStack(spacing: 8) {
                 Text(category.displayName)
-                    .font(.headline)
+                    .font(.outfitHeadline)
                     .foregroundStyle(.primary)
 
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(formatCurrency(category.actual))
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(isOverBudget ? .red : .primary)
 
                     Text("of \(formatCurrency(category.planned))")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                 }
 
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 8)
@@ -172,7 +172,7 @@ struct BudgetItemRow: View {
             HStack {
                 if isEditingName {
                     TextField("Item name", text: $editedNameText)
-                        .font(.body)
+                        .font(.outfitBody)
                         .textFieldStyle(.roundedBorder)
                         .focused($isNameFocused)
                         .onSubmit { commitNameEdit() }
@@ -188,12 +188,12 @@ struct BudgetItemRow: View {
                     } label: {
                         HStack(spacing: 4) {
                             Text(item.name)
-                                .font(.body)
+                                .font(.outfitBody)
                                 .foregroundStyle(.primary)
 
                             if item.recurringPaymentId != nil {
                                 Text("🔄")
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                             }
                         }
                     }
@@ -206,11 +206,11 @@ struct BudgetItemRow: View {
                     // Inline planned amount editing
                     HStack(spacing: 4) {
                         Text("$")
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.secondary)
                         TextField("0.00", text: $editedPlannedText)
                             .keyboardType(.decimalPad)
-                            .font(.subheadline)
+                            .font(.outfitSubheadline)
                             .fontWeight(.medium)
                             .frame(width: 80)
                             .textFieldStyle(.roundedBorder)
@@ -237,12 +237,12 @@ struct BudgetItemRow: View {
                     } label: {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text(formatCurrency(item.actual))
-                                .font(.subheadline)
+                                .font(.outfitSubheadline)
                                 .fontWeight(.medium)
                                 .foregroundStyle(item.isOverBudget ? .red : .primary)
 
                             Text(formatCurrency(item.remaining))
-                                .font(.caption)
+                                .font(.outfitCaption)
                                 .foregroundStyle(item.isOverBudget ? .red : .secondary)
                         }
                     }

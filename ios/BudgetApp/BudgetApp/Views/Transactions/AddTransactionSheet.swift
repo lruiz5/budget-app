@@ -13,6 +13,7 @@ struct AddTransactionSheet: View {
     @State private var merchant = ""
     @State private var selectedBudgetItemId: Int?
     @State private var isNonEarned = false
+    @State private var tagCategoryType: String = ""
     @State private var isSaving = false
     @State private var error: String?
 
@@ -70,7 +71,7 @@ struct AddTransactionSheet: View {
                                                     .foregroundStyle(.primary)
                                                 Spacer()
                                                 Text(formatCurrency(item.remaining))
-                                                    .font(.caption)
+                                                    .font(.outfitCaption)
                                                     .foregroundStyle(.secondary)
                                                 if selectedBudgetItemId == item.id {
                                                     Image(systemName: "checkmark")
@@ -79,6 +80,19 @@ struct AddTransactionSheet: View {
                                             }
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if let budget = budgetVM.budget {
+                    Section("Report As (optional)") {
+                        Picker("Category", selection: $tagCategoryType) {
+                            Text("None — use budget item category").tag("")
+                            ForEach(budget.sortedCategoryKeys, id: \.self) { key in
+                                if let category = budget.categories[key] {
+                                    Text(category.displayName).tag(key)
                                 }
                             }
                         }
@@ -139,7 +153,8 @@ struct AddTransactionSheet: View {
                     amount: amountDecimal,
                     type: transactionType,
                     merchant: merchant.isEmpty ? nil : merchant,
-                    isNonEarned: isNonEarned
+                    isNonEarned: isNonEarned,
+                    tagCategoryType: tagCategoryType.isEmpty ? nil : tagCategoryType
                 )
                 let created = try await TransactionService.shared.createTransaction(request)
                 await MainActor.run {

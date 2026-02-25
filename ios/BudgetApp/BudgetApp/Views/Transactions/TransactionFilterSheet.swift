@@ -75,7 +75,7 @@ struct TransactionFilterSheet: View {
                        let max = Decimal(string: filterMaxAmount),
                        min > max {
                         Text("Min is greater than max — both still apply independently")
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.orange)
                     }
                 }
@@ -91,7 +91,7 @@ struct TransactionFilterSheet: View {
                                 Text("Manual Entry")
                                     .foregroundStyle(.primary)
                                 Text("Transactions added manually")
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -115,7 +115,7 @@ struct TransactionFilterSheet: View {
                                         Text(account.displayName)
                                             .foregroundStyle(.primary)
                                         Text(account.institutionName)
-                                            .font(.caption)
+                                            .font(.outfitCaption)
                                             .foregroundStyle(.secondary)
                                     }
                                     Spacer()

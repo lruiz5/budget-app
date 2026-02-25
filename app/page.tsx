@@ -6,7 +6,7 @@ import BudgetHeader from "@/components/BudgetHeader";
 import BufferSection from "@/components/BufferSection";
 import BudgetSection from "@/components/BudgetSection";
 import BudgetSummary from "@/components/BudgetSummary";
-import AddTransactionModal, { TransactionToEdit } from "@/components/AddTransactionModal";
+import AddTransactionModal, { TransactionToEdit, CategoryOption } from "@/components/AddTransactionModal";
 import MonthlyReportModal from "@/components/MonthlyReportModal";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Budget, Transaction, BudgetItem, DEFAULT_CATEGORIES } from "@/types/budget";
@@ -163,6 +163,16 @@ function Home() {
     return categories.filter(c => c.items.length > 0);
   };
 
+  // Get category options for tag picker
+  const getCategoryOptions = (): CategoryOption[] => {
+    if (!budget) return [];
+    return Object.entries(budget.categories).map(([key, category]) => ({
+      key,
+      name: category.name,
+      emoji: category.emoji,
+    }));
+  };
+
   // Handle clicking on a budget item to show details in sidebar
   const handleItemClick = (item: BudgetItem, categoryName: string) => {
     setSelectedBudgetItem({ item, categoryName });
@@ -179,6 +189,7 @@ function Home() {
       amount: transaction.amount,
       type: transaction.type,
       merchant: transaction.merchant,
+      tagCategoryType: transaction.tagCategoryType,
     });
     setIsEditModalOpen(true);
   };
@@ -192,6 +203,7 @@ function Home() {
     amount: number;
     type: 'income' | 'expense';
     merchant?: string;
+    tagCategoryType?: string;
   }) => {
     try {
       const response = await fetch('/api/transactions', {
@@ -662,6 +674,7 @@ function Home() {
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={handleDeleteFromModal}
             budgetItems={getAllBudgetItems()}
+            categories={getCategoryOptions()}
             linkedAccounts={linkedAccounts}
             transactionToEdit={transactionToEdit}
           />

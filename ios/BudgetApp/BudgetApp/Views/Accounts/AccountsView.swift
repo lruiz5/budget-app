@@ -106,7 +106,7 @@ struct AccountsView: View {
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
-                                .font(.body)
+                                .font(.outfitBody)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -141,20 +141,20 @@ struct AccountCard: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(account.accountName)
-                    .font(.body)
+                    .font(.outfitBody)
                     .fontWeight(.medium)
 
                 HStack(spacing: 8) {
                     Text(account.accountTypeDisplay)
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
 
                     Text("·")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.tertiary)
 
                     Text(account.lastSyncedDisplay)
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -163,7 +163,7 @@ struct AccountCard: View {
 
             if let lastFour = account.lastFour {
                 Text("••••\(lastFour)")
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
@@ -195,12 +195,12 @@ struct AccountDetailSheet: View {
                     InstitutionIcon(name: account.institutionName, size: 56)
 
                     Text(account.accountName)
-                        .font(.title3)
+                        .font(.outfitTitle3)
                         .fontWeight(.semibold)
 
                     if let lastFour = account.lastFour {
                         Text("••••\(lastFour)")
-                            .font(.subheadline)
+                            .font(.outfitSubheadline)
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
@@ -212,15 +212,15 @@ struct AccountDetailSheet: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Transaction Streaming")
-                                .font(.headline)
+                                .font(.outfitHeadline)
 
                             if isSyncEnabled, let dateStr = viewModel.selectedAccount?.syncStartDateDisplay ?? account.syncStartDateDisplay {
                                 Text("Streaming since \(dateStr)")
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.green)
                             } else {
                                 Text("Turn on to begin syncing transactions automatically")
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -279,15 +279,15 @@ struct AddAccountSheet: View {
         NavigationStack {
             VStack(spacing: 20) {
                 Image(systemName: "building.columns.fill")
-                    .font(.system(size: 60))
+                    .font(.outfit(60))
                     .foregroundStyle(.green)
 
                 Text("Connect Your Bank")
-                    .font(.title2)
+                    .font(.outfitTitle2)
                     .fontWeight(.semibold)
 
                 Text("We use Teller to securely connect to your bank. Your credentials are never stored on our servers.")
-                    .font(.body)
+                    .font(.outfitBody)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
@@ -405,7 +405,7 @@ struct InstitutionIcon: View {
 
     private var defaultIcon: some View {
         Image(systemName: "building.columns.fill")
-            .font(.system(size: size * 0.5))
+            .font(.outfit(size * 0.5))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
             .background(Color.green, in: Circle())

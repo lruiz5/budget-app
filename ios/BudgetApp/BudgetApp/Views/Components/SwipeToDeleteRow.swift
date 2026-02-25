@@ -36,7 +36,7 @@ struct SwipeToDeleteRow<Content: View>: View {
                     onDelete()
                 } label: {
                     Image(systemName: "trash.fill")
-                        .font(.title3)
+                        .font(.outfitTitle3)
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }

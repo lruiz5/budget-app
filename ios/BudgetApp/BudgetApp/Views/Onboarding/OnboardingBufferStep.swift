@@ -13,16 +13,16 @@ struct OnboardingBufferStep: View {
             ScrollView {
                 VStack(spacing: 24) {
                     Image(systemName: "banknote.fill")
-                        .font(.system(size: 48))
+                        .font(.outfit(48))
                         .foregroundStyle(.green)
                         .padding(.top, 32)
 
                     Text("Set Your Starting Balance")
-                        .font(.title2)
+                        .font(.outfitTitle2)
                         .fontWeight(.bold)
 
                     Text("How much money do you have right now? This becomes your buffer — the starting point for your budget.")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
@@ -30,11 +30,11 @@ struct OnboardingBufferStep: View {
                     // Amount input
                     HStack(spacing: 4) {
                         Text("$")
-                            .font(.system(size: 48, weight: .bold))
+                            .font(.outfit(48)).fontWeight(.bold)
                             .foregroundStyle(.secondary)
 
                         TextField("0", text: $viewModel.bufferAmount)
-                            .font(.system(size: 48, weight: .bold))
+                            .font(.outfit(48)).fontWeight(.bold)
                             .keyboardType(.decimalPad)
                             .focused($isAmountFocused)
                             .multilineTextAlignment(.leading)
@@ -44,18 +44,18 @@ struct OnboardingBufferStep: View {
 
                     if bufferDecimal > 0 {
                         Text("Your starting balance: \(bufferDecimal.formatted())")
-                            .font(.subheadline)
+                            .font(.outfitSubheadline)
                             .foregroundStyle(.green)
                             .fontWeight(.medium)
                     }
 
                     Text("You can always change this later.")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
 
                     if let error = viewModel.error {
                         Text(error)
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.red)
                             .padding(.horizontal, 24)
                     }

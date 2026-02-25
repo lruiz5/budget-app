@@ -8,12 +8,12 @@ struct OnboardingConceptsStep: View {
             ScrollView {
                 VStack(spacing: 24) {
                     Text("Zero-Based Budgeting")
-                        .font(.title2)
+                        .font(.outfitTitle2)
                         .fontWeight(.bold)
                         .padding(.top, 24)
 
                     Text("Give every dollar a job so nothing slips through the cracks.")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
@@ -83,7 +83,7 @@ struct OnboardingConceptsStep: View {
     private func conceptCard(icon: String, title: String, description: String) -> some View {
         HStack(spacing: 16) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.outfitTitle2)
                 .foregroundStyle(.green)
                 .frame(width: 44, height: 44)
                 .background(Color.green.opacity(0.12))
@@ -91,10 +91,10 @@ struct OnboardingConceptsStep: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.subheadline)
+                    .font(.outfitSubheadline)
                     .fontWeight(.semibold)
                 Text(description)
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -107,7 +107,7 @@ struct OnboardingConceptsStep: View {
     private var exampleCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Example")
-                .font(.caption)
+                .font(.outfitCaption)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
 
@@ -136,11 +136,11 @@ struct OnboardingConceptsStep: View {
     private func exampleRow(label: String, value: String, color: Color = .primary, bold: Bool = false) -> some View {
         HStack {
             Text(label)
-                .font(.caption)
+                .font(.outfitCaption)
                 .fontWeight(bold ? .semibold : .regular)
             Spacer()
             Text(value)
-                .font(.caption)
+                .font(.outfitCaption)
                 .fontWeight(bold ? .semibold : .regular)
                 .foregroundStyle(color)
                 .monospacedDigit()

@@ -96,7 +96,7 @@ struct SplitTransactionSheet: View {
                             Image(systemName: "plus.circle")
                             Text("Add Split")
                         }
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.blue)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
@@ -113,7 +113,7 @@ struct SplitTransactionSheet: View {
                     // Error message
                     if let errorMessage {
                         Text(errorMessage)
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.red)
                     }
                 }
@@ -165,16 +165,16 @@ struct SplitTransactionSheet: View {
     private var headerSection: some View {
         VStack(spacing: 8) {
             Text(transaction.merchant ?? transaction.description)
-                .font(.headline)
+                .font(.outfitHeadline)
                 .lineLimit(1)
 
             Text(formatCurrency(transaction.amount))
-                .font(.title)
+                .font(.outfitTitle)
                 .fontWeight(.bold)
 
             HStack(spacing: 8) {
                 Text(transaction.type == .income ? "Income" : "Expense")
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(transaction.type == .income ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
@@ -182,7 +182,7 @@ struct SplitTransactionSheet: View {
                     .cornerRadius(6)
 
                 Text(formatDate(transaction.date))
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -198,7 +198,7 @@ struct SplitTransactionSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Split \(index + 1)")
-                    .font(.subheadline)
+                    .font(.outfitSubheadline)
                     .fontWeight(.medium)
 
                 Spacer()
@@ -234,7 +234,7 @@ struct SplitTransactionSheet: View {
                             .foregroundStyle(splitRows[index].budgetItemId != nil ? .primary : .secondary)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.caption)
+                            .font(.outfitCaption)
                             .foregroundStyle(.tertiary)
                     }
                     .padding(.horizontal, 12)
@@ -247,7 +247,7 @@ struct SplitTransactionSheet: View {
                     ProgressView()
                         .scaleEffect(0.8)
                     Text("Loading categories...")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 12)
@@ -270,14 +270,14 @@ struct SplitTransactionSheet: View {
                 Button("Remainder") {
                     applyRemainder(to: index)
                 }
-                .font(.caption)
+                .font(.outfitCaption)
                 .buttonStyle(.bordered)
                 .disabled(remaining == 0)
             }
 
             // Description
             TextField("Description (optional)", text: $splitRows[index].description)
-                .font(.subheadline)
+                .font(.outfitSubheadline)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .background(Color(.systemGray5))
@@ -287,7 +287,7 @@ struct SplitTransactionSheet: View {
             if transaction.type == .income {
                 Toggle(isOn: $splitRows[index].isNonEarned) {
                     Label("Non-earned", systemImage: "gift")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                 }
             }
         }
@@ -422,10 +422,10 @@ struct BudgetItemPickerView: View {
                                     Spacer()
                                     VStack(alignment: .trailing, spacing: 2) {
                                         Text(formatCurrency(item.remaining))
-                                            .font(.caption)
+                                            .font(.outfitCaption)
                                             .foregroundStyle(.secondary)
                                         Text("remaining")
-                                            .font(.caption2)
+                                            .font(.outfitCaption2)
                                             .foregroundStyle(.tertiary)
                                     }
                                     if selectedItemId == item.id {

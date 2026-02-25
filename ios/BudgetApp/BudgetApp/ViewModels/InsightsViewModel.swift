@@ -106,6 +106,23 @@ class InsightsViewModel: ObservableObject {
         heatmapCells = buildHeatmapCells(dailyData: daily, budget: budget)
     }
 
+    // MARK: - Tag Reclassification
+
+    /// Calculate tag adjustments: tagged transactions shift their amounts from the original category to the tagged category
+    private func getTagAdjustments(from budget: Budget) -> [String: Decimal] {
+        var adjustments: [String: Decimal] = [:]
+        for (catKey, category) in budget.categories {
+            for item in category.items {
+                for t in item.transactions where t.tagCategoryType != nil && t.tagCategoryType != catKey {
+                    let amt: Decimal = t.type == .expense ? t.amount : -t.amount
+                    adjustments[catKey, default: 0] -= amt
+                    adjustments[t.tagCategoryType!, default: 0] += amt
+                }
+            }
+        }
+        return adjustments
+    }
+
     // MARK: - Chart Data Helpers
 
     struct CategoryChartItem {
@@ -115,14 +132,16 @@ class InsightsViewModel: ObservableObject {
     }
 
     func getCategoryChartData(from budget: Budget) -> [CategoryChartItem] {
-        budget.categories.values
+        let tagAdj = getTagAdjustments(from: budget)
+        return budget.categories.values
             .filter { $0.categoryType.lowercased() != "income" }
             .sorted { $0.order < $1.order }
             .map { category in
-                CategoryChartItem(
+                let adjustedActual = category.actual + (tagAdj[category.categoryType] ?? 0)
+                return CategoryChartItem(
                     category: category.name,
                     planned: category.planned,
-                    actual: category.actual
+                    actual: adjustedActual
                 )
             }
     }
@@ -138,12 +157,14 @@ class InsightsViewModel: ObservableObject {
         var dataPoints: [TrendDataPoint] = []
         for budget in budgets {
             let monthLabel = "\(shortMonthName(budget.month)) \(budget.year)"
+            let tagAdj = getTagAdjustments(from: budget)
             for (_, category) in budget.categories {
                 if category.categoryType.lowercased() != "income" && category.categoryType.lowercased() != "saving" {
+                    let adjustedActual = category.actual + (tagAdj[category.categoryType] ?? 0)
                     dataPoints.append(TrendDataPoint(
                         category: category.name,
                         monthLabel: monthLabel,
-                        amount: category.actual
+                        amount: adjustedActual
                     ))
                 }
             }

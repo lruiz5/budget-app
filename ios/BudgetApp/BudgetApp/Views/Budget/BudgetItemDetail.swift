@@ -90,6 +90,9 @@ struct BudgetItemDetail: View {
                         },
                         onTransactionDeleted: { id in
                             transactions.removeAll { $0.id == id }
+                        },
+                        onSplit: {
+                            activeSheet = .splitTransaction(transaction)
                         }
                     )
                 case .splitTransaction(let transaction):
@@ -124,10 +127,10 @@ struct BudgetItemDetail: View {
 
                 VStack {
                     Text(formatCurrency(item.actual))
-                        .font(.title2)
+                        .font(.outfitTitle2)
                         .fontWeight(.bold)
                     Text("spent")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -136,25 +139,25 @@ struct BudgetItemDetail: View {
             HStack(spacing: 24) {
                 VStack {
                     Text("Planned")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(item.planned))
-                        .font(.headline)
+                        .font(.outfitHeadline)
                 }
 
                 VStack {
                     Text("Remaining")
-                        .font(.caption)
+                        .font(.outfitCaption)
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(item.remaining))
-                        .font(.headline)
+                        .font(.outfitHeadline)
                         .foregroundStyle(item.isOverBudget ? .red : .green)
                 }
             }
 
             if item.recurringPaymentId != nil {
                 Label("Recurring payment", systemImage: "repeat")
-                    .font(.caption)
+                    .font(.outfitCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -168,7 +171,7 @@ struct BudgetItemDetail: View {
     private var nameSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Item Name")
-                .font(.headline)
+                .font(.outfitHeadline)
 
             HStack {
                 if isEditingName {
@@ -197,7 +200,7 @@ struct BudgetItemDetail: View {
                     .buttonStyle(.bordered)
                 } else {
                     Text(item.name)
-                        .font(.title3)
+                        .font(.outfitTitle3)
                         .fontWeight(.medium)
 
                     Spacer()
@@ -219,7 +222,7 @@ struct BudgetItemDetail: View {
     private var plannedSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Planned Amount")
-                .font(.headline)
+                .font(.outfitHeadline)
 
             HStack {
                 if isEditingPlanned {
@@ -247,7 +250,7 @@ struct BudgetItemDetail: View {
                     .buttonStyle(.bordered)
                 } else {
                     Text(formatCurrency(item.planned))
-                        .font(.title3)
+                        .font(.outfitTitle3)
                         .fontWeight(.medium)
 
                     Spacer()
@@ -296,7 +299,7 @@ struct BudgetItemDetail: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Transactions")
-                    .font(.headline)
+                    .font(.outfitHeadline)
 
                 Spacer()
 
@@ -304,7 +307,7 @@ struct BudgetItemDetail: View {
                     activeSheet = .addTransaction
                 } label: {
                     Label("Add", systemImage: "plus")
-                        .font(.subheadline)
+                        .font(.outfitSubheadline)
                 }
             }
 
@@ -312,7 +315,7 @@ struct BudgetItemDetail: View {
 
             if listItems.isEmpty {
                 Text("No transactions yet")
-                    .font(.body)
+                    .font(.outfitBody)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
@@ -326,23 +329,23 @@ struct BudgetItemDetail: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(transaction.merchant ?? transaction.description)
-                                        .font(.body)
+                                        .font(.outfitBody)
                                         .lineLimit(1)
 
                                     Text(formatDate(transaction.date))
-                                        .font(.caption)
+                                        .font(.outfitCaption)
                                         .foregroundStyle(.secondary)
                                 }
 
                                 Spacer()
 
                                 Text(transaction.displayAmount)
-                                    .font(.body)
+                                    .font(.outfitBody)
                                     .fontWeight(.medium)
                                     .foregroundStyle(transaction.type == .income ? .green : .primary)
 
                                 Image(systemName: "chevron.right")
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.tertiary)
                             }
                         }
@@ -358,7 +361,7 @@ struct BudgetItemDetail: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(split.parentTransaction?.merchant ?? split.parentTransaction?.description ?? "Split")
-                                        .font(.body)
+                                        .font(.outfitBody)
                                         .lineLimit(1)
 
                                     HStack(spacing: 4) {
@@ -368,11 +371,11 @@ struct BudgetItemDetail: View {
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
                                     }
-                                    .font(.caption)
+                                    .font(.outfitCaption)
 
                                     if let date = split.parentTransaction?.date {
                                         Text(formatDate(date))
-                                            .font(.caption)
+                                            .font(.outfitCaption)
                                             .foregroundStyle(.secondary)
                                     }
                                 }
@@ -380,11 +383,11 @@ struct BudgetItemDetail: View {
                                 Spacer()
 
                                 Text(formatCurrency(split.amount))
-                                    .font(.body)
+                                    .font(.outfitBody)
                                     .fontWeight(.medium)
 
                                 Image(systemName: "chevron.right")
-                                    .font(.caption)
+                                    .font(.outfitCaption)
                                     .foregroundStyle(.tertiary)
                             }
                         }
