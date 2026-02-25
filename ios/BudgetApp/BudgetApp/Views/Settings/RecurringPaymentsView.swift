@@ -333,6 +333,8 @@ struct EditRecurringPaymentSheet: View {
     @State private var categoryType: String
     @State private var isSaving = false
     @State private var showDeleteConfirmation = false
+    @State private var isAdjustingFunding = false
+    @State private var adjustedFundingText = ""
 
     private var categories: [String] {
         Constants.defaultCategories.filter { $0 != "income" }
@@ -408,6 +410,40 @@ struct EditRecurringPaymentSheet: View {
 
                     if frequency != .monthly, let amountDecimal = Decimal(string: amount), amountDecimal > 0 {
                         LabeledContent("Monthly Contribution", value: formatCurrency(amountDecimal / Decimal(frequency.monthsInCycle)))
+                    }
+
+                    if isAdjustingFunding {
+                        HStack {
+                            TextField("Funded amount", text: $adjustedFundingText)
+                                .keyboardType(.decimalPad)
+                                .textFieldStyle(.roundedBorder)
+
+                            Button("Save") {
+                                guard let desired = Decimal(string: adjustedFundingText), desired >= 0 else { return }
+                                let rawCalculated = payment.fundedAmount - payment.fundingAdjustment
+                                let newAdjustment = desired - rawCalculated
+                                isSaving = true
+                                Task {
+                                    await viewModel.updatePayment(
+                                        id: payment.id,
+                                        name: nil, amount: nil, frequency: nil, nextDueDate: nil,
+                                        fundingAdjustment: newAdjustment
+                                    )
+                                    isSaving = false
+                                    isAdjustingFunding = false
+                                    dismiss()
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(Decimal(string: adjustedFundingText) == nil || isSaving)
+                        }
+                    } else {
+                        Button {
+                            adjustedFundingText = "\(payment.fundedAmount)"
+                            isAdjustingFunding = true
+                        } label: {
+                            Label("Adjust Funding", systemImage: "pencil")
+                        }
                     }
                 }
 

@@ -7,6 +7,7 @@ struct RecurringPayment: Codable, Identifiable {
     let frequency: PaymentFrequency
     var nextDueDate: Date
     var fundedAmount: Decimal
+    var fundingAdjustment: Decimal
     let categoryType: String?
     let isActive: Bool
     let createdAt: Date?
@@ -42,7 +43,7 @@ struct RecurringPayment: Codable, Identifiable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, amount, frequency, nextDueDate, fundedAmount
+        case id, name, amount, frequency, nextDueDate, fundedAmount, fundingAdjustment
         case categoryType, isActive, createdAt
     }
 
@@ -80,6 +81,12 @@ struct RecurringPayment: Codable, Identifiable {
             fundedAmount = Decimal(string: fundedString) ?? 0
         } else {
             fundedAmount = try container.decode(Decimal.self, forKey: .fundedAmount)
+        }
+
+        if let adjString = try? container.decode(String.self, forKey: .fundingAdjustment) {
+            fundingAdjustment = Decimal(string: adjString) ?? 0
+        } else {
+            fundingAdjustment = (try? container.decode(Decimal.self, forKey: .fundingAdjustment)) ?? 0
         }
     }
 }

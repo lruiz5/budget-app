@@ -4,7 +4,7 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.10.0 (stable)  |  **iOS App:** v0.15.0 (pre-release) — **iOS app name: Happy Tusk**
+**Web App:** v1.11.0 (stable)  |  **iOS App:** v0.16.0 (pre-release) — **iOS app name: Happy Tusk**
 **Last Session:** 2026-02-25
 
 ## Instructions for Claude
@@ -73,7 +73,7 @@ Budget (month/year) → Buffer + Categories (Income, Giving, Household, Transpor
 | budget_items | id, categoryId, name, planned, order, **recurringPaymentId** | Line items |
 | transactions | id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, **isNonEarned**, **tagCategoryType**, deletedAt | Soft delete, tag reclassifies in reports |
 | split_transactions | id, parentTransactionId, budgetItemId, amount, description, **isNonEarned** | Split across items |
-| recurring_payments | id, **userId**, name, amount, frequency, nextDueDate, fundedAmount, categoryType | Auto-reset on GET |
+| recurring_payments | id, **userId**, name, amount, frequency, nextDueDate, fundedAmount, **fundingAdjustment**, categoryType | Auto-reset on GET, manual funding adjustment |
 | linked_accounts | id, **userId**, tellerAccountId, accessToken, institutionName, **syncEnabled**, syncStartDate | Teller bank accounts, per-account sync toggle |
 | user_onboarding | id, **userId**, currentStep, completedAt, skippedAt | Onboarding progress |
 
@@ -105,6 +105,8 @@ const { userId } = authResult;
 - Auto-reset: GET `/api/budgets` advances past-due `nextDueDate`, resets `fundedAmount`
 - Auto-create: POST `/api/budgets/copy` creates items for active recurring payments
 - Delete: must unlink budget items FIRST (`set({ recurringPaymentId: null })`), then delete
+- Funding calculated dynamically from linked transactions (monthly=current month only, non-monthly=cumulative)
+- `fundingAdjustment` offset corrects calculated amount (e.g., after backlogging historical transactions)
 
 ### PostgreSQL Numeric Patterns (Web)
 
@@ -127,9 +129,9 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 ## Working Features
 
-**Web (v1.10.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller), recurring payments, budget copy/reset, insights (D3 charts + Sankey), monthly report, tag reclassification, onboarding, tablet responsive.
+**Web (v1.11.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller), recurring payments (with manual funding adjustment), budget copy/reset, insights (D3 charts + Sankey), monthly report, tag reclassification, onboarding, tablet responsive.
 
-**iOS (v0.15.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification. See `ios/BudgetApp/CHANGELOG.md`.
+**iOS (v0.16.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment. See `ios/BudgetApp/CHANGELOG.md`.
 
 ## Common Issues
 
@@ -161,11 +163,13 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 ## Current State & Next Steps
 
-**Web:** v1.10.0 — stable, production-ready on Vercel
+**Web:** v1.11.0 — stable, production-ready on Vercel
 
-**iOS:** v0.15.0 — pre-release. Tag reclassification, custom Outfit font, tap-to-categorize, split from categorize/edit sheets. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.16.0 — pre-release. Manual funding adjustment, tag reclassification, custom Outfit font, tap-to-categorize, split from categorize/edit sheets. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 
-**Pending migration:** `tag_category_type` column — run `ALTER TABLE transactions ADD COLUMN tag_category_type text;` in Supabase SQL Editor, then `db:push` to confirm no drift
+**Pending migrations:** Run in Supabase SQL Editor, then `db:push` to confirm no drift:
+- `ALTER TABLE transactions ADD COLUMN tag_category_type text;`
+- `ALTER TABLE recurring_payments ADD COLUMN funding_adjustment numeric(10,2) NOT NULL DEFAULT '0';`
 
 **Next iOS work:**
 - Renew Apple Developer membership ($99/yr) — required for TestFlight + App Store upload

@@ -92,7 +92,7 @@ class RecurringViewModel: ObservableObject {
 
     // MARK: - Update Payment
 
-    func updatePayment(id: Int, name: String?, amount: Decimal?, frequency: PaymentFrequency?, nextDueDate: Date?, categoryType: String? = nil) async {
+    func updatePayment(id: Int, name: String?, amount: Decimal?, frequency: PaymentFrequency?, nextDueDate: Date?, categoryType: String? = nil, fundingAdjustment: Decimal? = nil) async {
         guard requireOnline() else { return }
         do {
             let request = UpdateRecurringRequest(
@@ -101,7 +101,8 @@ class RecurringViewModel: ObservableObject {
                 amount: amount,
                 frequency: frequency,
                 nextDueDate: nextDueDate,
-                categoryType: categoryType
+                categoryType: categoryType,
+                fundingAdjustment: fundingAdjustment
             )
             let updated = try await recurringService.updateRecurringPayment(request)
 
