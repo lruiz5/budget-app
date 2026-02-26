@@ -249,23 +249,34 @@ class BudgetViewModel: ObservableObject {
 
         WidgetDataManager.write(widgetData)
         writeCategoryRingsData(budget: budget, monthLabel: monthLabel, now: now)
+        writeBudgetOverviewData(monthLabel: monthLabel, now: now)
     }
 
     private func writeCategoryRingsData(budget: Budget, monthLabel: String, now: Date) {
         let priorityTypes = ["household", "transportation", "food", "personal"]
 
-        let rings: [CategoryRingItem] = priorityTypes.map { type in
-            if let category = budget.categories[type] {
-                return CategoryRingItem(
-                    categoryType: type,
+        // All expense categories for the configurable single-ring widget
+        let allRings: [CategoryRingItem] = sortedCategories
+            .filter { $0.categoryType.lowercased() != "income" }
+            .map { category in
+                CategoryRingItem(
+                    categoryType: category.categoryType,
+                    name: category.name,
                     emoji: category.categoryEmoji,
                     planned: category.planned,
                     actual: category.actual
                 )
+            }
+
+        // Priority 4 for the medium category rings widget
+        let priority: [CategoryRingItem] = priorityTypes.map { type in
+            if let ring = allRings.first(where: { $0.categoryType.lowercased() == type }) {
+                return ring
             } else {
                 let emoji = Constants.categoryEmojis[type] ?? "📁"
                 return CategoryRingItem(
                     categoryType: type,
+                    name: type.capitalized,
                     emoji: emoji,
                     planned: 0,
                     actual: 0
@@ -274,12 +285,25 @@ class BudgetViewModel: ObservableObject {
         }
 
         let data = CategoryRingsData(
-            rings: rings,
+            rings: allRings,
+            priorityRings: priority,
             monthLabel: monthLabel,
             lastUpdated: now
         )
 
         WidgetDataManager.writeCategoryRings(data)
+    }
+
+    private func writeBudgetOverviewData(monthLabel: String, now: Date) {
+        let data = BudgetOverviewData(
+            monthLabel: monthLabel,
+            incomePlanned: incomePlanned,
+            incomeActual: incomeActual,
+            expensePlanned: expensePlanned,
+            expenseActual: expenseActual,
+            lastUpdated: now
+        )
+        WidgetDataManager.writeBudgetOverview(data)
     }
 
     private func writeUncategorizedWidgetData() {

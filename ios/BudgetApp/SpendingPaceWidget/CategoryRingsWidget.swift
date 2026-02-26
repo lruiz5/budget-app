@@ -50,14 +50,18 @@ struct CategoryRingsWidget: Widget {
 // MARK: - Preview Data
 
 extension CategoryRingsData {
-    static let preview = CategoryRingsData(
-        rings: [
-            CategoryRingItem(categoryType: "household", emoji: "🏠", planned: 1200, actual: 890),
-            CategoryRingItem(categoryType: "transportation", emoji: "🚗", planned: 500, actual: 520),
-            CategoryRingItem(categoryType: "food", emoji: "🍽️", planned: 600, actual: 430),
-            CategoryRingItem(categoryType: "personal", emoji: "👤", planned: 300, actual: 150),
-        ],
-        monthLabel: "Feb 2026",
-        lastUpdated: .now
-    )
+    static let preview: CategoryRingsData = {
+        let rings = [
+            CategoryRingItem(categoryType: "household", name: "Household", emoji: "🏠", planned: 1200, actual: 890),
+            CategoryRingItem(categoryType: "transportation", name: "Transportation", emoji: "🚗", planned: 500, actual: 520),
+            CategoryRingItem(categoryType: "food", name: "Food", emoji: "🍽️", planned: 600, actual: 430),
+            CategoryRingItem(categoryType: "personal", name: "Personal", emoji: "👤", planned: 300, actual: 150),
+        ]
+        return CategoryRingsData(
+            rings: rings,
+            priorityRings: rings,
+            monthLabel: "Feb 2026",
+            lastUpdated: .now
+        )
+    }()
 }

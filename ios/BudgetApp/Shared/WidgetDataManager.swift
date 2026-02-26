@@ -6,6 +6,7 @@ enum WidgetDataManager {
     private static let spendingPaceKey = "spending_pace_data"
     private static let latestTransactionsKey = "latest_transactions_data"
     private static let categoryRingsKey = "category_rings_data"
+    private static let budgetOverviewKey = "budget_overview_data"
 
     // MARK: - Spending Pace
 
@@ -16,6 +17,7 @@ enum WidgetDataManager {
         guard let encoded = try? encoder.encode(data) else { return }
         defaults.set(encoded, forKey: spendingPaceKey)
         WidgetCenter.shared.reloadTimelines(ofKind: "SpendingPaceWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "SpendingPaceSmallWidget")
     }
 
     static func read() -> SpendingPaceData? {
@@ -54,6 +56,7 @@ enum WidgetDataManager {
         guard let encoded = try? encoder.encode(data) else { return }
         defaults.set(encoded, forKey: categoryRingsKey)
         WidgetCenter.shared.reloadTimelines(ofKind: "CategoryRingsWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "SingleCategoryRingSmallWidget")
     }
 
     static func readCategoryRings() -> CategoryRingsData? {
@@ -62,5 +65,24 @@ enum WidgetDataManager {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try? decoder.decode(CategoryRingsData.self, from: data)
+    }
+
+    // MARK: - Budget Overview
+
+    static func writeBudgetOverview(_ data: BudgetOverviewData) {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let encoded = try? encoder.encode(data) else { return }
+        defaults.set(encoded, forKey: budgetOverviewKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: "BudgetOverviewSmallWidget")
+    }
+
+    static func readBudgetOverview() -> BudgetOverviewData? {
+        guard let defaults = UserDefaults(suiteName: suiteName),
+              let data = defaults.data(forKey: budgetOverviewKey) else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(BudgetOverviewData.self, from: data)
     }
 }
