@@ -37,6 +37,7 @@ struct HappyTuskWidgetBundle: WidgetBundle {
     var body: some Widget {
         SpendingPaceWidget()
         LatestTransactionsWidget()
+        CategoryRingsWidget()
     }
 }
 

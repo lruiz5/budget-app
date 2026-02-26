@@ -34,7 +34,7 @@ struct SpendingPaceWidgetEntryView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Text("out of \(Self.currencyWhole.string(from: data.totalBudgeted as NSNumber) ?? "$0") budgeted  \u{00B7}  \(data.monthLabel)")
+                Text("out of \(Self.currencyWhole.string(from: data.totalBudgeted as NSNumber) ?? "$0") budgeted")
                     .font(.custom("Outfit", size: 11))
                     .foregroundStyle(.tertiary)
 
