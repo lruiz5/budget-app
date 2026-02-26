@@ -12,20 +12,21 @@ All notable changes to the Budget App iOS application.
 
 - **Spending Pace widget** (medium) — cumulative daily spending chart with green-to-red gradient, dashed budget pace reference line, remaining/budgeted title, and dot indicator at current spending position
 - **Latest Transactions widget** (medium) — shows uncategorized transactions needing categorization, with "updated X ago" timestamp and "All caught up!" empty state
-- **WidgetBundle** (`HappyTuskWidgetBundle`) — hosts both widgets from a single extension target
-- **Shared data layer** — `SpendingPaceData`, `LatestTransactionsData`, `WidgetDataManager` using App Group (`group.com.happytusk.app`) shared `UserDefaults`
-- **Deep link handling** — tapping Spending Pace opens Insights tab, tapping Transactions opens Budget page (`happytusk://` URL scheme)
+- **Category Rings widget** (medium) — 4 progress rings for Household, Transportation, Food, Personal categories; emoji-identified (no text labels), green/red progress arc, compact dollar remaining + "left"/"over" label
+- **WidgetBundle** (`HappyTuskWidgetBundle`) — hosts all three widgets from a single extension target
+- **Shared data layer** — `SpendingPaceData`, `LatestTransactionsData`, `CategoryRingsData`, `WidgetDataManager` using App Group (`group.com.happytusk.app`) shared `UserDefaults`
+- **Deep link handling** — tapping Spending Pace opens Insights tab, tapping Transactions/Category Rings opens Budget page (`happytusk://` URL scheme)
 - **Budget model extensions** — `totalExpensePlanned`, `dailyCumulativeSpending()` extracted for widget data pipeline
 - **Stale data indicator** — refresh icon shown when widget data is >24 hours old
 
 ### Files Created
 
-- `Shared/SpendingPaceData.swift`, `Shared/LatestTransactionsData.swift`, `Shared/WidgetDataManager.swift` (both targets)
-- `SpendingPaceWidget/SpendingPaceWidgetBundle.swift`, `SpendingPaceWidgetView.swift`, `LatestTransactionsWidget.swift`, `LatestTransactionsWidgetView.swift`, `Info.plist` (widget target)
+- `Shared/SpendingPaceData.swift`, `Shared/LatestTransactionsData.swift`, `Shared/CategoryRingsData.swift`, `Shared/WidgetDataManager.swift` (both targets)
+- `SpendingPaceWidget/SpendingPaceWidgetBundle.swift`, `SpendingPaceWidgetView.swift`, `LatestTransactionsWidget.swift`, `LatestTransactionsWidgetView.swift`, `CategoryRingsWidget.swift`, `CategoryRingsWidgetView.swift`, `Info.plist` (widget target)
 
 ### Files Modified
 
-- `ViewModels/BudgetViewModel.swift` — `writeWidgetData()`, `writeUncategorizedWidgetData()`
+- `ViewModels/BudgetViewModel.swift` — `writeWidgetData()`, `writeUncategorizedWidgetData()`, `writeCategoryRingsData()`
 - `Models/Budget.swift` — widget data helper extensions
 - `BudgetAppApp.swift` — `.onOpenURL` deep link handler
 - `App/ContentView.swift` — deep link tab switching via notification

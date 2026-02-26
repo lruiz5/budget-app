@@ -17,6 +17,8 @@
 		54C4BF2F2F503443009FF56A /* LatestTransactionsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF282F503443009FF56A /* LatestTransactionsData.swift */; };
 		54C4BF302F503443009FF56A /* WidgetDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF2A2F503443009FF56A /* WidgetDataManager.swift */; };
 		54C4BF312F503443009FF56A /* SpendingPaceData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF292F503443009FF56A /* SpendingPaceData.swift */; };
+		54C4BFD42F50BC12009FF56A /* CategoryRingsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */; };
+		54C4BFD52F50BC12009FF56A /* CategoryRingsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,6 +71,7 @@
 		54C4BF282F503443009FF56A /* LatestTransactionsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatestTransactionsData.swift; sourceTree = "<group>"; };
 		54C4BF292F503443009FF56A /* SpendingPaceData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpendingPaceData.swift; sourceTree = "<group>"; };
 		54C4BF2A2F503443009FF56A /* WidgetDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataManager.swift; sourceTree = "<group>"; };
+		54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryRingsData.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -79,7 +82,7 @@
 			);
 			target = 54B7B5B12F32BDE1006D5BE2 /* BudgetApp */;
 		};
-		54C4BF212F502DAD009FF56A /* Exceptions for "SpendingPaceWidget" folder in "SpendingPaceWidgetExtension" target */ = {
+		54C4BFD62F50BC64009FF56A /* Exceptions for "SpendingPaceWidget" folder in "SpendingPaceWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -110,7 +113,7 @@
 		54C4BEFF2F4FC33B009FF56A /* SpendingPaceWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				54C4BF212F502DAD009FF56A /* Exceptions for "SpendingPaceWidget" folder in "SpendingPaceWidgetExtension" target */,
+				54C4BFD62F50BC64009FF56A /* Exceptions for "SpendingPaceWidget" folder in "SpendingPaceWidgetExtension" target */,
 			);
 			path = SpendingPaceWidget;
 			sourceTree = "<group>";
@@ -190,6 +193,7 @@
 		54C4BF2B2F503443009FF56A /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */,
 				54C4BF282F503443009FF56A /* LatestTransactionsData.swift */,
 				54C4BF292F503443009FF56A /* SpendingPaceData.swift */,
 				54C4BF2A2F503443009FF56A /* WidgetDataManager.swift */,
@@ -382,6 +386,7 @@
 			files = (
 				54C4BF2F2F503443009FF56A /* LatestTransactionsData.swift in Sources */,
 				54C4BF302F503443009FF56A /* WidgetDataManager.swift in Sources */,
+				54C4BFD52F50BC12009FF56A /* CategoryRingsData.swift in Sources */,
 				54C4BF312F503443009FF56A /* SpendingPaceData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -405,6 +410,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				54C4BF2C2F503443009FF56A /* LatestTransactionsData.swift in Sources */,
+				54C4BFD42F50BC12009FF56A /* CategoryRingsData.swift in Sources */,
 				54C4BF2D2F503443009FF56A /* WidgetDataManager.swift in Sources */,
 				54C4BF2E2F503443009FF56A /* SpendingPaceData.swift in Sources */,
 			);

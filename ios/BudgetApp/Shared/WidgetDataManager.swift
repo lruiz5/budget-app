@@ -5,6 +5,7 @@ enum WidgetDataManager {
     private static let suiteName = "group.com.happytusk.app"
     private static let spendingPaceKey = "spending_pace_data"
     private static let latestTransactionsKey = "latest_transactions_data"
+    private static let categoryRingsKey = "category_rings_data"
 
     // MARK: - Spending Pace
 
@@ -42,5 +43,24 @@ enum WidgetDataManager {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try? decoder.decode(LatestTransactionsData.self, from: data)
+    }
+
+    // MARK: - Category Rings
+
+    static func writeCategoryRings(_ data: CategoryRingsData) {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let encoded = try? encoder.encode(data) else { return }
+        defaults.set(encoded, forKey: categoryRingsKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: "CategoryRingsWidget")
+    }
+
+    static func readCategoryRings() -> CategoryRingsData? {
+        guard let defaults = UserDefaults(suiteName: suiteName),
+              let data = defaults.data(forKey: categoryRingsKey) else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(CategoryRingsData.self, from: data)
     }
 }

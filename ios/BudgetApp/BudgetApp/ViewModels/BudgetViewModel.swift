@@ -248,6 +248,38 @@ class BudgetViewModel: ObservableObject {
         )
 
         WidgetDataManager.write(widgetData)
+        writeCategoryRingsData(budget: budget, monthLabel: monthLabel, now: now)
+    }
+
+    private func writeCategoryRingsData(budget: Budget, monthLabel: String, now: Date) {
+        let priorityTypes = ["household", "transportation", "food", "personal"]
+
+        let rings: [CategoryRingItem] = priorityTypes.map { type in
+            if let category = budget.categories[type] {
+                return CategoryRingItem(
+                    categoryType: type,
+                    emoji: category.categoryEmoji,
+                    planned: category.planned,
+                    actual: category.actual
+                )
+            } else {
+                let emoji = Constants.categoryEmojis[type] ?? "📁"
+                return CategoryRingItem(
+                    categoryType: type,
+                    emoji: emoji,
+                    planned: 0,
+                    actual: 0
+                )
+            }
+        }
+
+        let data = CategoryRingsData(
+            rings: rings,
+            monthLabel: monthLabel,
+            lastUpdated: now
+        )
+
+        WidgetDataManager.writeCategoryRings(data)
     }
 
     private func writeUncategorizedWidgetData() {
