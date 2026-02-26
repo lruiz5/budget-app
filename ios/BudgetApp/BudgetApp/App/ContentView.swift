@@ -52,6 +52,11 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: networkMonitor.isConnected)
+        .onReceive(NotificationCenter.default.publisher(for: .widgetDeepLink)) { notification in
+            if let destination = notification.object as? String, destination == "insights" {
+                selectedTab = 3
+            }
+        }
     }
 }
 

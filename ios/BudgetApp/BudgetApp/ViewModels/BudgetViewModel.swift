@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import SwiftUI
 import UIKit
+import WidgetKit
 
 @MainActor
 class BudgetViewModel: ObservableObject {
@@ -85,6 +86,9 @@ class BudgetViewModel: ObservableObject {
 
         isLoading = false
 
+        // Write widget data for current month only
+        writeWidgetData()
+
         // Load uncategorized transactions for the drag-to-assign tray
         await loadUncategorizedTransactions()
     }
@@ -113,6 +117,7 @@ class BudgetViewModel: ObservableObject {
             }
 
             uncategorizedTransactions = filtered
+            writeUncategorizedWidgetData()
         } catch {
             #if DEBUG
             print("Failed to load uncategorized transactions: \(error)")
@@ -210,6 +215,73 @@ class BudgetViewModel: ObservableObject {
         incomeActual = iActual
         expensePlanned = ePlanned
         expenseActual = eActual
+    }
+
+    // MARK: - Widget Data
+
+    private func writeWidgetData() {
+        guard let budget = budget else { return }
+
+        // Only write for the current month
+        let now = Date()
+        var utcCal = Calendar(identifier: .gregorian)
+        utcCal.timeZone = TimeZone(identifier: "UTC")!
+        let currentMonth = utcCal.component(.month, from: now) - 1 // 0-indexed
+        let currentYear = utcCal.component(.year, from: now)
+        guard budget.month == currentMonth && budget.year == currentYear else { return }
+
+        // Build month label using UTC to avoid timezone shift
+        let monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        let monthLabel = "\(monthNames[budget.month]) \(budget.year)"
+
+        let dailyCumulative = budget.dailyCumulativeSpending()
+        let totalSpent = dailyCumulative.last ?? 0
+
+        let widgetData = SpendingPaceData(
+            monthLabel: monthLabel,
+            daysInMonth: dailyCumulative.count,
+            totalBudgeted: budget.totalExpensePlanned,
+            totalSpent: totalSpent,
+            dailyCumulative: dailyCumulative,
+            lastUpdated: now
+        )
+
+        WidgetDataManager.write(widgetData)
+    }
+
+    private func writeUncategorizedWidgetData() {
+        let now = Date()
+        let monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+        var utcCal = Calendar(identifier: .gregorian)
+        utcCal.timeZone = TimeZone(identifier: "UTC")!
+
+        // Sort by date descending, take most recent 5
+        let sorted = uncategorizedTransactions.sorted { $0.date > $1.date }
+        let recent = sorted.prefix(5)
+
+        let widgetTransactions = recent.map { transaction in
+            let day = utcCal.component(.day, from: transaction.date)
+            let month = utcCal.component(.month, from: transaction.date) - 1
+            let dateLabel = "\(monthNames[month]) \(day)"
+
+            return WidgetTransaction(
+                id: transaction.id,
+                description: transaction.merchant ?? transaction.description,
+                amount: transaction.amount,
+                type: transaction.type == .income ? "income" : "expense",
+                date: dateLabel
+            )
+        }
+
+        let transactionsData = LatestTransactionsData(
+            transactions: Array(widgetTransactions),
+            lastUpdated: now
+        )
+
+        WidgetDataManager.writeTransactions(transactionsData)
     }
 
     // MARK: - Toast Helper
