@@ -302,6 +302,53 @@ struct BudgetItem: Codable, Identifiable {
     }
 }
 
+// MARK: - Widget Data Helpers (extracted for shared use)
+
+extension Budget {
+    private static let utcCalendar: Calendar = {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        return cal
+    }()
+
+    /// Total planned expenses across all non-income categories
+    var totalExpensePlanned: Decimal {
+        categories.values
+            .filter { $0.categoryType.lowercased() != "income" }
+            .reduce(0) { $0 + $1.planned }
+    }
+
+    /// Cumulative daily spending for the month (index 0 = day 1).
+    /// Mirrors InsightsViewModel.getDailySpending logic.
+    func dailyCumulativeSpending() -> [Decimal] {
+        var startComponents = DateComponents()
+        startComponents.year = year
+        startComponents.month = month + 1 // API is 0-indexed
+        startComponents.day = 1
+        guard let monthStart = Self.utcCalendar.date(from: startComponents) else { return [] }
+        let daysInMonth = Self.utcCalendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+
+        var spendingByDay: [Int: Decimal] = [:]
+        for category in categories.values {
+            guard category.categoryType.lowercased() != "income" else { continue }
+            for item in category.items {
+                for transaction in item.transactions where !transaction.isDeleted && transaction.type == .expense {
+                    let day = Self.utcCalendar.component(.day, from: transaction.date)
+                    spendingByDay[day, default: 0] += transaction.amount
+                }
+            }
+        }
+
+        var result: [Decimal] = []
+        var cumulative: Decimal = 0
+        for day in 1...daysInMonth {
+            cumulative += spendingByDay[day] ?? 0
+            result.append(cumulative)
+        }
+        return result
+    }
+}
+
 // Split transaction with parent info for actual calculation
 struct SplitTransactionWithParent: Codable, Identifiable {
     let id: Int

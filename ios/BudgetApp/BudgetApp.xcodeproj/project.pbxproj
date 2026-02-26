@@ -8,6 +8,15 @@
 
 /* Begin PBXBuildFile section */
 		54B7B6252F32C114006D5BE2 /* Clerk in Frameworks */ = {isa = PBXBuildFile; productRef = 54B7B6242F32C114006D5BE2 /* Clerk */; };
+		54C4BEFC2F4FC33B009FF56A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54C4BEFB2F4FC33B009FF56A /* WidgetKit.framework */; };
+		54C4BEFE2F4FC33B009FF56A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54C4BEFD2F4FC33B009FF56A /* SwiftUI.framework */; };
+		54C4BF0D2F4FC33D009FF56A /* SpendingPaceWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 54C4BEF92F4FC33B009FF56A /* SpendingPaceWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		54C4BF2C2F503443009FF56A /* LatestTransactionsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF282F503443009FF56A /* LatestTransactionsData.swift */; };
+		54C4BF2D2F503443009FF56A /* WidgetDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF2A2F503443009FF56A /* WidgetDataManager.swift */; };
+		54C4BF2E2F503443009FF56A /* SpendingPaceData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF292F503443009FF56A /* SpendingPaceData.swift */; };
+		54C4BF2F2F503443009FF56A /* LatestTransactionsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF282F503443009FF56A /* LatestTransactionsData.swift */; };
+		54C4BF302F503443009FF56A /* WidgetDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF2A2F503443009FF56A /* WidgetDataManager.swift */; };
+		54C4BF312F503443009FF56A /* SpendingPaceData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF292F503443009FF56A /* SpendingPaceData.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,12 +34,41 @@
 			remoteGlobalIDString = 54B7B5B12F32BDE1006D5BE2;
 			remoteInfo = BudgetApp;
 		};
+		54C4BF0B2F4FC33D009FF56A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 54B7B5AA2F32BDE1006D5BE2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 54C4BEF82F4FC33B009FF56A;
+			remoteInfo = SpendingPaceWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		54C4BF0E2F4FC33D009FF56A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				54C4BF0D2F4FC33D009FF56A /* SpendingPaceWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		54B7B5B22F32BDE1006D5BE2 /* Happy Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Happy Tusk.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54B7B5BF2F32BDE2006D5BE2 /* BudgetAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BudgetAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		54B7B5C92F32BDE2006D5BE2 /* BudgetAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BudgetAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		54C4BEF92F4FC33B009FF56A /* SpendingPaceWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SpendingPaceWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		54C4BEFB2F4FC33B009FF56A /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		54C4BEFD2F4FC33B009FF56A /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		54C4BF202F502CBB009FF56A /* SpendingPaceWidgetExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "SpendingPaceWidgetExtension-Info.plist"; sourceTree = "<group>"; };
+		54C4BF232F502F13009FF56A /* SpendingPaceWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SpendingPaceWidgetExtension.entitlements; sourceTree = "<group>"; };
+		54C4BF282F503443009FF56A /* LatestTransactionsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatestTransactionsData.swift; sourceTree = "<group>"; };
+		54C4BF292F503443009FF56A /* SpendingPaceData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpendingPaceData.swift; sourceTree = "<group>"; };
+		54C4BF2A2F503443009FF56A /* WidgetDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -40,6 +78,13 @@
 				Info.plist,
 			);
 			target = 54B7B5B12F32BDE1006D5BE2 /* BudgetApp */;
+		};
+		54C4BF212F502DAD009FF56A /* Exceptions for "SpendingPaceWidget" folder in "SpendingPaceWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 54C4BEF82F4FC33B009FF56A /* SpendingPaceWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -60,6 +105,14 @@
 		54B7B5CC2F32BDE2006D5BE2 /* BudgetAppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = BudgetAppUITests;
+			sourceTree = "<group>";
+		};
+		54C4BEFF2F4FC33B009FF56A /* SpendingPaceWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				54C4BF212F502DAD009FF56A /* Exceptions for "SpendingPaceWidget" folder in "SpendingPaceWidgetExtension" target */,
+			);
+			path = SpendingPaceWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -87,15 +140,29 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		54C4BEF62F4FC33B009FF56A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				54C4BEFE2F4FC33B009FF56A /* SwiftUI.framework in Frameworks */,
+				54C4BEFC2F4FC33B009FF56A /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		54B7B5A92F32BDE1006D5BE2 = {
 			isa = PBXGroup;
 			children = (
+				54C4BF2B2F503443009FF56A /* Shared */,
+				54C4BF232F502F13009FF56A /* SpendingPaceWidgetExtension.entitlements */,
+				54C4BF202F502CBB009FF56A /* SpendingPaceWidgetExtension-Info.plist */,
 				54B7B5B42F32BDE1006D5BE2 /* BudgetApp */,
 				54B7B5C22F32BDE2006D5BE2 /* BudgetAppTests */,
 				54B7B5CC2F32BDE2006D5BE2 /* BudgetAppUITests */,
+				54C4BEFF2F4FC33B009FF56A /* SpendingPaceWidget */,
+				54C4BEFA2F4FC33B009FF56A /* Frameworks */,
 				54B7B5B32F32BDE1006D5BE2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -106,8 +173,28 @@
 				54B7B5B22F32BDE1006D5BE2 /* Happy Tusk.app */,
 				54B7B5BF2F32BDE2006D5BE2 /* BudgetAppTests.xctest */,
 				54B7B5C92F32BDE2006D5BE2 /* BudgetAppUITests.xctest */,
+				54C4BEF92F4FC33B009FF56A /* SpendingPaceWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		54C4BEFA2F4FC33B009FF56A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				54C4BEFB2F4FC33B009FF56A /* WidgetKit.framework */,
+				54C4BEFD2F4FC33B009FF56A /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		54C4BF2B2F503443009FF56A /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				54C4BF282F503443009FF56A /* LatestTransactionsData.swift */,
+				54C4BF292F503443009FF56A /* SpendingPaceData.swift */,
+				54C4BF2A2F503443009FF56A /* WidgetDataManager.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -120,10 +207,12 @@
 				54B7B5AE2F32BDE1006D5BE2 /* Sources */,
 				54B7B5AF2F32BDE1006D5BE2 /* Frameworks */,
 				54B7B5B02F32BDE1006D5BE2 /* Resources */,
+				54C4BF0E2F4FC33D009FF56A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				54C4BF0C2F4FC33D009FF56A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				54B7B5B42F32BDE1006D5BE2 /* BudgetApp */,
@@ -182,6 +271,28 @@
 			productReference = 54B7B5C92F32BDE2006D5BE2 /* BudgetAppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		54C4BEF82F4FC33B009FF56A /* SpendingPaceWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 54C4BF112F4FC33D009FF56A /* Build configuration list for PBXNativeTarget "SpendingPaceWidgetExtension" */;
+			buildPhases = (
+				54C4BEF52F4FC33B009FF56A /* Sources */,
+				54C4BEF62F4FC33B009FF56A /* Frameworks */,
+				54C4BEF72F4FC33B009FF56A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				54C4BEFF2F4FC33B009FF56A /* SpendingPaceWidget */,
+			);
+			name = SpendingPaceWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = SpendingPaceWidgetExtension;
+			productReference = 54C4BEF92F4FC33B009FF56A /* SpendingPaceWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -202,6 +313,9 @@
 					54B7B5C82F32BDE2006D5BE2 = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = 54B7B5B12F32BDE1006D5BE2;
+					};
+					54C4BEF82F4FC33B009FF56A = {
+						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
@@ -225,6 +339,7 @@
 				54B7B5B12F32BDE1006D5BE2 /* BudgetApp */,
 				54B7B5BE2F32BDE2006D5BE2 /* BudgetAppTests */,
 				54B7B5C82F32BDE2006D5BE2 /* BudgetAppUITests */,
+				54C4BEF82F4FC33B009FF56A /* SpendingPaceWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -251,6 +366,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		54C4BEF72F4FC33B009FF56A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -258,6 +380,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				54C4BF2F2F503443009FF56A /* LatestTransactionsData.swift in Sources */,
+				54C4BF302F503443009FF56A /* WidgetDataManager.swift in Sources */,
+				54C4BF312F503443009FF56A /* SpendingPaceData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -275,6 +400,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		54C4BEF52F4FC33B009FF56A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				54C4BF2C2F503443009FF56A /* LatestTransactionsData.swift in Sources */,
+				54C4BF2D2F503443009FF56A /* WidgetDataManager.swift in Sources */,
+				54C4BF2E2F503443009FF56A /* SpendingPaceData.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -287,6 +422,11 @@
 			isa = PBXTargetDependency;
 			target = 54B7B5B12F32BDE1006D5BE2 /* BudgetApp */;
 			targetProxy = 54B7B5CA2F32BDE2006D5BE2 /* PBXContainerItemProxy */;
+		};
+		54C4BF0C2F4FC33D009FF56A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 54C4BEF82F4FC33B009FF56A /* SpendingPaceWidgetExtension */;
+			targetProxy = 54C4BF0B2F4FC33D009FF56A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -417,6 +557,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BudgetApp/BudgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VGZGTYTT7T;
@@ -451,6 +592,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BudgetApp/BudgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VGZGTYTT7T;
@@ -564,6 +706,70 @@
 			};
 			name = Release;
 		};
+		54C4BF0F2F4FC33D009FF56A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SpendingPaceWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VGZGTYTT7T;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SpendingPaceWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SpendingPaceWidget;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.happytusk.app.SpendingPaceWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		54C4BF102F4FC33D009FF56A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SpendingPaceWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VGZGTYTT7T;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SpendingPaceWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SpendingPaceWidget;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.happytusk.app.SpendingPaceWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -599,6 +805,15 @@
 			buildConfigurations = (
 				54B7B5DA2F32BDE2006D5BE2 /* Debug */,
 				54B7B5DB2F32BDE2006D5BE2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		54C4BF112F4FC33D009FF56A /* Build configuration list for PBXNativeTarget "SpendingPaceWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				54C4BF0F2F4FC33D009FF56A /* Debug */,
+				54C4BF102F4FC33D009FF56A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -222,6 +222,12 @@ extension String {
     }
 }
 
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let widgetDeepLink = Notification.Name("widgetDeepLink")
+}
+
 // MARK: - Array Extensions
 
 extension Array {
