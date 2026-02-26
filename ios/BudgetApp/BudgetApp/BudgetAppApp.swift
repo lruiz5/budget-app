@@ -77,8 +77,8 @@ struct BudgetAppApp: App {
                 isLoading = false
             }
             .onOpenURL { url in
-                if url.host() == "insights" {
-                    NotificationCenter.default.post(name: .widgetDeepLink, object: "insights")
+                if let host = url.host() {
+                    NotificationCenter.default.post(name: .widgetDeepLink, object: host)
                 }
             }
             .onChange(of: clerk.user) { oldValue, newValue in

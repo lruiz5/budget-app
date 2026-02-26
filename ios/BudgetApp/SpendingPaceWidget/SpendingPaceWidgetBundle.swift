@@ -35,9 +35,14 @@ struct SpendingPaceProvider: TimelineProvider {
 @main
 struct HappyTuskWidgetBundle: WidgetBundle {
     var body: some Widget {
+        // Medium widgets
         SpendingPaceWidget()
         LatestTransactionsWidget()
         CategoryRingsWidget()
+        // Small widgets
+        SpendingPaceSmallWidget()
+        SingleCategoryRingSmallWidget()
+        BudgetOverviewSmallWidget()
     }
 }
 

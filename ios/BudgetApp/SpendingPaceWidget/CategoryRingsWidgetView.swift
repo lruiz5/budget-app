@@ -19,9 +19,9 @@ struct CategoryRingsWidgetEntryView: View {
                     
                 }
 
-                // 4 rings
+                // 4 priority rings
                 HStack(spacing: 12) {
-                    ForEach(data.rings, id: \.categoryType) { ring in
+                    ForEach(data.priorityRings, id: \.categoryType) { ring in
                         CategoryRingView(ring: ring)
                     }
                 }
@@ -51,6 +51,8 @@ struct CategoryRingsWidgetEntryView: View {
 
 struct CategoryRingView: View {
     let ring: CategoryRingItem
+    var size: CGFloat = 44
+    var strokeWidth: CGFloat = 4.5
 
     private static let currencyWhole: NumberFormatter = {
         let f = NumberFormatter()
@@ -65,23 +67,23 @@ struct CategoryRingView: View {
             ZStack {
                 // Background track
                 Circle()
-                    .stroke(Color(.systemGray5), lineWidth: 4.5)
+                    .stroke(Color(.systemGray5), lineWidth: strokeWidth)
 
                 // Progress arc
                 Circle()
                     .trim(from: 0, to: ring.progress)
                     .stroke(
                         ring.isOver ? Color.red : Color.green,
-                        style: StrokeStyle(lineWidth: 4.5, lineCap: .round)
+                        style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
 
                 // Emoji
                 Text(ring.emoji)
-                    .font(.system(size: 18))
+                    .font(.system(size: size * 0.41))
                     .padding(6)
             }
-            .frame(width: 44, height: 44)
+            .frame(width: size, height: size)
             .padding(.bottom, 10)
 
             // Dollar remaining

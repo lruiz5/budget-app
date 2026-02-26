@@ -19,6 +19,8 @@
 		54C4BF312F503443009FF56A /* SpendingPaceData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BF292F503443009FF56A /* SpendingPaceData.swift */; };
 		54C4BFD42F50BC12009FF56A /* CategoryRingsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */; };
 		54C4BFD52F50BC12009FF56A /* CategoryRingsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */; };
+		54C4C1062F511024009FF56A /* BudgetOverviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4C1052F511024009FF56A /* BudgetOverviewData.swift */; };
+		54C4C1072F511024009FF56A /* BudgetOverviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C4C1052F511024009FF56A /* BudgetOverviewData.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +74,7 @@
 		54C4BF292F503443009FF56A /* SpendingPaceData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpendingPaceData.swift; sourceTree = "<group>"; };
 		54C4BF2A2F503443009FF56A /* WidgetDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataManager.swift; sourceTree = "<group>"; };
 		54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryRingsData.swift; sourceTree = "<group>"; };
+		54C4C1052F511024009FF56A /* BudgetOverviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetOverviewData.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -193,6 +196,7 @@
 		54C4BF2B2F503443009FF56A /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				54C4C1052F511024009FF56A /* BudgetOverviewData.swift */,
 				54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */,
 				54C4BF282F503443009FF56A /* LatestTransactionsData.swift */,
 				54C4BF292F503443009FF56A /* SpendingPaceData.swift */,
@@ -388,6 +392,7 @@
 				54C4BF302F503443009FF56A /* WidgetDataManager.swift in Sources */,
 				54C4BFD52F50BC12009FF56A /* CategoryRingsData.swift in Sources */,
 				54C4BF312F503443009FF56A /* SpendingPaceData.swift in Sources */,
+				54C4C1072F511024009FF56A /* BudgetOverviewData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -411,6 +416,7 @@
 			files = (
 				54C4BF2C2F503443009FF56A /* LatestTransactionsData.swift in Sources */,
 				54C4BFD42F50BC12009FF56A /* CategoryRingsData.swift in Sources */,
+				54C4C1062F511024009FF56A /* BudgetOverviewData.swift in Sources */,
 				54C4BF2D2F503443009FF56A /* WidgetDataManager.swift in Sources */,
 				54C4BF2E2F503443009FF56A /* SpendingPaceData.swift in Sources */,
 			);
