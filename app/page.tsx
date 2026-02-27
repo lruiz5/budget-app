@@ -64,6 +64,7 @@ function Home() {
   const [budget, setBudget] = useState<Budget | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Check if user needs onboarding
   useEffect(() => {
@@ -190,6 +191,7 @@ function Home() {
       type: transaction.type,
       merchant: transaction.merchant,
       tagCategoryType: transaction.tagCategoryType,
+      isNonEarned: transaction.isNonEarned,
     });
     setIsEditModalOpen(true);
   };
@@ -204,6 +206,7 @@ function Home() {
     type: 'income' | 'expense';
     merchant?: string;
     tagCategoryType?: string;
+    isNonEarned?: boolean;
   }) => {
     try {
       const response = await fetch('/api/transactions', {
@@ -241,6 +244,22 @@ function Home() {
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setTransactionToEdit(null);
+  };
+
+  const handleTransactionDrop = async (transactionId: string, budgetItemId: string) => {
+    try {
+      const response = await fetch('/api/transactions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: parseInt(transactionId), budgetItemId }),
+      });
+      if (response.ok) {
+        refreshBudget();
+        setRefreshTrigger(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error assigning transaction:', error);
+    }
   };
 
   const handleAddGroup = async () => {
@@ -450,6 +469,7 @@ function Home() {
                       onSplitClick={handleSplitClick}
                       onItemClick={handleItemClick}
                       selectedItemId={selectedBudgetItem?.item.id}
+                      onTransactionDrop={handleTransactionDrop}
                     />
                     {/* Delete button for custom categories */}
                     {!DEFAULT_CATEGORIES.includes(key as any) && category.dbId && (
@@ -662,6 +682,7 @@ function Home() {
             onCloseItemDetail={() => setSelectedBudgetItem(null)}
             splitToEdit={splitToEdit}
             onClearSplitToEdit={clearSplitToEdit}
+            refreshTrigger={refreshTrigger}
           />
         </div>
 

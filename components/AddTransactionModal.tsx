@@ -28,6 +28,7 @@ export interface TransactionToEdit {
   type: 'income' | 'expense';
   merchant?: string | null;
   tagCategoryType?: string | null;
+  isNonEarned?: boolean;
 }
 
 interface AddTransactionModalProps {
@@ -42,6 +43,7 @@ interface AddTransactionModalProps {
     type: 'income' | 'expense';
     merchant?: string;
     tagCategoryType?: string;
+    isNonEarned?: boolean;
   }) => void;
   onEditTransaction?: (transaction: {
     id: number;
@@ -53,6 +55,7 @@ interface AddTransactionModalProps {
     type: 'income' | 'expense';
     merchant?: string;
     tagCategoryType?: string;
+    isNonEarned?: boolean;
   }) => void;
   onDeleteTransaction?: (id: number) => void;
   budgetItems: { category: string; items: BudgetItem[] }[];
@@ -79,6 +82,7 @@ export default function AddTransactionModal({
   const [linkedAccountId, setLinkedAccountId] = useState<string>('');
   const [budgetItemId, setBudgetItemId] = useState('');
   const [tagCategoryType, setTagCategoryType] = useState<string>('');
+  const [isNonEarned, setIsNonEarned] = useState(false);
 
   const isEditMode = !!transactionToEdit;
 
@@ -92,6 +96,7 @@ export default function AddTransactionModal({
       setLinkedAccountId(transactionToEdit.linkedAccountId?.toString() || '');
       setBudgetItemId(transactionToEdit.budgetItemId?.toString() || '');
       setTagCategoryType(transactionToEdit.tagCategoryType || '');
+      setIsNonEarned(transactionToEdit.isNonEarned || false);
     } else {
       // Reset form for new transaction
       setType('expense');
@@ -101,6 +106,7 @@ export default function AddTransactionModal({
       setLinkedAccountId('');
       setBudgetItemId('');
       setTagCategoryType('');
+      setIsNonEarned(false);
     }
   }, [transactionToEdit, isOpen]);
 
@@ -124,6 +130,7 @@ export default function AddTransactionModal({
       type,
       merchant: merchant.trim() || undefined,
       tagCategoryType: tagCategoryType || undefined,
+      isNonEarned: type === 'income' ? isNonEarned : undefined,
     };
 
     if (isEditMode && onEditTransaction) {
@@ -143,6 +150,7 @@ export default function AddTransactionModal({
     setLinkedAccountId('');
     setBudgetItemId('');
     setTagCategoryType('');
+    setIsNonEarned(false);
     onClose();
   };
 
@@ -316,6 +324,22 @@ export default function AddTransactionModal({
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* Non-earned income toggle - only visible for income type */}
+          {type === 'income' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="nonEarned"
+                checked={isNonEarned}
+                onChange={(e) => setIsNonEarned(e.target.checked)}
+                className="w-4 h-4 text-primary rounded border-border-strong focus:ring-primary"
+              />
+              <label htmlFor="nonEarned" className="text-sm text-text-secondary">
+                Non-earned income <span className="text-text-tertiary text-xs">(gifts, refunds, etc.)</span>
+              </label>
             </div>
           )}
 

@@ -10,6 +10,7 @@ import {
   FaTimes,
   FaUndo,
   FaPlus,
+  FaSearch,
 } from "react-icons/fa";
 import { HiOutlineScissors } from "react-icons/hi2";
 import AddTransactionModal, { TransactionToEdit, CategoryOption } from "./AddTransactionModal";
@@ -32,6 +33,7 @@ interface BudgetSummaryProps {
   onCloseItemDetail?: () => void;
   splitToEdit?: string | null;
   onClearSplitToEdit?: () => void;
+  refreshTrigger?: number;
 }
 
 interface UncategorizedTransaction {
@@ -61,6 +63,7 @@ export default function BudgetSummary({
   onCloseItemDetail,
   splitToEdit,
   onClearSplitToEdit,
+  refreshTrigger,
 }: BudgetSummaryProps) {
   const toast = useToast();
   const { setCount: setUncategorizedCount } = useUncategorizedCount();
@@ -88,6 +91,8 @@ export default function BudgetSummary({
   const [transactionToSplit, setTransactionToSplit] =
     useState<UncategorizedTransaction | null>(null);
   const [existingSplits, setExistingSplits] = useState<ExistingSplit[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
 
   const buffer = budget.buffer || 0;
 
@@ -224,7 +229,7 @@ export default function BudgetSummary({
     } finally {
       setIsLoadingUncategorized(false);
     }
-  }, [budget.month, budget.year]);
+  }, [budget.month, budget.year, refreshTrigger]);
 
   // Filter uncategorized transactions to 7 days before/after the current month
   const filteredUncategorizedTxns = useMemo(() => {
@@ -250,6 +255,43 @@ export default function BudgetSummary({
   useEffect(() => {
     setUncategorizedCount(filteredUncategorizedTxns.length);
   }, [filteredUncategorizedTxns, setUncategorizedCount]);
+
+  // Search and filter helpers
+  const matchesSearch = useCallback(
+    (txn: { merchant?: string | null; description: string; amount: number }) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        (txn.merchant?.toLowerCase().includes(q) ?? false) ||
+        txn.description.toLowerCase().includes(q) ||
+        String(txn.amount).includes(q)
+      );
+    },
+    [searchQuery],
+  );
+
+  const matchesType = useCallback(
+    (txn: { type: "income" | "expense" }) => {
+      if (typeFilter === "all") return true;
+      return txn.type === typeFilter;
+    },
+    [typeFilter],
+  );
+
+  const searchedNewTxns = useMemo(
+    () => filteredUncategorizedTxns.filter((txn) => matchesSearch(txn) && matchesType(txn)),
+    [filteredUncategorizedTxns, matchesSearch, matchesType],
+  );
+
+  const searchedTrackedTxns = useMemo(
+    () => allTransactions.filter((txn) => matchesSearch(txn) && matchesType(txn)),
+    [allTransactions, matchesSearch, matchesType],
+  );
+
+  const searchedDeletedTxns = useMemo(
+    () => deletedTxns.filter((txn) => matchesSearch(txn) && matchesType(txn)),
+    [deletedTxns, matchesSearch, matchesType],
+  );
 
   // Fetch deleted transactions
   const fetchDeleted = useCallback(async () => {
@@ -521,6 +563,7 @@ export default function BudgetSummary({
         type: transaction.type,
         merchant: transaction.merchant,
         tagCategoryType: transaction.tagCategoryType,
+        isNonEarned: transaction.isNonEarned,
       });
       setIsAddModalOpen(true);
     }
@@ -544,7 +587,7 @@ export default function BudgetSummary({
   };
 
   const handleSplitTransaction = async (
-    splits: { budgetItemId: number; amount: number; description?: string }[],
+    splits: { budgetItemId: number; amount: number; description?: string; isNonEarned?: boolean }[],
   ) => {
     if (!transactionToSplit) return;
 
@@ -777,6 +820,7 @@ export default function BudgetSummary({
             transactionToSplit?.description ||
             ""
           }
+          transactionType={transactionToSplit?.type}
           budgetItems={getAllBudgetItems()}
           existingSplits={existingSplits}
         />
@@ -789,7 +833,7 @@ export default function BudgetSummary({
       {/* Tabs */}
       <div className="flex border-b border-border">
         <button
-          onClick={() => setActiveTab("summary")}
+          onClick={() => { setActiveTab("summary"); setSearchQuery(""); setTypeFilter("all"); }}
           className={`cursor-pointer flex-1 px-8 py-6 transition-colors flex flex-col items-center gap-3 ${
             activeTab === "summary"
               ? "text-primary border-b-2 border-primary"
@@ -1001,19 +1045,49 @@ export default function BudgetSummary({
               </div>
             </div>
 
+            {/* Search & Filters */}
+            <div className="px-4 pt-3 pb-2 space-y-2 border-b border-border">
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={12} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search transactions..."
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div className="flex gap-1.5">
+                {(["all", "income", "expense"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setTypeFilter(f)}
+                    className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                      typeFilter === f
+                        ? "bg-primary text-white"
+                        : "bg-surface-secondary text-text-secondary hover:bg-border"
+                    }`}
+                  >
+                    {f === "all" ? "All" : f === "income" ? "Income" : "Expense"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Sub-tab content */}
             <div className="flex-1 overflow-y-auto p-6">
               {/* New (Uncategorized) Tab */}
               {transactionSubTab === "new" && (
                 <div className="space-y-3">
-                  {filteredUncategorizedTxns.length === 0 &&
+                  {searchedNewTxns.length === 0 &&
                     !isLoadingUncategorized && (
                       <p className="text-text-secondary text-center py-12 text-base">
-                        No new transactions. Click &quot;Sync&quot; to import
-                        from your bank.
+                        {searchQuery || typeFilter !== "all"
+                          ? "No transactions match your search."
+                          : <>No new transactions. Click &quot;Sync&quot; to import from your bank.</>}
                       </p>
                     )}
-                  {isLoadingUncategorized && filteredUncategorizedTxns.length === 0 && (
+                  {isLoadingUncategorized && searchedNewTxns.length === 0 && (
                     <p className="text-text-secondary text-center py-12 text-base">
                       Loading transactions...
                     </p>
@@ -1022,7 +1096,7 @@ export default function BudgetSummary({
                   {(() => {
                     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                     const grouped: Record<string, UncategorizedTransaction[]> = {};
-                    for (const txn of filteredUncategorizedTxns) {
+                    for (const txn of searchedNewTxns) {
                       const [y, m] = txn.date.split('-').map(Number);
                       const key = `${y}-${String(m).padStart(2, '0')}`;
                       if (!grouped[key]) grouped[key] = [];
@@ -1048,7 +1122,14 @@ export default function BudgetSummary({
                           {txns.map((txn) => (
                             <div
                               key={txn.id}
-                              className="bg-accent-orange-light border border-accent-orange-border rounded-lg p-3 mb-3 last:mb-0"
+                              draggable={assigningId !== txn.id}
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData("application/transaction-id", String(txn.id));
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              className={`bg-accent-orange-light border border-accent-orange-border rounded-lg p-3 mb-3 last:mb-0 ${
+                                assigningId !== txn.id ? "cursor-grab active:cursor-grabbing" : ""
+                              }`}
                             >
                               {assigningId === txn.id ? (
                                 <div className="space-y-3">
@@ -1171,12 +1252,14 @@ export default function BudgetSummary({
               {/* Tracked (Categorized) Tab */}
               {transactionSubTab === "tracked" && (
                 <div className="space-y-3">
-                  {allTransactions.length === 0 && (
+                  {searchedTrackedTxns.length === 0 && (
                     <p className="text-text-secondary text-center py-12 text-base">
-                      No tracked transactions yet.
+                      {searchQuery || typeFilter !== "all"
+                        ? "No transactions match your search."
+                        : "No tracked transactions yet."}
                     </p>
                   )}
-                  {allTransactions.map((transaction) => {
+                  {searchedTrackedTxns.map((transaction) => {
                     const isSplit =
                       "isSplit" in transaction && transaction.isSplit;
                     return (
@@ -1231,12 +1314,14 @@ export default function BudgetSummary({
               {/* Deleted Tab */}
               {transactionSubTab === "deleted" && (
                 <div className="space-y-3">
-                  {deletedTxns.length === 0 && (
+                  {searchedDeletedTxns.length === 0 && (
                     <p className="text-text-secondary text-center py-12 text-base">
-                      No deleted transactions.
+                      {searchQuery || typeFilter !== "all"
+                        ? "No transactions match your search."
+                        : "No deleted transactions."}
                     </p>
                   )}
-                  {deletedTxns.map((txn) => (
+                  {searchedDeletedTxns.map((txn) => (
                     <div
                       key={txn.id}
                       className="bg-surface-secondary border border-border rounded-lg p-3"
@@ -1309,6 +1394,7 @@ export default function BudgetSummary({
         transactionDescription={
           transactionToSplit?.merchant || transactionToSplit?.description || ""
         }
+        transactionType={transactionToSplit?.type}
         budgetItems={getAllBudgetItems()}
         existingSplits={existingSplits}
       />
