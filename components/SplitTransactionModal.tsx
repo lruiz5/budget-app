@@ -17,15 +17,17 @@ export interface ExistingSplit {
   budgetItemId: number;
   amount: number;
   description?: string | null;
+  isNonEarned?: boolean;
 }
 
 interface SplitTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSplit: (splits: { budgetItemId: number; amount: number; description?: string }[]) => void;
+  onSplit: (splits: { budgetItemId: number; amount: number; description?: string; isNonEarned?: boolean }[]) => void;
   transactionId: number;
   transactionAmount: number;
   transactionDescription: string;
+  transactionType?: 'income' | 'expense';
   budgetItems: { category: string; items: BudgetItem[] }[];
   existingSplits?: ExistingSplit[];
 }
@@ -37,6 +39,7 @@ export default function SplitTransactionModal({
   transactionId,
   transactionAmount,
   transactionDescription,
+  transactionType,
   budgetItems,
   existingSplits,
 }: SplitTransactionModalProps) {
@@ -46,6 +49,7 @@ export default function SplitTransactionModal({
     { budgetItemId: '', amount: '', description: '' },
   ]);
 
+  const [isNonEarned, setIsNonEarned] = useState(false);
   const isEditMode = existingSplits && existingSplits.length > 0;
 
   // Populate form when modal opens
@@ -58,6 +62,7 @@ export default function SplitTransactionModal({
           amount: parseFloat(String(s.amount)).toFixed(2),
           description: s.description || '',
         })));
+        setIsNonEarned(existingSplits.some(s => s.isNonEarned));
       } else {
         // Reset to empty for new split
         setSplits([
@@ -119,6 +124,7 @@ export default function SplitTransactionModal({
         budgetItemId: parseInt(s.budgetItemId),
         amount: parseFloat(s.amount),
         description: s.description || undefined,
+        isNonEarned: transactionType === 'income' ? isNonEarned : undefined,
       }))
     );
   };
@@ -224,6 +230,22 @@ export default function SplitTransactionModal({
             <FaPlus size={12} />
             Add Another Split
           </button>
+
+          {/* Non-earned income toggle - only for income transactions */}
+          {transactionType === 'income' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="splitNonEarned"
+                checked={isNonEarned}
+                onChange={(e) => setIsNonEarned(e.target.checked)}
+                className="w-4 h-4 text-primary rounded border-border-strong focus:ring-primary"
+              />
+              <label htmlFor="splitNonEarned" className="text-sm text-text-secondary">
+                Non-earned income <span className="text-text-tertiary text-xs">(gifts, refunds, etc.)</span>
+              </label>
+            </div>
+          )}
 
           {/* Remaining indicator */}
           <div className={`p-3 rounded-lg ${isBalanced ? 'bg-success-light' : 'bg-warning-light'}`}>

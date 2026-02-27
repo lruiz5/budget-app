@@ -29,6 +29,7 @@ interface BudgetSectionProps {
   onSplitClick?: (parentTransactionId: string) => void;
   onItemClick?: (item: BudgetItem, categoryName: string) => void;
   selectedItemId?: string;
+  onTransactionDrop?: (transactionId: string, budgetItemId: string) => void;
 }
 
 interface SortableItemProps {
@@ -50,6 +51,7 @@ interface SortableItemProps {
   onItemClick?: (item: BudgetItem) => void;
   isSelected?: boolean;
   showRemaining?: boolean;
+  onTransactionDrop?: (transactionId: string, budgetItemId: string) => void;
 }
 
 function SortableItem({
@@ -69,7 +71,9 @@ function SortableItem({
   onItemClick,
   isSelected = false,
   showRemaining = false,
+  onTransactionDrop,
 }: SortableItemProps) {
+  const [isDragOver, setIsDragOver] = useState(false);
   const {
     attributes,
     listeners,
@@ -87,7 +91,7 @@ function SortableItem({
 
   const difference = item.planned - item.actual;
   const progressPercent = item.planned > 0 ? Math.min((item.actual / item.planned) * 100, 100) : 0;
-  const isOverBudget = item.actual > item.planned;
+  const isOverBudget = item.actual > item.planned + 0.01;
 
   const isEditing =
     editingNames[item.id] !== undefined || editingValues[item.id] !== undefined;
@@ -96,7 +100,23 @@ function SortableItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="relative"
+      className={`relative ${isDragOver ? "ring-2 ring-primary rounded bg-primary-light/30" : ""}`}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes("application/transaction-id")) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          setIsDragOver(true);
+        }
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const txnId = e.dataTransfer.getData("application/transaction-id");
+        if (txnId && onTransactionDrop) {
+          onTransactionDrop(txnId, item.id);
+        }
+      }}
     >
       <div
         onClick={() => onItemClick?.(item)}
@@ -242,63 +262,70 @@ function SortableItem({
             Transactions
           </div>
           <div className="space-y-1">
-            {[...item.transactions]
+            {[
+              ...item.transactions.map((t) => ({ kind: 'transaction' as const, date: t.date, data: t })),
+              ...(item.splitTransactions || []).map((s) => ({ kind: 'split' as const, date: s.parentDate || '', data: s })),
+            ]
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-              .map((transaction) => (
-              <div
-                key={transaction.id}
-                onClick={() => onTransactionClick?.(transaction)}
-                className="flex items-center justify-between text-sm py-1 hover:bg-surface rounded px-2 cursor-pointer transition-colors"
-              >
-                <div className="flex-1">
-                  <span className="text-text-secondary">
-                    {new Date(transaction.date).toLocaleDateString()}
-                  </span>
-                  <span className="ml-3 text-text-primary">
-                    {transaction.merchant || transaction.description}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`font-medium ${transaction.type === 'income' ? 'text-success' : 'text-text-primary'}`}>
-                    {transaction.type === 'income' ? '+' : ''}${formatCurrency(transaction.amount)}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteTransaction(transaction.id);
-                    }}
-                    className="text-danger hover:text-danger text-xs"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-            ))}
-            {/* Split transactions */}
-            {[...(item.splitTransactions || [])]
-              .sort((a, b) => new Date(b.parentDate || '').getTime() - new Date(a.parentDate || '').getTime())
-              .map((split) => (
-              <div
-                key={`split-${split.id}`}
-                onClick={() => onSplitClick?.(split.parentTransactionId)}
-                className="flex items-center justify-between text-sm py-1 px-2 bg-accent-purple-light rounded cursor-pointer hover:bg-accent-purple-light transition-colors"
-              >
-                <div className="flex-1">
-                  <span className="text-text-secondary">
-                    {split.parentDate ? new Date(split.parentDate).toLocaleDateString() : '—'}
-                  </span>
-                  <span className="ml-3 text-text-primary">
-                    {split.description || split.parentMerchant || split.parentDescription || 'Split'}
-                  </span>
-                  <span className="ml-2 text-xs text-accent-purple">(split)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`font-medium ${split.parentType === 'income' ? 'text-success' : 'text-text-primary'}`}>
-                    {split.parentType === 'income' ? '+' : ''}${formatCurrency(split.amount)}
-                  </span>
-                </div>
-              </div>
-            ))}
+              .map((entry) => {
+                if (entry.kind === 'transaction') {
+                  const transaction = entry.data;
+                  return (
+                    <div
+                      key={transaction.id}
+                      onClick={() => onTransactionClick?.(transaction)}
+                      className="flex items-center justify-between text-sm py-1 hover:bg-surface rounded px-2 cursor-pointer transition-colors"
+                    >
+                      <div className="flex-1">
+                        <span className="text-text-secondary">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </span>
+                        <span className="ml-3 text-text-primary">
+                          {transaction.merchant || transaction.description}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium ${transaction.type === 'income' ? 'text-success' : 'text-text-primary'}`}>
+                          {transaction.type === 'income' ? '+' : ''}${formatCurrency(transaction.amount)}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteTransaction(transaction.id);
+                          }}
+                          className="text-danger hover:text-danger text-xs"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  const split = entry.data;
+                  return (
+                    <div
+                      key={`split-${split.id}`}
+                      onClick={() => onSplitClick?.(split.parentTransactionId)}
+                      className="flex items-center justify-between text-sm py-1 px-2 bg-accent-purple-light rounded cursor-pointer hover:bg-accent-purple-light transition-colors"
+                    >
+                      <div className="flex-1">
+                        <span className="text-text-secondary">
+                          {split.parentDate ? new Date(split.parentDate).toLocaleDateString() : '—'}
+                        </span>
+                        <span className="ml-3 text-text-primary">
+                          {split.description || split.parentMerchant || split.parentDescription || 'Split'}
+                        </span>
+                        <span className="ml-2 text-xs text-accent-purple">(split)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium ${split.parentType === 'income' ? 'text-success' : 'text-text-primary'}`}>
+                          {split.parentType === 'income' ? '+' : ''}${formatCurrency(split.amount)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+              })}
           </div>
         </div>
       )}
@@ -329,6 +356,7 @@ export default function BudgetSection({
   onSplitClick,
   onItemClick,
   selectedItemId,
+  onTransactionDrop,
 }: BudgetSectionProps) {
   const [newItemName, setNewItemName] = useState("");
   const [isAddingItem, setIsAddingItem] = useState(false);
@@ -566,6 +594,7 @@ export default function BudgetSection({
                       onItemClick={(item) => onItemClick?.(item, category.name)}
                       isSelected={selectedItemId === item.id}
                       showRemaining={showRemaining}
+                      onTransactionDrop={onTransactionDrop}
                     />
                   ))}
                 </SortableContext>

@@ -16,6 +16,7 @@ interface LinkedAccount {
   lastFour: string;
   status: string;
   lastSyncedAt: string | null;
+  syncEnabled: boolean;
 }
 
 declare global {
@@ -142,6 +143,24 @@ export default function SettingsPage() {
     }
   };
 
+  const handleToggleSync = async (accountId: number, currentState: boolean) => {
+    setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, syncEnabled: !currentState } : a));
+    try {
+      const response = await fetch('/api/teller/accounts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: accountId, syncEnabled: !currentState }),
+      });
+      if (!response.ok) {
+        setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, syncEnabled: currentState } : a));
+        toast.error('Failed to update sync setting');
+      }
+    } catch {
+      setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, syncEnabled: currentState } : a));
+      toast.error('Failed to update sync setting');
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never';
     return new Date(dateString).toLocaleString();
@@ -224,7 +243,7 @@ export default function SettingsPage() {
                     {/* Accounts under this institution */}
                     <div className="divide-y divide-border">
                       {institutionAccounts.map(account => (
-                        <div key={account.id} className="flex items-center justify-between px-4 py-3">
+                        <div key={account.id} className={`flex items-center justify-between px-4 py-3 transition-opacity ${!account.syncEnabled ? 'opacity-60' : ''}`}>
                           <div className="pl-13">
                             <p className="font-medium text-text-primary">
                               {account.accountName} •••• {account.lastFour}
@@ -233,7 +252,7 @@ export default function SettingsPage() {
                               Last synced: {formatDate(account.lastSyncedAt)}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <span
                               className={`px-2 py-1 text-xs rounded-full ${
                                 account.status === 'open'
@@ -243,6 +262,17 @@ export default function SettingsPage() {
                             >
                               {account.accountSubtype}
                             </span>
+                            <button
+                              onClick={() => handleToggleSync(account.id, account.syncEnabled)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                account.syncEnabled ? 'bg-primary' : 'bg-border-strong'
+                              }`}
+                              title={account.syncEnabled ? 'Sync enabled' : 'Sync disabled'}
+                            >
+                              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                account.syncEnabled ? 'translate-x-6' : 'translate-x-1'
+                              }`} />
+                            </button>
                             <button
                               onClick={() => handleDeleteAccount(account.id)}
                               className="p-2 text-danger hover:bg-danger-light rounded"

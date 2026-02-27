@@ -4,9 +4,9 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 
 ## Project Status
 
-**Web App Version:** v1.9.0
-**iOS App Version:** v0.1.1 (pre-release)
-**Last Updated:** 2026-02-04
+**Web App Version:** v1.12.0
+**iOS App Version:** v0.17.0 (pre-release)
+**Last Updated:** 2026-02-27
 
 **Note:** iOS app uses 0.x.x versioning until first App Store release (v1.0.0). See `ios/BudgetApp/CHANGELOG.md` for iOS-specific changes.
 
@@ -145,6 +145,7 @@ Accessible via sidebar navigation:
 - Pending and posted transaction status tracking
 - Automatic updates when pending transactions post
 - Last synced timestamp for each account
+- **Per-account sync toggle**: enable/disable sync per linked account
 
 #### Transaction Management
 
@@ -152,10 +153,13 @@ Accessible via sidebar navigation:
 - **Tracked Transactions Tab**: View all categorized transactions including split portions
 - **Deleted Transactions Tab**: View and restore soft-deleted transactions
 - Assign transactions to budget items via dropdown
+- **Drag-to-assign**: drag uncategorized transactions onto budget items (desktop)
+- **Search & filter**: real-time search + All/Income/Expense filter pills
 - Merchant-based categorization suggestions from historical data
 - Edit transaction details (date, description, amount, merchant, type)
 - Manual transaction entry with floating add button
 - Click on any transaction to edit or delete
+- **Non-earned income**: mark income transactions as gifts, refunds, etc.
 
 #### Split Transactions
 
@@ -363,6 +367,10 @@ A native iOS app built with SwiftUI is available in the `ios/BudgetApp/` directo
 - Month/year picker for navigating between budget periods
 - Clerk authentication integration
 - Settings view with recurring payments management
+- Transaction search & filters, drag-to-categorize
+- Per-account sync toggle, non-earned income marking
+- WidgetKit widgets (spending pace, category rings, budget overview)
+- Tag reclassification, manual funding adjustment
 
 ### Architecture
 

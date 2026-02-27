@@ -4,13 +4,58 @@ All notable changes to this project will be documented in this file.
 
 ## Versioning Strategy
 
-- **Web App**: Versioned independently (currently v1.9.0)
-- **iOS App**: Versioned independently in `ios/BudgetApp/CHANGELOG.md` (currently v0.1.1, pre-release)
-- **Project**: Overall version tracks major milestones (currently v1.9.0)
+- **Web App**: Versioned independently (currently v1.12.0)
+- **iOS App**: Versioned independently in `ios/BudgetApp/CHANGELOG.md` (currently v0.17.0, pre-release)
+- **Project**: Overall version tracks major milestones (currently v1.12.0)
 
 **Note:** iOS app uses 0.x.x versioning until first App Store release (v1.0.0).
 
 ---
+
+## [1.12.0] - 2026-02-27 - Web Feature Parity with iOS
+
+### Added
+
+- **Non-earned income toggle** — mark income transactions as non-earned (gifts, refunds, etc.)
+  - Checkbox in AddTransactionModal visible when type is Income
+  - Checkbox in SplitTransactionModal for income split transactions
+  - `isNonEarned` field persisted through edit and split flows
+- **Per-account sync toggle** — enable/disable sync per linked bank account on Settings page
+  - Toggle switch per account row with optimistic update + rollback on failure
+  - Dimmed styling for disabled accounts
+- **Transaction search & filters** — search bar + type filter chips on Transactions sidebar
+  - Real-time search matching against merchant, description, and amount
+  - All/Income/Expense filter pills across New, Tracked, and Deleted tabs
+  - Badge counts remain unfiltered; filters clear on tab switch
+- **Drag-to-assign transactions** — drag uncategorized transactions from sidebar onto budget items
+  - HTML5 native drag-and-drop (coexists with @dnd-kit reorder)
+  - Custom MIME type `application/transaction-id` to prevent false triggers
+  - Visual highlight (ring + light bg) on valid drag hover over budget items
+  - Desktop only (lg+ screens); dropdown assign remains as fallback
+
+### Fixed
+
+- **False overspent indicator** — budget items at exact planned amount (e.g., 250/250) no longer show red overspent styling (floating point epsilon tolerance)
+- **Split transaction sorting** — splits now interleaved with regular transactions by date instead of grouped at bottom of list
+
+## [1.11.0] - 2026-02-20 - Tag Reclassification & Monthly Report Enhancements
+
+### Added
+
+- **Tag reclassification** — `tagCategoryType` field allows transactions to report under a different category than their budget item
+- **Report As dropdown** in AddTransactionModal for optional category override
+- **Monthly report improvements** — enhanced Buffer Flow and category breakdown accuracy
+
+## [1.10.0] - 2026-02-12 - Teller Sync Improvements & Bug Fixes
+
+### Added
+
+- **Pending-to-posted deduplication** — Teller sync fuzzy-matches stale pending transactions by merchant+date to update instead of creating duplicates
+- **Sync start date** per account — prevents re-importing old transactions
+
+### Fixed
+
+- **Seed script FK error** — uncategorized transactions now cleaned up before deleting linked accounts
 
 ## [1.9.0] - 2026-02-04 - Native iOS App (SwiftUI)
 
