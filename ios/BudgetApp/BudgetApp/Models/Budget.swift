@@ -8,7 +8,7 @@ struct Budget: Codable, Identifiable {
     let userId: String
     let month: Int
     let year: Int
-    let buffer: Decimal
+    var buffer: Decimal
     let createdAt: Date
     var categories: [String: BudgetCategory]
 
@@ -103,7 +103,7 @@ struct Budget: Codable, Identifiable {
     }
 }
 
-struct BudgetCategory: Codable, Identifiable {
+struct BudgetCategory: Codable, Identifiable, Equatable {
     let id: Int
     let budgetId: Int
     let categoryType: String
@@ -197,7 +197,7 @@ struct BudgetCategory: Codable, Identifiable {
     }
 }
 
-struct BudgetItem: Codable, Identifiable {
+struct BudgetItem: Codable, Identifiable, Equatable {
     let id: Int
     let categoryId: Int
     let name: String
@@ -350,7 +350,7 @@ extension Budget {
 }
 
 // Split transaction with parent info for actual calculation
-struct SplitTransactionWithParent: Codable, Identifiable {
+struct SplitTransactionWithParent: Codable, Identifiable, Equatable {
     let id: Int
     let parentTransactionId: Int
     let budgetItemId: Int

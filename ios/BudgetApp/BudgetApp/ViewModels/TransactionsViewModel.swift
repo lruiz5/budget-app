@@ -81,7 +81,7 @@ class TransactionsViewModel: ObservableObject {
             if updated > 0 { parts.append("\(updated) updated") }
             let summary = parts.isEmpty ? "No new transactions" : "Synced " + parts.joined(separator: ", ")
             showToast(summary, isError: false)
-            await loadTransactions()
+            await loadTransactions(skipCache: true)
         } catch {
             showToast("Sync failed: \(error.localizedDescription)", isError: true)
         }
@@ -91,25 +91,27 @@ class TransactionsViewModel: ObservableObject {
 
     // MARK: - Load Transactions
 
-    func loadTransactions() async {
+    func loadTransactions(skipCache: Bool = false) async {
         error = nil
 
         let month = selectedMonth
         let year = selectedYear
 
-        // Load from cache first (instant, no spinner)
-        if let cachedUncat: [Transaction] = await CacheManager.shared.load(forKey: "txn_uncategorized_\(month)_\(year)"),
-           let cachedCat: [Transaction] = await CacheManager.shared.load(forKey: "txn_categorized_\(month)_\(year)") {
-            uncategorizedTransactions = cachedUncat
-            categorizedTransactions = cachedCat
-            transactions = cachedUncat + cachedCat
-        }
-        if let cachedCategories: [BudgetCategory] = await CacheManager.shared.load(forKey: "budget_categories_\(month)_\(year)") {
-            budgetCategories = cachedCategories
-            updateBudgetItemNameMap()
-        }
-        if let cachedAccounts: [LinkedAccount] = await CacheManager.shared.load(forKey: "linked_accounts") {
-            linkedAccounts = cachedAccounts
+        // Load from cache first (instant, no spinner) — skip after mutations to avoid stale flash
+        if !skipCache {
+            if let cachedUncat: [Transaction] = await CacheManager.shared.load(forKey: "txn_uncategorized_\(month)_\(year)"),
+               let cachedCat: [Transaction] = await CacheManager.shared.load(forKey: "txn_categorized_\(month)_\(year)") {
+                uncategorizedTransactions = cachedUncat
+                categorizedTransactions = cachedCat
+                transactions = cachedUncat + cachedCat
+            }
+            if let cachedCategories: [BudgetCategory] = await CacheManager.shared.load(forKey: "budget_categories_\(month)_\(year)") {
+                budgetCategories = cachedCategories
+                updateBudgetItemNameMap()
+            }
+            if let cachedAccounts: [LinkedAccount] = await CacheManager.shared.load(forKey: "linked_accounts") {
+                linkedAccounts = cachedAccounts
+            }
         }
 
         // Only show spinner if no cached data
@@ -314,7 +316,7 @@ class TransactionsViewModel: ObservableObject {
                 merchant: merchant
             )
             _ = try await transactionService.createTransaction(request)
-            await loadTransactions()
+            await loadTransactions(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)
         }
@@ -334,7 +336,7 @@ class TransactionsViewModel: ObservableObject {
                 type: type
             )
             _ = try await transactionService.updateTransaction(request)
-            await loadTransactions()
+            await loadTransactions(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)
         }
@@ -346,7 +348,7 @@ class TransactionsViewModel: ObservableObject {
         guard requireOnline() else { return }
         do {
             _ = try await transactionService.deleteTransaction(id: id)
-            await loadTransactions()
+            await loadTransactions(skipCache: true)
             showToast("Transaction deleted", isError: false)
         } catch {
             showToast(error.localizedDescription, isError: true)
@@ -359,7 +361,7 @@ class TransactionsViewModel: ObservableObject {
         guard requireOnline() else { return }
         do {
             _ = try await transactionService.restoreTransaction(id: id)
-            await loadTransactions()
+            await loadTransactions(skipCache: true)
             await loadDeletedTransactions()
             showToast("Transaction restored", isError: false)
         } catch {
@@ -380,7 +382,7 @@ class TransactionsViewModel: ObservableObject {
         do {
             let request = CreateSplitsRequest(parentTransactionId: transactionId, splits: splits)
             _ = try await transactionService.createSplits(request)
-            await loadTransactions()
+            await loadTransactions(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)
         }
@@ -390,7 +392,7 @@ class TransactionsViewModel: ObservableObject {
         guard requireOnline() else { return }
         do {
             _ = try await transactionService.deleteSplits(parentTransactionId: transactionId, budgetItemId: budgetItemId)
-            await loadTransactions()
+            await loadTransactions(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)
         }

@@ -1301,8 +1301,8 @@ export default function BudgetSummary({
                               )}
                             </div>
                           </div>
-                          <span className="text-base font-medium text-text-primary ml-3">
-                            ${formatCurrency(Math.abs(transaction.amount))}
+                          <span className={`text-base font-medium ml-3 ${transaction.type === "income" ? "text-success" : "text-text-primary"}`}>
+                            {transaction.type === "income" ? "+" : "-"}${formatCurrency(Math.abs(transaction.amount))}
                           </span>
                         </div>
                       </div>

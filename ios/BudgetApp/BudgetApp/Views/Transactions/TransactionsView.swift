@@ -167,12 +167,12 @@ struct TransactionsView: View {
         switch sheet {
         case .addTransaction:
             AddTransactionSheet(onSave: {
-                Task { await viewModel.loadTransactions() }
+                Task { await viewModel.loadTransactions(skipCache: true) }
             })
         case .editTransaction(let transaction):
             EditTransactionSheet(transaction: transaction, onUpdate: {
                 Task {
-                    await viewModel.loadTransactions()
+                    await viewModel.loadTransactions(skipCache: true)
                     if selectedFilter == .deleted {
                         await viewModel.loadDeletedTransactions()
                     }
@@ -191,7 +191,7 @@ struct TransactionsView: View {
                 transaction: transaction,
                 existingSplits: transaction.splits ?? [],
                 onComplete: {
-                    Task { await viewModel.loadTransactions() }
+                    Task { await viewModel.loadTransactions(skipCache: true) }
                 }
             )
         case .filterOptions:

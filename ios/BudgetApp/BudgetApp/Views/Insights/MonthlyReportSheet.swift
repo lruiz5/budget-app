@@ -526,30 +526,14 @@ struct MonthlyReportSheet: View {
         totalUnderspent - totalOverspent + leftToBudget
     }
 
-    // Tag reclassification adjustments for reporting
-    private var tagAdjustments: [String: Decimal] {
-        var adjustments: [String: Decimal] = [:]
-        for (catKey, category) in budget.categories {
-            for item in category.items {
-                for t in item.transactions where t.tagCategoryType != nil && t.tagCategoryType != catKey {
-                    let amt: Decimal = t.type == .expense ? t.amount : -t.amount
-                    adjustments[catKey, default: 0] -= amt
-                    adjustments[t.tagCategoryType!, default: 0] += amt
-                }
-            }
-        }
-        return adjustments
-    }
-
     // Category summaries (excludes income, includes saving, sorted by actual desc)
-    // Applies tag reclassification: tagged transactions shift amounts between categories
+    // No tag reclassification — report as only applies to cash flow/spending trends
     private var categorySummaries: [CategorySummary] {
-        let adj = tagAdjustments
         return budget.categories.values
             .filter { $0.categoryType.lowercased() != "income" }
             .map { cat in
                 let planned = cat.planned
-                let actual = cat.actual + (adj[cat.categoryType] ?? 0)
+                let actual = cat.actual
                 let difference = planned - actual
                 let percentUsed = planned > 0 ? Double(truncating: (actual / planned * 100) as NSNumber) : 0
 

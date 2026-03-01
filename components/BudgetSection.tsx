@@ -91,7 +91,7 @@ function SortableItem({
 
   const difference = item.planned - item.actual;
   const progressPercent = item.planned > 0 ? Math.min((item.actual / item.planned) * 100, 100) : 0;
-  const isOverBudget = item.actual > item.planned + 0.01;
+  const isOverBudget = item.actual > item.planned + 0.005;
 
   const isEditing =
     editingNames[item.id] !== undefined || editingValues[item.id] !== undefined;

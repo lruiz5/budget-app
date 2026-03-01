@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { BudgetItem } from '@/types/budget';
-import { getCategoryEmoji } from '@/lib/chartColors';
+import { useState, useEffect } from "react";
+import { BudgetItem } from "@/types/budget";
+import { getCategoryEmoji } from "@/lib/chartColors";
 
 interface LinkedAccount {
   id: number;
@@ -25,7 +25,7 @@ export interface TransactionToEdit {
   date: string;
   description: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: "income" | "expense";
   merchant?: string | null;
   tagCategoryType?: string | null;
   isNonEarned?: boolean;
@@ -40,7 +40,7 @@ interface AddTransactionModalProps {
     date: string;
     description: string;
     amount: number;
-    type: 'income' | 'expense';
+    type: "income" | "expense";
     merchant?: string;
     tagCategoryType?: string;
     isNonEarned?: boolean;
@@ -52,7 +52,7 @@ interface AddTransactionModalProps {
     date: string;
     description: string;
     amount: number;
-    type: 'income' | 'expense';
+    type: "income" | "expense";
     merchant?: string;
     tagCategoryType?: string;
     isNonEarned?: boolean;
@@ -75,13 +75,14 @@ export default function AddTransactionModal({
   linkedAccounts = [],
   transactionToEdit,
 }: AddTransactionModalProps) {
-  const [type, setType] = useState<'income' | 'expense'>('expense');
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [merchant, setMerchant] = useState('');
-  const [linkedAccountId, setLinkedAccountId] = useState<string>('');
-  const [budgetItemId, setBudgetItemId] = useState('');
-  const [tagCategoryType, setTagCategoryType] = useState<string>('');
+  const [type, setType] = useState<"income" | "expense">("expense");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [merchant, setMerchant] = useState("");
+  const [linkedAccountId, setLinkedAccountId] = useState<string>("");
+  const [budgetItemId, setBudgetItemId] = useState("");
+  const [tagCategoryType, setTagCategoryType] = useState<string>("");
+  const [description, setDescription] = useState("");
   const [isNonEarned, setIsNonEarned] = useState(false);
 
   const isEditMode = !!transactionToEdit;
@@ -92,20 +93,22 @@ export default function AddTransactionModal({
       setType(transactionToEdit.type);
       setAmount(transactionToEdit.amount.toString());
       setDate(transactionToEdit.date);
-      setMerchant(transactionToEdit.merchant || '');
-      setLinkedAccountId(transactionToEdit.linkedAccountId?.toString() || '');
-      setBudgetItemId(transactionToEdit.budgetItemId?.toString() || '');
-      setTagCategoryType(transactionToEdit.tagCategoryType || '');
+      setMerchant(transactionToEdit.merchant || "");
+      setLinkedAccountId(transactionToEdit.linkedAccountId?.toString() || "");
+      setBudgetItemId(transactionToEdit.budgetItemId?.toString() || "");
+      setTagCategoryType(transactionToEdit.tagCategoryType || "");
+      setDescription(transactionToEdit.description || "");
       setIsNonEarned(transactionToEdit.isNonEarned || false);
     } else {
       // Reset form for new transaction
-      setType('expense');
-      setAmount('');
-      setDate(new Date().toISOString().split('T')[0]);
-      setMerchant('');
-      setLinkedAccountId('');
-      setBudgetItemId('');
-      setTagCategoryType('');
+      setType("expense");
+      setAmount("");
+      setDate(new Date().toISOString().split("T")[0]);
+      setMerchant("");
+      setLinkedAccountId("");
+      setBudgetItemId("");
+      setTagCategoryType("");
+      setDescription("");
       setIsNonEarned(false);
     }
   }, [transactionToEdit, isOpen]);
@@ -117,20 +120,22 @@ export default function AddTransactionModal({
 
     // For edit mode, preserve the original description if merchant is empty
     // For new transactions, use 'Manual transaction' as fallback
-    const description = isEditMode
-      ? (merchant.trim() || transactionToEdit.description)
-      : (merchant.trim() || 'Manual transaction');
+    const descriptionValue =
+      description.trim() ||
+      (isEditMode
+        ? merchant.trim() || transactionToEdit.description
+        : merchant.trim() || "Manual transaction");
 
     const transactionData = {
       budgetItemId,
       linkedAccountId: linkedAccountId ? parseInt(linkedAccountId) : undefined,
       date,
-      description,
+      description: descriptionValue,
       amount: parseFloat(amount),
       type,
       merchant: merchant.trim() || undefined,
       tagCategoryType: tagCategoryType || undefined,
-      isNonEarned: type === 'income' ? isNonEarned : undefined,
+      isNonEarned: type === "income" ? isNonEarned : undefined,
     };
 
     if (isEditMode && onEditTransaction) {
@@ -143,20 +148,21 @@ export default function AddTransactionModal({
     }
 
     // Reset form
-    setType('expense');
-    setAmount('');
-    setDate(new Date().toISOString().split('T')[0]);
-    setMerchant('');
-    setLinkedAccountId('');
-    setBudgetItemId('');
-    setTagCategoryType('');
+    setType("expense");
+    setAmount("");
+    setDate(new Date().toISOString().split("T")[0]);
+    setMerchant("");
+    setLinkedAccountId("");
+    setBudgetItemId("");
+    setTagCategoryType("");
+    setDescription("");
     setIsNonEarned(false);
     onClose();
   };
 
   const handleDelete = () => {
     if (!transactionToEdit || !onDeleteTransaction) return;
-    if (!confirm('Delete this transaction?')) return;
+    if (!confirm("Delete this transaction?")) return;
 
     onDeleteTransaction(transactionToEdit.id);
     onClose();
@@ -167,14 +173,14 @@ export default function AddTransactionModal({
   // Check if account is already linked (from Teller sync)
   const hasLinkedAccount = isEditMode && transactionToEdit?.linkedAccountId;
   const linkedAccountDisplay = hasLinkedAccount
-    ? linkedAccounts.find(a => a.id === transactionToEdit.linkedAccountId)
+    ? linkedAccounts.find((a) => a.id === transactionToEdit.linkedAccountId)
     : null;
 
   return (
     <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50">
       <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
         <h2 className="text-2xl font-bold text-text-primary mb-6">
-          {isEditMode ? 'Edit Transaction' : 'Add Transaction'}
+          {isEditMode ? "Edit Transaction" : "Add Transaction"}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -188,8 +194,8 @@ export default function AddTransactionModal({
                 <input
                   type="radio"
                   value="expense"
-                  checked={type === 'expense'}
-                  onChange={(e) => setType(e.target.value as 'expense')}
+                  checked={type === "expense"}
+                  onChange={(e) => setType(e.target.value as "expense")}
                   className="mr-2 w-4 h-4 text-primary"
                 />
                 <span className="text-sm text-text-secondary">Expense</span>
@@ -198,8 +204,8 @@ export default function AddTransactionModal({
                 <input
                   type="radio"
                   value="income"
-                  checked={type === 'income'}
-                  onChange={(e) => setType(e.target.value as 'income')}
+                  checked={type === "income"}
+                  onChange={(e) => setType(e.target.value as "income")}
                   className="mr-2 w-4 h-4 text-primary"
                 />
                 <span className="text-sm text-text-secondary">Income</span>
@@ -213,7 +219,9 @@ export default function AddTransactionModal({
               Amount
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-2 text-text-secondary">$</span>
+              <span className="absolute left-3 top-2 text-text-secondary">
+                $
+              </span>
               <input
                 type="number"
                 value={amount}
@@ -257,14 +265,33 @@ export default function AddTransactionModal({
             />
           </div>
 
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1">
+              Notes{" "}
+              <span className="text-text-tertiary text-xs">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              placeholder="e.g., Secret Santa Gift"
+              className="w-full px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
           {/* Account - read-only if already linked, editable otherwise */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1">
-              Account <span className="text-text-tertiary text-xs">(optional)</span>
+              Account{" "}
+              <span className="text-text-tertiary text-xs">(optional)</span>
             </label>
             {hasLinkedAccount && linkedAccountDisplay ? (
               <div className="w-full px-3 py-2 border border-border rounded bg-surface-secondary text-text-secondary">
-                {linkedAccountDisplay.institutionName} - {linkedAccountDisplay.accountName} *{linkedAccountDisplay.lastFour}
+                {linkedAccountDisplay.institutionName} -{" "}
+                {linkedAccountDisplay.accountName} *
+                {linkedAccountDisplay.lastFour}
               </div>
             ) : (
               <select
@@ -310,7 +337,8 @@ export default function AddTransactionModal({
           {categories.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">
-                Report as <span className="text-text-tertiary text-xs">(optional)</span>
+                Report as{" "}
+                <span className="text-text-tertiary text-xs">(optional)</span>
               </label>
               <select
                 value={tagCategoryType}
@@ -328,7 +356,7 @@ export default function AddTransactionModal({
           )}
 
           {/* Non-earned income toggle - only visible for income type */}
-          {type === 'income' && (
+          {type === "income" && (
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -337,8 +365,14 @@ export default function AddTransactionModal({
                 onChange={(e) => setIsNonEarned(e.target.checked)}
                 className="w-4 h-4 text-primary rounded border-border-strong focus:ring-primary"
               />
-              <label htmlFor="nonEarned" className="text-sm text-text-secondary">
-                Non-earned income <span className="text-text-tertiary text-xs">(gifts, refunds, etc.)</span>
+              <label
+                htmlFor="nonEarned"
+                className="text-sm text-text-secondary"
+              >
+                Non-earned income{" "}
+                <span className="text-text-tertiary text-xs">
+                  (gifts, refunds, etc.)
+                </span>
               </label>
             </div>
           )}
@@ -348,7 +382,7 @@ export default function AddTransactionModal({
               type="submit"
               className="flex-1 px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover font-medium"
             >
-              {isEditMode ? 'Save Changes' : 'Add Transaction'}
+              {isEditMode ? "Save Changes" : "Add Transaction"}
             </button>
             <button
               type="button"
