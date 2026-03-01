@@ -1,6 +1,6 @@
 {
   "name": "budget-app",
-  "version": "0.9.7",
+  "version": "0.9.9",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {

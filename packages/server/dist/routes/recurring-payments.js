@@ -102,7 +102,7 @@ route.get('/', async (c) => {
     const userId = getUserId(c);
     const db = await getDb();
     const payments = await db.query.recurringPayments.findMany({
-        where: and(eq(recurringPayments.userId, userId), eq(recurringPayments.isActive, true)),
+        where: and(eq(recurringPayments.userId, userId), eq(recurringPayments.isActive, true), isNull(recurringPayments.deletedAt)),
         orderBy: [desc(recurringPayments.nextDueDate)],
     });
     const now = new Date();
@@ -234,10 +234,12 @@ route.delete('/', async (c) => {
     // First, unlink any budget items that reference this recurring payment
     await db
         .update(budgetItems)
-        .set({ recurringPaymentId: null })
+        .set({ recurringPaymentId: null, updatedAt: new Date() })
         .where(eq(budgetItems.recurringPaymentId, id));
-    // Then delete the recurring payment
-    await db.delete(recurringPayments).where(eq(recurringPayments.id, id));
+    // Soft delete the recurring payment
+    await db.update(recurringPayments)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(recurringPayments.id, id));
     return c.json({ success: true });
 });
 // ============================================================================

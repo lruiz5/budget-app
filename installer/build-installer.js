@@ -307,8 +307,13 @@ async function createDistribution() {
   fs.mkdirSync(serverDir, { recursive: true });
 
   const nodeExeSrc = path.join(NODE_DIR, 'node.exe');
+  const iconSrc = path.join(PROJECT_ROOT, 'public', 'icon.ico');
+
   if (fs.existsSync(nodeExeSrc)) {
     fs.copyFileSync(nodeExeSrc, path.join(serverDir, 'node.exe'));
+  }
+  if (fs.existsSync(iconSrc)) {
+    fs.copyFileSync(iconSrc, path.join(serverDir, 'icon.ico'));
   }
 
   copyDir(
@@ -377,6 +382,9 @@ pause
 
   if (fs.existsSync(nodeExeSrc)) {
     fs.copyFileSync(nodeExeSrc, path.join(clientDir, 'node.exe'));
+  }
+  if (fs.existsSync(iconSrc)) {
+    fs.copyFileSync(iconSrc, path.join(clientDir, 'icon.ico'));
   }
 
   const nextFiles = ['server.js', 'package.json'];
@@ -463,6 +471,9 @@ pause
 
   if (fs.existsSync(nodeExeSrc)) {
     fs.copyFileSync(nodeExeSrc, path.join(fullDir, 'node.exe'));
+  }
+  if (fs.existsSync(iconSrc)) {
+    fs.copyFileSync(iconSrc, path.join(fullDir, 'icon.ico'));
   }
 
   copyDir(

@@ -405,6 +405,29 @@ async function initializeSchema(client: PGlite): Promise<void> {
     ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS csv_column_mapping TEXT;
   `).catch(() => {});
 
+  // Add updatedAt and deletedAt columns for sync support (existing databases)
+  const syncColumns = [
+    // updatedAt columns
+    'ALTER TABLE budget_categories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+    'ALTER TABLE budget_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+    'ALTER TABLE transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+    'ALTER TABLE split_transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+    'ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+    'ALTER TABLE user_onboarding ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+    'ALTER TABLE csv_import_hashes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+    'ALTER TABLE income_allocations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+    // deletedAt columns (soft delete for sync)
+    'ALTER TABLE budget_categories ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ',
+    'ALTER TABLE budget_items ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ',
+    'ALTER TABLE split_transactions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ',
+    'ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ',
+    'ALTER TABLE recurring_payments ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ',
+    'ALTER TABLE user_onboarding ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ',
+  ];
+  for (const cmd of syncColumns) {
+    await client.exec(cmd).catch(() => {});
+  }
+
   const alterCommands = [
     'ALTER TABLE linked_accounts ALTER COLUMN teller_account_id DROP NOT NULL',
     'ALTER TABLE linked_accounts ALTER COLUMN teller_enrollment_id DROP NOT NULL',
@@ -414,6 +437,60 @@ async function initializeSchema(client: PGlite): Promise<void> {
   ];
   for (const cmd of alterCommands) {
     await client.exec(cmd).catch(() => {});
+  }
+
+  // Sync changelog table and triggers
+  await client.exec(`
+    CREATE TABLE IF NOT EXISTS sync_changelog (
+      id SERIAL PRIMARY KEY,
+      table_name TEXT NOT NULL,
+      record_id TEXT NOT NULL,
+      operation TEXT NOT NULL,
+      changed_at TIMESTAMPTZ DEFAULT NOW(),
+      synced BOOLEAN DEFAULT false,
+      error_message TEXT,
+      last_attempt_at TIMESTAMPTZ
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sync_changelog_unsynced
+      ON sync_changelog (synced) WHERE synced = false;
+  `);
+
+  // Create trigger function that auto-logs changes (skips during sync pulls)
+  await client.exec(`
+    CREATE OR REPLACE FUNCTION sync_changelog_trigger() RETURNS trigger AS $$
+    BEGIN
+      IF current_setting('app.syncing', true) = 'true' THEN
+        IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+      END IF;
+
+      IF TG_OP = 'DELETE' THEN
+        INSERT INTO sync_changelog (table_name, record_id, operation)
+        VALUES (TG_TABLE_NAME, OLD.id::text, 'DELETE');
+        RETURN OLD;
+      ELSE
+        INSERT INTO sync_changelog (table_name, record_id, operation)
+        VALUES (TG_TABLE_NAME, NEW.id::text, TG_OP);
+        RETURN NEW;
+      END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+  // Attach triggers to all synced tables
+  const syncedTables = [
+    'budgets', 'budget_categories', 'budget_items', 'transactions',
+    'split_transactions', 'linked_accounts', 'recurring_payments',
+    'user_onboarding', 'csv_import_hashes', 'income_allocations',
+  ];
+
+  for (const table of syncedTables) {
+    await client.exec(`
+      DROP TRIGGER IF EXISTS sync_track_${table} ON ${table};
+      CREATE TRIGGER sync_track_${table}
+        AFTER INSERT OR UPDATE OR DELETE ON ${table}
+        FOR EACH ROW EXECUTE FUNCTION sync_changelog_trigger();
+    `).catch(() => {});
   }
 }
 

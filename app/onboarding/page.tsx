@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ServerStep from '@/components/onboarding/ServerStep';
 import WelcomeStep from '@/components/onboarding/WelcomeStep';
+import CloudSyncStep from '@/components/onboarding/CloudSyncStep';
 import { api, ApiError, isServerConfigured } from '@/lib/api-client';
 import ConceptsStep from '@/components/onboarding/ConceptsStep';
 import BufferStep from '@/components/onboarding/BufferStep';
@@ -24,7 +25,7 @@ interface CreatedItem {
   planned: number;
 }
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const emojiMap: Record<string, string> = {
   'income': '💰',
@@ -203,41 +204,47 @@ export default function OnboardingPage() {
             />
           )}
           {currentStep === 3 && (
-            <ConceptsStep
+            <CloudSyncStep
               onNext={() => setCurrentStep(4)}
-              onBack={() => setCurrentStep(2)}
+              onSynced={() => { window.location.href = '/'; }}
             />
           )}
           {currentStep === 4 && (
-            <BufferStep
-              budgetId={budgetId}
-              onNext={() => {
-                setBufferAmount(bufferAmount);
-                setCurrentStep(5);
-              }}
+            <ConceptsStep
+              onNext={() => setCurrentStep(5)}
               onBack={() => setCurrentStep(3)}
             />
           )}
           {currentStep === 5 && (
-            <ItemsStep
-              categories={categories}
-              createdItems={createdItems}
-              setCreatedItems={setCreatedItems}
-              onNext={() => setCurrentStep(6)}
+            <BufferStep
+              budgetId={budgetId}
+              onNext={() => {
+                setBufferAmount(bufferAmount);
+                setCurrentStep(6);
+              }}
               onBack={() => setCurrentStep(4)}
             />
           )}
           {currentStep === 6 && (
-            <TransactionStep
+            <ItemsStep
+              categories={categories}
               createdItems={createdItems}
-              onNext={() => {
-                setAddedTransaction(true);
-                setCurrentStep(7);
-              }}
+              setCreatedItems={setCreatedItems}
+              onNext={() => setCurrentStep(7)}
               onBack={() => setCurrentStep(5)}
             />
           )}
           {currentStep === 7 && (
+            <TransactionStep
+              createdItems={createdItems}
+              onNext={() => {
+                setAddedTransaction(true);
+                setCurrentStep(8);
+              }}
+              onBack={() => setCurrentStep(6)}
+            />
+          )}
+          {currentStep === 8 && (
             <CompleteStep
               buffer={bufferAmount}
               createdItems={createdItems}

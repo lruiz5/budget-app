@@ -8,6 +8,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { formatTimestamp } from '@/lib/dateHelpers';
 import CsvImportModal from '@/components/csv/CsvImportModal';
 import DatabaseManagement from '@/components/DatabaseManagement';
+import SupabaseSyncPanel from '@/components/SupabaseSyncPanel';
 import { CsvAccount } from '@/types/csv';
 import { api, IncomeAllocation, getServerUrl, setServerUrl } from '@/lib/api-client';
 import { Budget } from '@/types/budget';
@@ -653,6 +654,9 @@ export default function SettingsPage() {
               </p>
             )}
           </div>
+
+          {/* Cloud Sync */}
+          <SupabaseSyncPanel />
 
           {/* Database Management */}
           <DatabaseManagement

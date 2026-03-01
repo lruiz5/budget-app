@@ -153,7 +153,7 @@ route.put('/', async (c) => {
   }
 
   // Build update object with only provided fields
-  const updateData: Record<string, unknown> = {};
+  const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (budgetItemId !== undefined) updateData.budgetItemId = budgetItemId || null;
   if (linkedAccountId !== undefined) updateData.linkedAccountId = linkedAccountId || null;
   if (date !== undefined) updateData.date = date;
@@ -191,7 +191,7 @@ route.delete('/', async (c) => {
 
   await db
     .update(transactions)
-    .set({ deletedAt: new Date() })
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
     .where(eq(transactions.id, id));
 
   return c.json({ success: true });
@@ -302,7 +302,7 @@ route.patch('/', async (c) => {
 
   const [restored] = await db
     .update(transactions)
-    .set({ deletedAt: null })
+    .set({ deletedAt: null, updatedAt: new Date() })
     .where(eq(transactions.id, id))
     .returning();
 
@@ -365,7 +365,7 @@ route.post('/split', async (c) => {
     // Clear the parent's budgetItemId since it's now split
     await db
       .update(transactions)
-      .set({ budgetItemId: null })
+      .set({ budgetItemId: null, updatedAt: new Date() })
       .where(eq(transactions.id, transactionId));
 
     // Insert new splits
@@ -449,7 +449,7 @@ route.delete('/split', async (c) => {
     if (budgetItemId) {
       await db
         .update(transactions)
-        .set({ budgetItemId })
+        .set({ budgetItemId, updatedAt: new Date() })
         .where(eq(transactions.id, transactionId));
     }
 
@@ -536,7 +536,7 @@ route.post('/batch-assign', async (c) => {
     try {
       await db
         .update(transactions)
-        .set({ budgetItemId: assignment.budgetItemId })
+        .set({ budgetItemId: assignment.budgetItemId, updatedAt: new Date() })
         .where(eq(transactions.id, assignment.transactionId));
       assigned++;
     } catch (error) {

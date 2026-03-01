@@ -41,7 +41,7 @@ route.post('/', async (c) => {
     // Update the target category
     const [updated] = await db
       .update(incomeAllocations)
-      .set({ targetCategoryType })
+      .set({ targetCategoryType, updatedAt: new Date() })
       .where(eq(incomeAllocations.id, existing.id))
       .returning();
     return c.json(updated);

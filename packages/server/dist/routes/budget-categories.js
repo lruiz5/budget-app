@@ -71,18 +71,27 @@ route.delete('/', async (c) => {
     if (defaultTypes.includes(category.categoryType)) {
         return c.json({ error: 'Cannot delete default categories' }, 400);
     }
-    // Cascade delete: get item IDs, delete split transactions, transactions, items, then category
+    // Soft-delete cascade: mark items, splits, and category as deleted
+    const now = new Date();
     if (category.items.length > 0) {
         const itemIds = category.items.map(i => i.id);
-        // Delete split transactions referencing these items
-        await db.delete(splitTransactions).where(inArray(splitTransactions.budgetItemId, itemIds));
+        // Soft delete split transactions referencing these items
+        await db.update(splitTransactions)
+            .set({ deletedAt: now, updatedAt: now })
+            .where(inArray(splitTransactions.budgetItemId, itemIds));
         // Unlink transactions from these items
-        await db.update(transactions).set({ budgetItemId: null }).where(inArray(transactions.budgetItemId, itemIds));
-        // Delete budget items
-        await db.delete(budgetItems).where(inArray(budgetItems.id, itemIds));
+        await db.update(transactions)
+            .set({ budgetItemId: null, updatedAt: now })
+            .where(inArray(transactions.budgetItemId, itemIds));
+        // Soft delete budget items
+        await db.update(budgetItems)
+            .set({ deletedAt: now, updatedAt: now })
+            .where(inArray(budgetItems.id, itemIds));
     }
-    // Delete the category
-    await db.delete(budgetCategories).where(eq(budgetCategories.id, id));
+    // Soft delete the category
+    await db.update(budgetCategories)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(eq(budgetCategories.id, id));
     return c.json({ success: true });
 });
 export default route;
