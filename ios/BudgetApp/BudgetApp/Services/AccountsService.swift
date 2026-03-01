@@ -27,6 +27,12 @@ actor AccountsService {
         try await api.delete("/api/teller/accounts", queryParams: ["id": String(id)])
     }
 
+    // MARK: - Balances
+
+    func getBalances() async throws -> [String: String] {
+        try await api.get("/api/teller/balances")
+    }
+
     // MARK: - Account Settings
 
     func updateAccountSync(id: Int, enabled: Bool) async throws -> LinkedAccount {

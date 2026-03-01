@@ -15,6 +15,8 @@ class AccountsViewModel: ObservableObject {
     @Published var isToastError = false
 
     @Published private(set) var groupedAccounts: [(key: String, value: [LinkedAccount])] = []
+    @Published private(set) var balances: [String: Decimal] = [:]
+    @Published var isLoadingBalances = false
 
     private let accountsService = AccountsService.shared
 
@@ -67,6 +69,25 @@ class AccountsViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    // MARK: - Load Balances
+
+    func loadBalances() async {
+        isLoadingBalances = true
+        do {
+            let raw = try await accountsService.getBalances()
+            var parsed: [String: Decimal] = [:]
+            for (key, value) in raw {
+                if let decimal = Decimal(string: value) {
+                    parsed[key] = decimal
+                }
+            }
+            balances = parsed
+        } catch {
+            // Silently fail — balances are supplementary
+        }
+        isLoadingBalances = false
     }
 
     // MARK: - Unlink Account
