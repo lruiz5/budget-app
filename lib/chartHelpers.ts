@@ -33,13 +33,11 @@ function getTagAdjustments(budget: Budget): Record<string, number> {
 export function transformBudgetToCategoryData(budget: Budget | null): CategoryChartData[] {
   if (!budget) return [];
 
-  const tagAdj = getTagAdjustments(budget);
-
+  // No tag reclassification — this is a planned vs actual chart
   return getExpenseCategoryKeys(budget).map((key) => {
     const category = budget.categories[key];
     const planned = category.items.reduce((sum, item) => sum + item.planned, 0);
-    const baseActual = category.items.reduce((sum, item) => sum + item.actual, 0);
-    const actual = baseActual + (tagAdj[key] || 0);
+    const actual = category.items.reduce((sum, item) => sum + item.actual, 0);
 
     return {
       key,

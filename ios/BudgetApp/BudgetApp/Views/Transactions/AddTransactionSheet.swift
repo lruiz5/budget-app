@@ -49,6 +49,7 @@ struct AddTransactionSheet: View {
                     TextField("Merchant (optional)", text: $merchant)
 
                     DatePicker("Date", selection: $selectedDate, displayedComponents: .date)
+                        .environment(\.timeZone, TimeZone(identifier: "UTC")!)
                 }
 
                 Section("Category") {

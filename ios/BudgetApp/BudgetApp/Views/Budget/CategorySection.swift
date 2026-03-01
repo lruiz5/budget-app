@@ -93,7 +93,7 @@ struct CategorySection: View {
         .onAppear {
             orderedItems = category.items.sorted { $0.order < $1.order }
         }
-        .onChange(of: category.items.map(\.id)) { _, _ in
+        .onChange(of: category.items) { _, _ in
             orderedItems = category.items.sorted { $0.order < $1.order }
         }
     }

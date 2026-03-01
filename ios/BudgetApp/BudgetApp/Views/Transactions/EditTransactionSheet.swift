@@ -69,6 +69,7 @@ struct EditTransactionSheet: View {
                     TextField("Merchant (optional)", text: $editedMerchant)
 
                     DatePicker("Date", selection: $selectedDate, displayedComponents: .date)
+                        .environment(\.timeZone, TimeZone(identifier: "UTC")!)
                 }
 
                 if transaction.isSplit {
@@ -264,6 +265,7 @@ struct EditTransactionSheet: View {
                 let request = UpdateTransactionRequest(
                     id: transaction.id,
                     budgetItemId: selectedBudgetItemId,
+                    clearBudgetItemId: selectedBudgetItemId == nil,
                     date: selectedDate,
                     description: editedDescription,
                     amount: amountDecimal,

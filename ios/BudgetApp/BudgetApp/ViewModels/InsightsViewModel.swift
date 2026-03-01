@@ -131,17 +131,16 @@ class InsightsViewModel: ObservableObject {
         let actual: Decimal
     }
 
+    // No tag reclassification — this is a planned vs actual chart
     func getCategoryChartData(from budget: Budget) -> [CategoryChartItem] {
-        let tagAdj = getTagAdjustments(from: budget)
         return budget.categories.values
             .filter { $0.categoryType.lowercased() != "income" }
             .sorted { $0.order < $1.order }
             .map { category in
-                let adjustedActual = category.actual + (tagAdj[category.categoryType] ?? 0)
                 return CategoryChartItem(
                     category: category.name,
                     planned: category.planned,
-                    actual: adjustedActual
+                    actual: category.actual
                 )
             }
     }

@@ -4,8 +4,8 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.12.0 (stable)  |  **iOS App:** v0.16.0 (pre-release) — **iOS app name: Happy Tusk**
-**Last Session:** 2026-02-27
+**Web App:** v1.12.0 (stable)  |  **iOS App:** v0.17.0 (pre-release) — **iOS app name: Happy Tusk**
+**Last Session:** 2026-03-01
 
 ## Instructions for Claude
 
@@ -71,7 +71,7 @@ Budget (month/year) → Buffer + Categories (Income, Giving, Household, Transpor
 | budgets | id, **userId**, month, year, buffer | Monthly containers |
 | budget_categories | id, budgetId, categoryType, name, order, emoji | Includes custom cats |
 | budget_items | id, categoryId, name, planned, order, **recurringPaymentId** | Line items |
-| transactions | id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, **isNonEarned**, **tagCategoryType**, deletedAt | Soft delete, tag reclassifies in reports |
+| transactions | id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, **isNonEarned**, **tagCategoryType**, deletedAt | Soft delete, tag reclassifies in cash flow/spending trends only |
 | split_transactions | id, parentTransactionId, budgetItemId, amount, description, **isNonEarned** | Split across items |
 | recurring_payments | id, **userId**, name, amount, frequency, nextDueDate, fundedAmount, **fundingAdjustment**, categoryType | Auto-reset on GET, manual funding adjustment |
 | linked_accounts | id, **userId**, tellerAccountId, accessToken, institutionName, **syncEnabled**, syncStartDate | Teller bank accounts, per-account sync toggle |
@@ -147,6 +147,8 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 | Quick Assign wrong month | Budget item IDs are per-month. Client validates suggestions against current month's items + generates own merchant→item map. Server uses name-based lookup |
 | Teller pending→posted duplicates | Teller issues new IDs when pending settles as posted (tips). Sync fuzzy-matches stale pending by merchant+date (7d) to update instead of insert, preserving categorization |
 | seed-demo.ts FK error on linked_accounts | Uncategorized transactions (`budgetItemId=null`) survive budget cascade-delete and still reference `linked_accounts.id`. Fix: delete transactions per account before deleting the account. |
+| iOS stale UI after mutations | Cache-first reload flashes old data. Use `loadBudget(skipCache: true)` / `loadTransactions(skipCache: true)` after mutations. Optimistic local updates for instant feedback. |
+| iOS uncategorize transaction fails | `encodeIfPresent` omits nil `budgetItemId`. Use `clearBudgetItemId` flag + `encodeNil` to send explicit null. |
 
 ## Development Commands
 

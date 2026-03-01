@@ -44,20 +44,21 @@ class BudgetViewModel: ObservableObject {
 
     // MARK: - Load Budget
 
-    func loadBudget() async {
-        await loadBudgetForMonth(month: selectedMonth, year: selectedYear)
+    func loadBudget(skipCache: Bool = false) async {
+        await loadBudgetForMonth(month: selectedMonth, year: selectedYear, skipCache: skipCache)
     }
 
-    func loadBudgetForMonth(month: Int, year: Int) async {
+    func loadBudgetForMonth(month: Int, year: Int, skipCache: Bool = false) async {
         error = nil
 
         // Update the selected month/year to match what we're loading
         selectedMonth = month
         selectedYear = year
 
-        // Load from cache first (instant, no spinner)
         let cacheKey = "budget_\(month)_\(year)"
-        if let cached: Budget = await CacheManager.shared.load(forKey: cacheKey) {
+
+        // Load from cache first (instant, no spinner) — skip after mutations to avoid stale flash
+        if !skipCache, let cached: Budget = await CacheManager.shared.load(forKey: cacheKey) {
             budget = cached
             updateComputedData()
         }
@@ -138,7 +139,7 @@ class BudgetViewModel: ObservableObject {
             let request = UpdateTransactionRequest(id: transactionId, budgetItemId: toBudgetItemId)
             _ = try await transactionService.updateTransaction(request)
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            await loadBudget()
+            await loadBudget(skipCache: true)
         } catch {
             // Rollback — re-add transaction to tray
             if let removed {
@@ -222,12 +223,12 @@ class BudgetViewModel: ObservableObject {
     private func writeWidgetData() {
         guard let budget = budget else { return }
 
-        // Only write for the current month
+        // Only write for the current month (use local timezone so widgets
+        // show the user's current month, not UTC which can be a day ahead)
         let now = Date()
-        var utcCal = Calendar(identifier: .gregorian)
-        utcCal.timeZone = TimeZone(identifier: "UTC")!
-        let currentMonth = utcCal.component(.month, from: now) - 1 // 0-indexed
-        let currentYear = utcCal.component(.year, from: now)
+        let localCal = Calendar.current
+        let currentMonth = localCal.component(.month, from: now) - 1 // 0-indexed
+        let currentYear = localCal.component(.year, from: now)
         guard budget.month == currentMonth && budget.year == currentYear else { return }
 
         // Build month label using UTC to avoid timezone shift
@@ -386,22 +387,28 @@ class BudgetViewModel: ObservableObject {
         }
 
         // Always reload to get the full budget with categories
-        await loadBudget()
+        await loadBudget(skipCache: true)
     }
 
     // MARK: - Update Buffer
 
     func updateBuffer(_ newBuffer: Decimal) async {
         guard requireOnline() else { return }
-        guard let budget = budget else { return }
+        guard var budget = budget else { return }
+
+        // Optimistic update
+        budget.buffer = newBuffer
+        self.budget = budget
+        updateComputedData()
 
         do {
             _ = try await budgetService.updateBudget(
                 BudgetUpdateRequest(id: budget.id, buffer: String(describing: newBuffer))
             )
-            await loadBudget()
+            await loadBudget(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)
+            await loadBudget(skipCache: true)
         }
     }
 
@@ -411,7 +418,7 @@ class BudgetViewModel: ObservableObject {
         guard requireOnline() else { return }
         do {
             _ = try await budgetService.createBudgetItem(categoryId: categoryId, name: name, planned: planned)
-            await loadBudget()
+            await loadBudget(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)
         }
@@ -419,11 +426,37 @@ class BudgetViewModel: ObservableObject {
 
     func updateItem(id: Int, name: String?, planned: Decimal?) async {
         guard requireOnline() else { return }
+
+        // Optimistic update — apply change locally for instant UI feedback
+        if var budget = budget {
+            for catKey in budget.categories.keys {
+                if let itemIndex = budget.categories[catKey]?.items.firstIndex(where: { $0.id == id }) {
+                    if let name = name {
+                        budget.categories[catKey]!.items[itemIndex] = {
+                            var item = budget.categories[catKey]!.items[itemIndex]
+                            // name is let, so rebuild
+                            return BudgetItem(id: item.id, categoryId: item.categoryId, name: name, planned: item.planned, actual: item.actual, order: item.order, recurringPaymentId: item.recurringPaymentId, transactions: item.transactions, splitTransactions: item.splitTransactions)
+                        }()
+                    }
+                    if let planned = planned {
+                        budget.categories[catKey]!.items[itemIndex].planned = planned
+                        // Recalculate category planned total
+                        budget.categories[catKey]!.planned = budget.categories[catKey]!.items.reduce(0) { $0 + $1.planned }
+                    }
+                    break
+                }
+            }
+            self.budget = budget
+            updateComputedData()
+        }
+
         do {
             _ = try await budgetService.updateBudgetItem(id: id, name: name, planned: planned)
-            await loadBudget()
+            await loadBudget(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)
+            // Reload to revert optimistic update on failure
+            await loadBudget(skipCache: true)
         }
     }
 
@@ -431,7 +464,7 @@ class BudgetViewModel: ObservableObject {
         guard requireOnline() else { return }
         do {
             _ = try await budgetService.deleteBudgetItem(id: id)
-            await loadBudget()
+            await loadBudget(skipCache: true)
             showToast("Item deleted", isError: false)
         } catch {
             showToast(error.localizedDescription, isError: true)
@@ -445,7 +478,7 @@ class BudgetViewModel: ObservableObject {
         }
         do {
             _ = try await budgetService.reorderBudgetItems(items: reorderItems)
-            await loadBudget()
+            await loadBudget(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)
         }
@@ -459,7 +492,7 @@ class BudgetViewModel: ObservableObject {
 
         do {
             _ = try await budgetService.createCategory(budgetId: budget.id, name: name, emoji: emoji)
-            await loadBudget()
+            await loadBudget(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)
         }
@@ -469,7 +502,7 @@ class BudgetViewModel: ObservableObject {
         guard requireOnline() else { return }
         do {
             _ = try await budgetService.deleteCategory(id: id)
-            await loadBudget()
+            await loadBudget(skipCache: true)
             showToast("Category deleted", isError: false)
         } catch {
             showToast(error.localizedDescription, isError: true)
@@ -485,7 +518,7 @@ class BudgetViewModel: ObservableObject {
         isLoading = true
         do {
             _ = try await budgetService.resetBudget(budgetId: budget.id, mode: mode)
-            await loadBudget()
+            await loadBudget(skipCache: true)
             showToast("Budget reset", isError: false)
         } catch {
             showToast(error.localizedDescription, isError: true)

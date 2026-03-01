@@ -92,6 +92,7 @@ struct CreateTransactionRequest: Encodable {
 struct UpdateTransactionRequest: Encodable {
     let id: Int
     let budgetItemId: Int?
+    let clearBudgetItemId: Bool
     let date: String?
     let description: String?
     let amount: String?
@@ -106,10 +107,15 @@ struct UpdateTransactionRequest: Encodable {
 
     // Custom encoding to OMIT nil fields (not encode as null)
     // The API checks `if (field !== undefined)` — null would still trigger updates
+    // clearBudgetItemId sends explicit null to uncategorize
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
-        try container.encodeIfPresent(budgetItemId, forKey: .budgetItemId)
+        if clearBudgetItemId {
+            try container.encodeNil(forKey: .budgetItemId)
+        } else {
+            try container.encodeIfPresent(budgetItemId, forKey: .budgetItemId)
+        }
         try container.encodeIfPresent(date, forKey: .date)
         try container.encodeIfPresent(description, forKey: .description)
         try container.encodeIfPresent(amount, forKey: .amount)
@@ -119,9 +125,10 @@ struct UpdateTransactionRequest: Encodable {
         try container.encodeIfPresent(tagCategoryType, forKey: .tagCategoryType)
     }
 
-    init(id: Int, budgetItemId: Int? = nil, date: Date? = nil, description: String? = nil, amount: Decimal? = nil, type: TransactionType? = nil, merchant: String? = nil, isNonEarned: Bool? = nil, tagCategoryType: String? = nil) {
+    init(id: Int, budgetItemId: Int? = nil, clearBudgetItemId: Bool = false, date: Date? = nil, description: String? = nil, amount: Decimal? = nil, type: TransactionType? = nil, merchant: String? = nil, isNonEarned: Bool? = nil, tagCategoryType: String? = nil) {
         self.id = id
         self.budgetItemId = budgetItemId
+        self.clearBudgetItemId = clearBudgetItemId
         if let date = date {
             self.date = Formatters.yearMonthDay.string(from: date)
         } else {
