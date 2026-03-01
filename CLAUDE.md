@@ -85,7 +85,7 @@ Budget (month/year) → Buffer + Categories (Income, Giving, Household, Transpor
 
 **Components:** `BudgetSection.tsx` (category+items), `BudgetSummary.tsx` (sidebar), `MonthlyReportModal.tsx`, `DashboardLayout.tsx`, `Sidebar.tsx`, `AddTransactionModal.tsx`, `SplitTransactionModal.tsx`, `MobileBlockScreen.tsx`, `onboarding/*.tsx`, `charts/*.tsx`
 
-**API Routes:** `budgets/` (GET auto-creates), `budget-categories/`, `transactions/`, `transactions/split/`, `recurring-payments/`, `teller/`, `onboarding/`, `budgets/copy/`, `budgets/reset/`, `auth/claim-data/`
+**API Routes:** `budgets/` (GET auto-creates), `budget-categories/`, `transactions/`, `transactions/split/`, `recurring-payments/`, `teller/` (accounts, sync, balances), `onboarding/`, `budgets/copy/`, `budgets/reset/`, `auth/claim-data/`
 
 **Utilities:** `lib/budgetHelpers.ts`, `lib/teller.ts`, `lib/auth.ts`, `lib/formatCurrency.ts`, `lib/chartColors.ts`, `lib/chartHelpers.ts`
 
@@ -131,7 +131,7 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 **Web (v1.12.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller) with per-account sync toggle, recurring payments (with manual funding adjustment), budget copy/reset, insights (D3 charts + Sankey), monthly report, tag reclassification, non-earned income marking, transaction search & filters, drag-to-assign uncategorized transactions, onboarding, tablet responsive.
 
-**iOS (v0.16.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment. See `ios/BudgetApp/CHANGELOG.md`.
+**iOS (v0.17.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment, account balances (live from Teller). See `ios/BudgetApp/CHANGELOG.md`.
 
 ## Common Issues
 

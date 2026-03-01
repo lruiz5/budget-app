@@ -39,9 +39,11 @@ struct AccountsView: View {
         }
         .refreshable {
             await viewModel.loadAccounts()
+            await viewModel.loadBalances()
         }
         .task {
             await viewModel.loadAccounts()
+            await viewModel.loadBalances()
         }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
@@ -86,7 +88,11 @@ struct AccountsView: View {
             ForEach(viewModel.groupedAccounts, id: \.key) { institution, accounts in
                 Section {
                     ForEach(accounts) { account in
-                        AccountCard(account: account)
+                        AccountCard(
+                            account: account,
+                            balance: viewModel.balances[String(account.id)],
+                            isLoadingBalance: viewModel.isLoadingBalances && viewModel.balances.isEmpty
+                        )
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 activeSheet = .accountDetail(account)
@@ -136,6 +142,8 @@ struct AccountsView: View {
 
 struct AccountCard: View {
     let account: LinkedAccount
+    var balance: Decimal?
+    var isLoadingBalance: Bool = false
 
     var body: some View {
         HStack {
@@ -161,11 +169,21 @@ struct AccountCard: View {
 
             Spacer()
 
-            if let lastFour = account.lastFour {
-                Text("••••\(lastFour)")
-                    .font(.outfitCaption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+            VStack(alignment: .trailing, spacing: 2) {
+                if isLoadingBalance {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                } else if let balance {
+                    Text(Formatters.currency.string(from: balance as NSDecimalNumber) ?? "$0.00")
+                        .font(.outfitBody)
+                        .fontWeight(.medium)
+                        .monospacedDigit()
+                } else if let lastFour = account.lastFour {
+                    Text("••••\(lastFour)")
+                        .font(.outfitCaption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
             }
         }
         .padding(.vertical, 4)
@@ -203,6 +221,14 @@ struct AccountDetailSheet: View {
                             .font(.outfitSubheadline)
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
+                    }
+
+                    if let balance = viewModel.balances[String(account.id)] {
+                        Text(Formatters.currency.string(from: balance as NSDecimalNumber) ?? "$0.00")
+                            .font(.outfitTitle2)
+                            .fontWeight(.semibold)
+                            .monospacedDigit()
+                            .padding(.top, 4)
                     }
                 }
                 .padding(.top, 8)
