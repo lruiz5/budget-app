@@ -222,7 +222,7 @@ route.put('/', async (c) => {
     return c.json({ error: 'Budget not found' }, 404);
   }
 
-  await db.update(budgets).set({ buffer }).where(eq(budgets.id, id));
+  await db.update(budgets).set({ buffer, updatedAt: new Date() }).where(eq(budgets.id, id));
 
   return c.json({ success: true });
 });

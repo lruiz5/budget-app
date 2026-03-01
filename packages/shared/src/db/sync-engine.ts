@@ -1,0 +1,416 @@
+import { getLocalDb } from './local';
+import { getSupabaseSQL } from './supabase-client';
+import type postgres from 'postgres';
+import { loadSupabaseConfig, saveSupabaseConfig } from './supabase-config';
+import { getPendingChanges, markSynced, markSyncError, clearSyncedEntries, clearAllChangelogEntries } from './sync-changelog';
+import type { ChangelogEntry } from './sync-changelog';
+
+/**
+ * Tables in dependency order (parents before children).
+ * Used for push (upsert parents first) and pull.
+ */
+const SYNC_TABLE_ORDER = [
+  'budgets',
+  'budget_categories',
+  'linked_accounts',
+  'recurring_payments',
+  'budget_items',
+  'transactions',
+  'split_transactions',
+  'user_onboarding',
+  'csv_import_hashes',
+  'income_allocations',
+] as const;
+
+/** Column definitions for each table (must match schema.ts exactly) */
+function getTableColumns(tableName: string): string[] {
+  const columnMap: Record<string, string[]> = {
+    budgets: ['id', 'user_id', 'month', 'year', 'buffer', 'created_at', 'updated_at'],
+    budget_categories: ['id', 'budget_id', 'category_type', 'name', 'emoji', 'category_order', 'updated_at', 'deleted_at'],
+    budget_items: ['id', 'category_id', 'name', 'planned', 'order', 'recurring_payment_id', 'created_at', 'updated_at', 'deleted_at'],
+    transactions: ['id', 'budget_item_id', 'linked_account_id', 'date', 'description', 'amount', 'type', 'merchant', 'check_number', 'teller_transaction_id', 'teller_account_id', 'status', 'deleted_at', 'created_at', 'updated_at'],
+    split_transactions: ['id', 'parent_transaction_id', 'budget_item_id', 'amount', 'description', 'created_at', 'updated_at', 'deleted_at'],
+    linked_accounts: ['id', 'user_id', 'account_source', 'teller_account_id', 'teller_enrollment_id', 'access_token', 'institution_name', 'institution_id', 'account_name', 'account_type', 'account_subtype', 'last_four', 'status', 'last_synced_at', 'created_at', 'csv_column_mapping', 'updated_at', 'deleted_at'],
+    recurring_payments: ['id', 'user_id', 'name', 'amount', 'frequency', 'next_due_date', 'funded_amount', 'category_type', 'is_active', 'created_at', 'updated_at', 'deleted_at'],
+    user_onboarding: ['id', 'user_id', 'current_step', 'completed_at', 'skipped_at', 'created_at', 'updated_at', 'deleted_at'],
+    csv_import_hashes: ['id', 'linked_account_id', 'hash', 'transaction_id', 'created_at', 'updated_at'],
+    income_allocations: ['id', 'user_id', 'income_item_name', 'target_category_type', 'created_at', 'updated_at'],
+  };
+  return columnMap[tableName] || [];
+}
+
+// ============================================================================
+// PUSH: Local -> Supabase
+// ============================================================================
+
+/** Push pending local changes to Supabase */
+export async function pushChanges(): Promise<{ pushed: number; skipped: number; errors: { message: string; entry: ChangelogEntry }[] }> {
+  const pending = await getPendingChanges();
+  if (pending.length === 0) return { pushed: 0, skipped: 0, errors: [] };
+
+  const sql = getSupabaseSQL();
+  const localDb = await getLocalDb();
+  const localClient = (localDb as any)._.session.client;
+
+  // Deduplicate: keep latest operation per record
+  const latestUpsertMap = new Map<string, ChangelogEntry>();
+  const deleteMap = new Map<string, ChangelogEntry>();
+
+  for (const entry of pending) {
+    const key = `${entry.table_name}:${entry.record_id}`;
+    if (entry.operation === 'DELETE') {
+      deleteMap.set(key, entry);
+      latestUpsertMap.delete(key);
+    } else {
+      latestUpsertMap.set(key, entry);
+    }
+  }
+
+  const tableOrderIndex: Map<string, number> = new Map(SYNC_TABLE_ORDER.map((t, i) => [t, i]));
+
+  // Sort upserts by dependency order (parents first)
+  const finalUpserts = Array.from(latestUpsertMap.values()).sort((a, b) => {
+    return (tableOrderIndex.get(a.table_name) ?? 999) - (tableOrderIndex.get(b.table_name) ?? 999);
+  });
+
+  // Sort deletes by reverse dependency order (children first)
+  const finalDeletes = Array.from(deleteMap.values()).sort((a, b) => {
+    return (tableOrderIndex.get(b.table_name) ?? 999) - (tableOrderIndex.get(a.table_name) ?? 999);
+  });
+
+  const orderedEntries = [...finalUpserts, ...finalDeletes];
+  let pushed = 0;
+  let skipped = 0;
+  const errors: { message: string; entry: ChangelogEntry }[] = [];
+  const successfulIds: number[] = [];
+
+  for (const entry of orderedEntries) {
+    try {
+      if (entry.operation === 'DELETE') {
+        // All our synced tables use soft deletes (deleted_at), so a DELETE trigger
+        // means the record was soft-deleted. Push the updated record with deleted_at set.
+        const columns = getTableColumns(entry.table_name);
+        if (columns.includes('deleted_at')) {
+          const localRow = await localClient.query(
+            `SELECT * FROM ${q(entry.table_name)} WHERE id = $1`,
+            [entry.record_id]
+          );
+          if (localRow.rows.length > 0) {
+            await upsertToRemote(sql, entry.table_name, localRow.rows[0]);
+            pushed++;
+          }
+        }
+        successfulIds.push(entry.id);
+        continue;
+      }
+
+      // INSERT or UPDATE: fetch local record
+      const localRow = await localClient.query(
+        `SELECT * FROM ${q(entry.table_name)} WHERE id = $1`,
+        [entry.record_id]
+      );
+
+      if (localRow.rows.length === 0) {
+        skipped++;
+        successfulIds.push(entry.id);
+        continue;
+      }
+
+      const localRecord = localRow.rows[0];
+
+      // Conflict resolution: check if remote is newer
+      const columns = getTableColumns(entry.table_name);
+      if (columns.includes('updated_at') && localRecord.updated_at) {
+        const remoteResult = await sql`
+          SELECT updated_at FROM ${sql(entry.table_name)} WHERE id = ${entry.record_id}
+        `;
+
+        if (remoteResult.length > 0 && remoteResult[0].updated_at) {
+          const remoteUpdatedAt = new Date(remoteResult[0].updated_at);
+          const localUpdatedAt = new Date(localRecord.updated_at);
+          if (remoteUpdatedAt >= localUpdatedAt) {
+            skipped++;
+            successfulIds.push(entry.id);
+            continue;
+          }
+        }
+      }
+
+      await upsertToRemote(sql, entry.table_name, localRecord);
+      pushed++;
+      successfulIds.push(entry.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[Sync Push] ${entry.table_name}:${entry.record_id}:`, message);
+      await markSyncError(entry.id, message);
+      errors.push({ message: `[${entry.table_name}] ${message}`, entry });
+      skipped++;
+    }
+  }
+
+  if (successfulIds.length > 0) {
+    await markSynced(successfulIds);
+  }
+
+  return { pushed, skipped, errors };
+}
+
+// ============================================================================
+// PULL: Supabase -> Local
+// ============================================================================
+
+/** Pull remote changes from Supabase into local PGlite */
+export async function pullChanges(): Promise<{ pulled: number; skipped: number; errors: { message: string; recordId: string }[] }> {
+  const config = loadSupabaseConfig();
+  if (!config) return { pulled: 0, skipped: 0, errors: [] };
+
+  const sql = getSupabaseSQL();
+  const localDb = await getLocalDb();
+  const localClient = (localDb as any)._.session.client;
+
+  const lastSyncAt = config.lastSyncAt ? new Date(config.lastSyncAt) : new Date(0);
+  let pulled = 0;
+  let skipped = 0;
+  const errors: { message: string; recordId: string }[] = [];
+
+  for (const tableName of SYNC_TABLE_ORDER) {
+    const columns = getTableColumns(tableName);
+    if (columns.length === 0) continue;
+
+    // All tables have updated_at after Phase 1 migration
+    const timestampCol = columns.includes('updated_at') ? 'updated_at' : 'created_at';
+
+    // Fetch records modified since last sync
+    const remoteRows = await sql`
+      SELECT * FROM ${sql(tableName)}
+      WHERE ${sql(timestampCol)} > ${lastSyncAt.toISOString()}
+      ORDER BY ${sql(timestampCol)} ASC
+    `;
+
+    for (const remoteRecord of remoteRows) {
+      try {
+        // Check if local has a newer version
+        if (columns.includes('updated_at') && remoteRecord.updated_at) {
+          const localRow = await localClient.query(
+            `SELECT "updated_at" FROM ${q(tableName)} WHERE id = $1`,
+            [remoteRecord.id]
+          );
+
+          if (localRow.rows.length > 0 && localRow.rows[0].updated_at) {
+            const localUpdatedAt = new Date(localRow.rows[0].updated_at);
+            const remoteUpdatedAt = new Date(remoteRecord.updated_at);
+            if (localUpdatedAt > remoteUpdatedAt) {
+              skipped++;
+              continue;
+            }
+          }
+        }
+
+        await upsertToLocal(localClient, tableName, remoteRecord, columns);
+        pulled++;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[Sync Pull] ${tableName}:${remoteRecord.id}:`, message);
+        errors.push({ message: `[${tableName}] ${message}`, recordId: remoteRecord.id });
+        skipped++;
+      }
+    }
+  }
+
+  // Update lastSyncAt
+  saveSupabaseConfig({ lastSyncAt: new Date().toISOString() });
+
+  // Housekeeping
+  await clearSyncedEntries();
+
+  return { pulled, skipped, errors };
+}
+
+// ============================================================================
+// FULL SYNC CYCLE
+// ============================================================================
+
+export interface SyncCycleResult {
+  pushed: number;
+  pulled: number;
+  skippedPush: number;
+  skippedPull: number;
+  pushErrors: number;
+  pullErrors: number;
+}
+
+/** Run a complete sync cycle: push local changes, then pull remote changes */
+export async function runSyncCycle(): Promise<SyncCycleResult> {
+  const pushResult = await pushChanges();
+  const pullResult = await pullChanges();
+
+  return {
+    pushed: pushResult.pushed,
+    pulled: pullResult.pulled,
+    skippedPush: pushResult.skipped,
+    skippedPull: pullResult.skipped,
+    pushErrors: pushResult.errors.length,
+    pullErrors: pullResult.errors.length,
+  };
+}
+
+// ============================================================================
+// INITIAL SYNC
+// ============================================================================
+
+export interface InitialSyncResult {
+  message: string;
+  stats: { pushed: number; pulled: number; errors: number };
+}
+
+/** Run initial sync in the specified direction */
+export async function runInitialSync(direction: 'push' | 'pull' | 'merge'): Promise<InitialSyncResult> {
+  const localDb = await getLocalDb();
+  const sql = getSupabaseSQL();
+  const localClient = (localDb as any)._.session.client;
+
+  let totalPushed = 0;
+  let totalPulled = 0;
+  let totalErrors = 0;
+  const errorDetails: string[] = [];
+
+  if (direction === 'push' || direction === 'merge') {
+    for (const tableName of SYNC_TABLE_ORDER) {
+      const columns = getTableColumns(tableName);
+      if (columns.length === 0) continue;
+
+      const localRows = await localClient.query(`SELECT * FROM ${q(tableName)}`);
+      for (const row of localRows.rows) {
+        try {
+          await upsertToRemote(sql, tableName, row);
+          totalPushed++;
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          console.error(`[Initial Push] ${tableName}:${row.id}:`, msg);
+          totalErrors++;
+          if (errorDetails.length < 5) {
+            errorDetails.push(`[${tableName}] ${msg}`);
+          }
+        }
+      }
+    }
+  }
+
+  if (direction === 'pull' || direction === 'merge') {
+    for (const tableName of SYNC_TABLE_ORDER) {
+      const columns = getTableColumns(tableName);
+      if (columns.length === 0) continue;
+
+      const remoteRows = await sql`SELECT * FROM ${sql(tableName)}`;
+      for (const row of remoteRows) {
+        try {
+          if (direction === 'merge' && columns.includes('updated_at') && row.updated_at) {
+            const localRow = await localClient.query(
+              `SELECT "updated_at" FROM ${q(tableName)} WHERE id = $1`,
+              [row.id]
+            );
+            if (localRow.rows.length > 0 && localRow.rows[0].updated_at) {
+              const localUpdatedAt = new Date(localRow.rows[0].updated_at);
+              const remoteUpdatedAt = new Date(row.updated_at);
+              if (localUpdatedAt > remoteUpdatedAt) continue;
+            }
+          }
+
+          await upsertToLocal(localClient, tableName, row, columns);
+          totalPulled++;
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          console.error(`[Initial Pull] ${tableName}:${row.id}:`, msg);
+          totalErrors++;
+          if (errorDetails.length < 5) {
+            errorDetails.push(`[${tableName}] ${msg}`);
+          }
+        }
+      }
+    }
+  }
+
+  // Enable sync and set lastSyncAt — clear ALL changelog entries since initial sync
+  // fully reconciles local and remote (avoids stale INSERT conflicts)
+  saveSupabaseConfig({ lastSyncAt: new Date().toISOString(), enabled: true });
+  await clearAllChangelogEntries();
+
+  const label = direction === 'push' ? 'Push' : direction === 'pull' ? 'Pull' : 'Merge';
+  let message = `Initial ${label} complete. Pushed: ${totalPushed}, Pulled: ${totalPulled}`;
+  if (totalErrors > 0) {
+    message += `. ${totalErrors} error(s): ${errorDetails.join('; ')}`;
+  }
+  return {
+    message,
+    stats: { pushed: totalPushed, pulled: totalPulled, errors: totalErrors },
+  };
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/** Quote a column/table name to handle PostgreSQL reserved words (e.g. "order") */
+function q(name: string): string {
+  return `"${name}"`;
+}
+
+/** Upsert a record into the remote Supabase database */
+async function upsertToRemote(sql: ReturnType<typeof postgres>, tableName: string, record: Record<string, any>): Promise<void> {
+  const columns = getTableColumns(tableName);
+  const values: any[] = [];
+  const placeholders: string[] = [];
+  const updateParts: string[] = [];
+
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i];
+    values.push(record[col] ?? null);
+    placeholders.push(`$${i + 1}`);
+    if (col !== 'id') {
+      updateParts.push(`${q(col)} = $${i + 1}`);
+    }
+  }
+
+  const quotedCols = columns.map(q).join(', ');
+  const upsertSQL = `
+    INSERT INTO ${q(tableName)} (${quotedCols})
+    VALUES (${placeholders.join(', ')})
+    ON CONFLICT (id) DO UPDATE SET ${updateParts.join(', ')}
+  `;
+
+  await sql.unsafe(upsertSQL, values);
+}
+
+/** Upsert a record into the local PGlite database */
+async function upsertToLocal(
+  localClient: any,
+  tableName: string,
+  record: Record<string, any>,
+  columns: string[]
+): Promise<void> {
+  const values: any[] = [];
+  const placeholders: string[] = [];
+  const updateParts: string[] = [];
+
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i];
+    values.push(record[col] ?? null);
+    placeholders.push(`$${i + 1}`);
+    if (col !== 'id') {
+      updateParts.push(`${q(col)} = $${i + 1}`);
+    }
+  }
+
+  const quotedCols = columns.map(q).join(', ');
+  const upsertSQL = `
+    INSERT INTO ${q(tableName)} (${quotedCols})
+    VALUES (${placeholders.join(', ')})
+    ON CONFLICT (id) DO UPDATE SET ${updateParts.join(', ')}
+  `;
+
+  // Wrap in transaction with syncing flag to suppress changelog trigger
+  await localClient.transaction(async (tx: any) => {
+    await tx.query("SET LOCAL app.syncing = 'true'");
+    await tx.query(upsertSQL, values);
+  });
+}

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { getDb } from '@budget-app/shared/db';
 import { linkedAccounts, transactions, csvImportHashes } from '@budget-app/shared/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, isNull } from 'drizzle-orm';
 import { getUserId } from '../middleware/auth';
 import { parseCsvText, detectColumnMapping, detectDateFormat, parseCsvWithMapping, computeTransactionHash } from '../lib/csvParser';
 const route = new Hono();
@@ -13,7 +13,7 @@ route.get('/accounts', async (c) => {
     const userId = getUserId(c);
     try {
         const db = await getDb();
-        const accounts = await db.select().from(linkedAccounts).where(and(eq(linkedAccounts.userId, userId), eq(linkedAccounts.accountSource, 'csv')));
+        const accounts = await db.select().from(linkedAccounts).where(and(eq(linkedAccounts.userId, userId), eq(linkedAccounts.accountSource, 'csv'), isNull(linkedAccounts.deletedAt)));
         // Parse the JSON column mapping for each account
         const accountsWithMapping = accounts.map((account) => ({
             ...account,
@@ -92,6 +92,7 @@ route.put('/accounts', async (c) => {
         if (Object.keys(updates).length === 0) {
             return c.json({ error: 'No updates provided' }, 400);
         }
+        updates.updatedAt = new Date();
         const [updatedAccount] = await db.update(linkedAccounts)
             .set(updates)
             .where(eq(linkedAccounts.id, accountId))
@@ -122,7 +123,9 @@ route.delete('/accounts', async (c) => {
         if (!existingAccount) {
             return c.json({ error: 'CSV account not found' }, 404);
         }
-        await db.delete(linkedAccounts).where(eq(linkedAccounts.id, accountId));
+        await db.update(linkedAccounts)
+            .set({ deletedAt: new Date(), updatedAt: new Date() })
+            .where(eq(linkedAccounts.id, accountId));
         return c.json({ success: true });
     }
     catch (error) {
@@ -255,7 +258,7 @@ route.post('/import', async (c) => {
         }
         // Update lastSyncedAt
         await db.update(linkedAccounts)
-            .set({ lastSyncedAt: new Date() })
+            .set({ lastSyncedAt: new Date(), updatedAt: new Date() })
             .where(eq(linkedAccounts.id, accountId));
         const result = {
             imported: newTransactions.length,

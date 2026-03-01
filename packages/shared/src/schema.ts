@@ -18,6 +18,8 @@ export const budgetCategories = pgTable('budget_categories', {
   name: text('name').notNull(),
   emoji: text('emoji'), // Custom emoji for user-created categories (null for defaults)
   categoryOrder: integer('category_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const budgetItems = pgTable('budget_items', {
@@ -28,6 +30,8 @@ export const budgetItems = pgTable('budget_items', {
   order: integer('order').notNull().default(0),
   recurringPaymentId: uuid('recurring_payment_id'), // Links to recurring_payments table
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const transactions = pgTable('transactions', {
@@ -47,6 +51,7 @@ export const transactions = pgTable('transactions', {
   // Soft delete
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
 });
 
 // Split transactions - child allocations of a parent transaction
@@ -57,6 +62,8 @@ export const splitTransactions = pgTable('split_transactions', {
   amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
   description: text('description'), // Optional context like "household items"
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 // Linked bank accounts from Teller or CSV import
@@ -81,6 +88,8 @@ export const linkedAccounts = pgTable('linked_accounts', {
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
   // CSV-specific fields (null for Teller accounts)
   csvColumnMapping: text('csv_column_mapping'), // JSON string of CsvColumnMapping
+  updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 // Relations
@@ -140,6 +149,7 @@ export const csvImportHashes = pgTable('csv_import_hashes', {
   hash: text('hash').notNull(), // SHA-256 of normalized date+amount+description
   transactionId: uuid('transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
 });
 
 export const csvImportHashesRelations = relations(csvImportHashes, ({ one }) => ({
@@ -161,6 +171,8 @@ export const userOnboarding = pgTable('user_onboarding', {
   completedAt: timestamp('completed_at', { withTimezone: true }),
   skippedAt: timestamp('skipped_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const userOnboardingRelations = relations(userOnboarding, () => ({}));
@@ -172,6 +184,7 @@ export const incomeAllocations = pgTable('income_allocations', {
   incomeItemName: text('income_item_name').notNull(),
   targetCategoryType: text('target_category_type').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
 });
 
 export const incomeAllocationsRelations = relations(incomeAllocations, () => ({}));
@@ -189,4 +202,5 @@ export const recurringPayments = pgTable('recurring_payments', {
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });

@@ -4,6 +4,8 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { requireAuth } from './middleware/auth';
 import type { AppEnv } from './types';
+import { isSupabaseEnabled } from '@budget-app/shared/db/supabase-config';
+import { startSyncScheduler } from '@budget-app/shared/db/sync-scheduler';
 
 // Route imports
 import databaseRoutes from './routes/database';
@@ -17,6 +19,7 @@ import csvRoutes from './routes/csv';
 import onboardingRoutes from './routes/onboarding';
 import authRoutes from './routes/auth';
 import incomeAllocationRoutes from './routes/income-allocations';
+import supabaseRoutes from './routes/supabase';
 
 const app = new Hono<AppEnv>();
 
@@ -44,6 +47,7 @@ app.get('/health', (c) => {
 
 // Database routes - mounted BEFORE auth middleware (no auth required)
 app.route('/api/database', databaseRoutes);
+app.route('/api/supabase', supabaseRoutes);
 
 // Auth middleware for all other /api/* routes
 app.use('/api/*', requireAuth());
@@ -70,6 +74,11 @@ serve({
   port,
 }, (info) => {
   console.log(`Budget API server running at http://localhost:${info.port}`);
+
+  // Start sync scheduler if Supabase is configured
+  if (isSupabaseEnabled()) {
+    startSyncScheduler();
+  }
 });
 
 export default app;

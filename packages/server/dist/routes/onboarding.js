@@ -43,7 +43,7 @@ route.put('/', async (c) => {
         return c.json(record);
     }
     await db.update(userOnboarding)
-        .set({ currentStep: step })
+        .set({ currentStep: step, updatedAt: new Date() })
         .where(eq(userOnboarding.userId, userId));
     return c.json({ success: true });
 });
@@ -52,10 +52,10 @@ route.patch('/', async (c) => {
     const userId = getUserId(c);
     const db = await getDb();
     const { action } = await c.req.json();
-    const updates = {};
+    const updates = { updatedAt: new Date() };
     if (action === 'complete') {
         updates.completedAt = new Date();
-        updates.currentStep = 6;
+        updates.currentStep = 7;
     }
     else if (action === 'skip') {
         updates.skippedAt = new Date();

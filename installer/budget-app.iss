@@ -32,6 +32,9 @@ PrivilegesRequired=admin
 ; Architecture
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+; App icon
+SetupIconFile=..\public\icon.ico
+UninstallDisplayIcon={app}\icon.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -45,6 +48,8 @@ Name: "startupicon"; Description: "Start Budget App when Windows starts"; GroupD
 Source: "..\dist\standalone\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Bundled Node.js runtime
 Source: "..\dist\node\node.exe"; DestDir: "{app}"; Flags: ignoreversion
+; App icon
+Source: "..\public\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; Startup scripts
 Source: "start.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "stop.bat"; DestDir: "{app}"; Flags: ignoreversion

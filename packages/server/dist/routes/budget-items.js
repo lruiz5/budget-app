@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { getDb } from '@budget-app/shared/db';
 import { budgetItems, budgetCategories } from '@budget-app/shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { getUserId } from '../middleware/auth';
 const route = new Hono();
 // POST / - Create a new budget item
@@ -23,7 +23,7 @@ route.post('/', async (c) => {
     }
     // Get the max order for this category
     const existingItems = await db.query.budgetItems.findMany({
-        where: eq(budgetItems.categoryId, categoryId),
+        where: and(eq(budgetItems.categoryId, categoryId), isNull(budgetItems.deletedAt)),
     });
     const maxOrder = existingItems.length > 0
         ? Math.max(...existingItems.map(item => item.order || 0))
@@ -60,7 +60,7 @@ route.put('/', async (c) => {
     if (!item || item.category.budget.userId !== userId) {
         return c.json({ error: 'Item not found' }, 404);
     }
-    const updates = {};
+    const updates = { updatedAt: new Date() };
     if (name !== undefined)
         updates.name = name;
     if (planned !== undefined)
@@ -92,7 +92,9 @@ route.delete('/', async (c) => {
     if (!item || item.category.budget.userId !== userId) {
         return c.json({ error: 'Item not found' }, 404);
     }
-    await db.delete(budgetItems).where(eq(budgetItems.id, id));
+    await db.update(budgetItems)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(budgetItems.id, id));
     return c.json({ success: true });
 });
 // PUT /reorder - Reorder items within a category
@@ -122,7 +124,7 @@ route.put('/reorder', async (c) => {
     for (const item of items) {
         await db
             .update(budgetItems)
-            .set({ order: item.order })
+            .set({ order: item.order, updatedAt: new Date() })
             .where(eq(budgetItems.id, item.id));
     }
     return c.json({ success: true });

@@ -775,6 +775,155 @@ export const databaseApi = {
 };
 
 // ============================================================================
+// SUPABASE SYNC API
+// ============================================================================
+
+export const supabaseApi = {
+  /**
+   * Get Supabase configuration (masked).
+   */
+  async getConfig(): Promise<{
+    enabled: boolean;
+    databaseUrl: string;
+    lastSyncAt: string | null;
+    instanceId: string;
+  }> {
+    return request('/api/supabase/config');
+  },
+
+  /**
+   * Update Supabase configuration.
+   */
+  async updateConfig(data: {
+    databaseUrl?: string;
+    enabled?: boolean;
+  }): Promise<{
+    enabled: boolean;
+    databaseUrl: string;
+    lastSyncAt: string | null;
+    instanceId: string;
+  }> {
+    return request('/api/supabase/config', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Test the Supabase connection.
+   */
+  async testConnection(): Promise<{ success: boolean; message: string }> {
+    return request('/api/supabase/test-connection', {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Create/verify schema on Supabase.
+   */
+  async setupSchema(): Promise<{ success: boolean; message: string }> {
+    return request('/api/supabase/setup-schema', {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Get sync status.
+   */
+  async getStatus(): Promise<{
+    state: string;
+    pendingCount: number;
+    lastError: string | null;
+    consecutiveFailures: number;
+    enabled: boolean;
+    lastSyncAt: string | null;
+    instanceId: string;
+  }> {
+    return request('/api/supabase/status');
+  },
+
+  /**
+   * Get pending/errored changelog entries.
+   */
+  async getChangelog(): Promise<{
+    entries: Array<{
+      id: number;
+      table_name: string;
+      record_id: string;
+      operation: string;
+      changed_at: string;
+      error_message?: string;
+    }>;
+    pendingCount: number;
+  }> {
+    return request('/api/supabase/changelog');
+  },
+
+  /**
+   * Find conflicts between local and remote.
+   */
+  async getAudit(): Promise<{
+    conflicts: Array<{
+      table: string;
+      recordId: string;
+      localData: Record<string, unknown> | null;
+      remoteData: Record<string, unknown> | null;
+      changelogId: number;
+    }>;
+  }> {
+    return request('/api/supabase/audit');
+  },
+
+  /**
+   * Resolve a sync conflict.
+   */
+  async resolveConflict(
+    changelogId: number,
+    strategy: 'keep-local' | 'use-remote' | 'discard'
+  ): Promise<{ success: boolean; message: string }> {
+    return request('/api/supabase/resolve-conflict', {
+      method: 'POST',
+      body: JSON.stringify({ changelogId, strategy }),
+    });
+  },
+
+  /**
+   * Trigger a manual sync.
+   */
+  async sync(): Promise<{
+    success: boolean;
+    error?: string;
+    result?: {
+      pushed: number;
+      pulled: number;
+      skippedPush: number;
+      skippedPull: number;
+      pushErrors: number;
+      pullErrors: number;
+    };
+  }> {
+    return request('/api/supabase/sync', {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Run initial sync (first-time setup).
+   */
+  async initialSync(direction: 'push' | 'pull' | 'merge'): Promise<{
+    success: boolean;
+    message: string;
+    error?: string;
+    stats?: { pushed: number; pulled: number; errors: number };
+  }> {
+    return request('/api/supabase/initial-sync', {
+      method: 'POST',
+      body: JSON.stringify({ direction }),
+    });
+  },
+};
+
+// ============================================================================
 // CONVENIENCE EXPORTS
 // ============================================================================
 
@@ -795,6 +944,7 @@ export const api = {
   onboarding: onboardingApi,
   database: databaseApi,
   incomeAllocation: incomeAllocationApi,
+  supabase: supabaseApi,
 };
 
 export default api;

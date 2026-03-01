@@ -14,7 +14,7 @@ route.get('/accounts', async (c) => {
         const userId = getUserId(c);
         const db = await getDb();
         // Only return Teller accounts (not CSV accounts)
-        const accounts = await db.select().from(linkedAccounts).where(and(eq(linkedAccounts.userId, userId), eq(linkedAccounts.accountSource, 'teller')));
+        const accounts = await db.select().from(linkedAccounts).where(and(eq(linkedAccounts.userId, userId), eq(linkedAccounts.accountSource, 'teller'), isNull(linkedAccounts.deletedAt)));
         return c.json(accounts);
     }
     catch (error) {
@@ -53,6 +53,7 @@ route.post('/accounts', async (c) => {
                     institutionName: account.institution.name,
                     accountName: account.name,
                     status: account.status,
+                    updatedAt: new Date(),
                 })
                     .where(eq(linkedAccounts.tellerAccountId, account.id));
                 savedAccounts.push({ ...existing[0], updated: true });
@@ -114,8 +115,10 @@ route.delete('/accounts', async (c) => {
                 console.warn('Failed to disconnect account from Teller API');
             }
         }
-        // Delete from database
-        await db.delete(linkedAccounts).where(eq(linkedAccounts.id, id));
+        // Soft delete from database
+        await db.update(linkedAccounts)
+            .set({ deletedAt: new Date(), updatedAt: new Date() })
+            .where(eq(linkedAccounts.id, id));
         return c.json({ success: true });
     }
     catch (error) {
@@ -228,7 +231,7 @@ route.post('/sync', async (c) => {
                 // Update last synced timestamp
                 await db
                     .update(linkedAccounts)
-                    .set({ lastSyncedAt: new Date() })
+                    .set({ lastSyncedAt: new Date(), updatedAt: new Date() })
                     .where(eq(linkedAccounts.id, account.id));
             }
             catch (error) {

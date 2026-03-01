@@ -449,11 +449,11 @@ Section "Install"
 
   ; Create Start Menu shortcuts
   CreateDirectory "$SMPROGRAMS\\${opts.shortcutName}"
-  CreateShortcut "$SMPROGRAMS\\${opts.shortcutName}\\${opts.shortcutName}.lnk" "$INSTDIR\\${opts.launchFile}" "" "$INSTDIR\\node.exe"
+  CreateShortcut "$SMPROGRAMS\\${opts.shortcutName}\\${opts.shortcutName}.lnk" "$INSTDIR\\${opts.launchFile}" "" "$INSTDIR\\icon.ico"
   CreateShortcut "$SMPROGRAMS\\${opts.shortcutName}\\Uninstall.lnk" "$INSTDIR\\Uninstall.exe"
 
   ; Create Desktop shortcut
-  CreateShortcut "$DESKTOP\\${opts.shortcutName}.lnk" "$INSTDIR\\${opts.launchFile}" "" "$INSTDIR\\node.exe"
+  CreateShortcut "$DESKTOP\\${opts.shortcutName}.lnk" "$INSTDIR\\${opts.launchFile}" "" "$INSTDIR\\icon.ico"
 
 SectionEnd
 

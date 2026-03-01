@@ -9,6 +9,13 @@
     ".": "./src/index.ts",
     "./types": "./src/types/index.ts",
     "./db": "./src/db/index.ts",
+    "./db/local": "./src/db/local.ts",
+    "./db/supabase-config": "./src/db/supabase-config.ts",
+    "./db/supabase-client": "./src/db/supabase-client.ts",
+    "./db/sync-scheduler": "./src/db/sync-scheduler.ts",
+    "./db/sync-changelog": "./src/db/sync-changelog.ts",
+    "./db/sync-engine": "./src/db/sync-engine.ts",
+    "./db/schema-sql": "./src/db/schema-sql.ts",
     "./schema": "./src/schema.ts"
   },
   "dependencies": {

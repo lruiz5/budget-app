@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
   FaWallet,
@@ -16,7 +17,11 @@ import {
   FaMoon,
   FaDesktop,
   FaCheck,
+  FaWifi,
+  FaSync,
+  FaBan,
 } from 'react-icons/fa';
+import { api } from '@/lib/api-client';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface NavItem {
@@ -33,6 +38,13 @@ export default function Sidebar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
+  const [syncStatus, setSyncStatus] = useState<{
+    state: string;
+    pendingCount: number;
+    lastError: string | null;
+    enabled: boolean;
+  } | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1023px)');
@@ -57,6 +69,34 @@ export default function Sidebar() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isUserMenuOpen]);
+
+  // Poll sync status
+  const fetchSyncStatus = useCallback(async () => {
+    try {
+      const s = await api.supabase.getStatus();
+      setSyncStatus(s);
+    } catch {
+      // Supabase not configured — ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSyncStatus();
+    const interval = setInterval(fetchSyncStatus, 15000);
+    return () => clearInterval(interval);
+  }, [fetchSyncStatus]);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await api.supabase.sync();
+      await fetchSyncStatus();
+    } catch {
+      await fetchSyncStatus();
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -111,18 +151,41 @@ export default function Sidebar() {
     >
       {/* Logo/Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-        {!isCollapsed && (
-          <span className="text-xl font-bold text-white">BudgetApp</span>
+        {!isCollapsed ? (
+          <div className="flex items-center gap-2">
+            <Image
+              src="/Budget_logo.png"
+              alt="Budget App"
+              width={36}
+              height={36}
+              className="rounded"
+            />
+            <span className="text-xl font-bold text-white">BudgetApp</span>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsCollapsed(false)}
+            className="mx-auto hover:opacity-80 transition-opacity"
+            title="Expand sidebar"
+          >
+            <Image
+              src="/Budget_logo.png"
+              alt="Budget App"
+              width={32}
+              height={32}
+              className="rounded"
+            />
+          </button>
         )}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`p-2 hover:bg-sidebar-hover rounded-lg transition-colors ${
-            isCollapsed ? 'mx-auto' : ''
-          }`}
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? <FaChevronRight size={14} /> : <FaChevronLeft size={14} />}
-        </button>
+        {!isCollapsed && (
+          <button
+            onClick={() => setIsCollapsed(true)}
+            className="p-2 hover:bg-sidebar-hover rounded-lg transition-colors"
+            title="Collapse sidebar"
+          >
+            <FaChevronLeft size={14} />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -146,6 +209,36 @@ export default function Sidebar() {
           ))}
         </ul>
       </nav>
+
+      {/* Sync Status */}
+      {syncStatus?.enabled && syncStatus.state !== 'disabled' && (
+        <div className="border-t border-sidebar-border px-3 py-2">
+          <div className="flex items-center gap-2">
+            <SyncIndicator state={syncing ? 'syncing' : syncStatus.state} />
+            {!isCollapsed && (
+              <span className="text-xs text-sidebar-text-muted truncate flex-1">
+                {syncing
+                  ? 'Syncing...'
+                  : syncStatus.state === 'idle'
+                  ? `Synced${syncStatus.pendingCount > 0 ? ` (${syncStatus.pendingCount})` : ''}`
+                  : syncStatus.state === 'error'
+                  ? 'Sync error'
+                  : syncStatus.state === 'offline'
+                  ? 'Offline'
+                  : 'Syncing...'}
+              </span>
+            )}
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="p-1 rounded hover:bg-sidebar-hover transition-colors"
+              title="Sync now"
+            >
+              <FaSync className={`w-3 h-3 text-sidebar-text-muted ${syncing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Help */}
       <div className="px-2 mb-2">
@@ -223,4 +316,18 @@ export default function Sidebar() {
       </div>
     </div>
   );
+}
+
+function SyncIndicator({ state }: { state: string }) {
+  switch (state) {
+    case 'idle':
+      return <FaWifi className="w-3.5 h-3.5 text-green-400 shrink-0" />;
+    case 'syncing':
+      return <FaSync className="w-3.5 h-3.5 text-blue-400 animate-spin shrink-0" />;
+    case 'offline':
+    case 'error':
+      return <FaBan className="w-3.5 h-3.5 text-red-400 shrink-0" />;
+    default:
+      return null;
+  }
 }
