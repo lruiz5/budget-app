@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { FaChartLine, FaChartBar, FaChartPie, FaSync } from 'react-icons/fa';
+import MonthBanner from '@/components/MonthBanner';
 import DashboardLayout from '@/components/DashboardLayout';
 import MonthlyReportModal from '@/components/MonthlyReportModal';
 import BudgetVsActualChart from '@/components/charts/BudgetVsActualChart';
@@ -19,15 +21,26 @@ export default function InsightsPageWrapper() {
   );
 }
 
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 function InsightsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [currentBudget, setCurrentBudget] = useState<Budget | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const selectedMonth = searchParams.get('month') !== null ? parseInt(searchParams.get('month')!) : new Date().getMonth();
-  const selectedYear = searchParams.get('year') !== null ? parseInt(searchParams.get('year')!) : new Date().getFullYear();
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const selectedMonth = searchParams.get('month') !== null ? parseInt(searchParams.get('month')!) : currentMonth;
+  const selectedYear = searchParams.get('year') !== null ? parseInt(searchParams.get('year')!) : currentYear;
+  const isCurrentMonth = selectedMonth === currentMonth && selectedYear === currentYear;
+  const isPast = selectedYear < currentYear || (selectedYear === currentYear && selectedMonth < currentMonth);
 
   const fetchMultiMonthBudgets = useCallback(async () => {
     setIsLoading(true);
@@ -65,8 +78,15 @@ function InsightsPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-full overflow-y-auto bg-surface-secondary p-4 lg:p-8">
-        <div className="max-w-6xl mx-auto">
+      <div className="h-full overflow-y-auto bg-surface-secondary">
+        {!isCurrentMonth && (
+          <MonthBanner
+            isPast={isPast}
+            currentMonthName={monthNames[currentMonth]}
+            onGoToCurrent={() => router.push(`/insights?month=${currentMonth}&year=${currentYear}`)}
+          />
+        )}
+        <div className="max-w-6xl mx-auto p-4 lg:p-8">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-text-primary">Insights</h1>
             <button
