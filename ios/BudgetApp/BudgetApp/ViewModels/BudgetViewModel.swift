@@ -251,6 +251,7 @@ class BudgetViewModel: ObservableObject {
         WidgetDataManager.write(widgetData)
         writeCategoryRingsData(budget: budget, monthLabel: monthLabel, now: now)
         writeBudgetOverviewData(monthLabel: monthLabel, now: now)
+        writeBudgetItemRingsData(monthLabel: monthLabel, now: now)
     }
 
     private func writeCategoryRingsData(budget: Budget, monthLabel: String, now: Date) {
@@ -305,6 +306,30 @@ class BudgetViewModel: ObservableObject {
             lastUpdated: now
         )
         WidgetDataManager.writeBudgetOverview(data)
+    }
+
+    private func writeBudgetItemRingsData(monthLabel: String, now: Date) {
+        let allItems: [BudgetItemRingItem] = sortedCategories
+            .filter { $0.categoryType.lowercased() != "income" }
+            .flatMap { category in
+                category.items.map { item in
+                    BudgetItemRingItem(
+                        id: item.id,
+                        name: item.name,
+                        categoryName: category.name,
+                        categoryEmoji: category.categoryEmoji,
+                        planned: item.planned,
+                        actual: item.actual
+                    )
+                }
+            }
+
+        let data = BudgetItemRingsData(
+            items: allItems,
+            monthLabel: monthLabel,
+            lastUpdated: now
+        )
+        WidgetDataManager.writeBudgetItemRings(data)
     }
 
     private func writeUncategorizedWidgetData() {

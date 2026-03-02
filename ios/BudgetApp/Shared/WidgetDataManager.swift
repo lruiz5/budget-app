@@ -7,6 +7,7 @@ enum WidgetDataManager {
     private static let latestTransactionsKey = "latest_transactions_data"
     private static let categoryRingsKey = "category_rings_data"
     private static let budgetOverviewKey = "budget_overview_data"
+    private static let budgetItemRingsKey = "budget_item_rings_data"
 
     // MARK: - Spending Pace
 
@@ -84,5 +85,24 @@ enum WidgetDataManager {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try? decoder.decode(BudgetOverviewData.self, from: data)
+    }
+
+    // MARK: - Budget Item Rings
+
+    static func writeBudgetItemRings(_ data: BudgetItemRingsData) {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let encoded = try? encoder.encode(data) else { return }
+        defaults.set(encoded, forKey: budgetItemRingsKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: "BudgetItemRingSmallWidget")
+    }
+
+    static func readBudgetItemRings() -> BudgetItemRingsData? {
+        guard let defaults = UserDefaults(suiteName: suiteName),
+              let data = defaults.data(forKey: budgetItemRingsKey) else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(BudgetItemRingsData.self, from: data)
     }
 }

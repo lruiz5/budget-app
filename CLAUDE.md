@@ -167,7 +167,7 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 **Web:** v1.13.0 — stable, production-ready on Vercel
 
-**iOS:** v0.17.0 — pre-release. WidgetKit widgets: 3 medium (Spending Pace chart, Uncategorized Transactions, Category Rings) + 3 small (Spending Pace arc, Single Category Ring w/ AppIntent config, Budget Overview nested rings). Manual funding adjustment, tag reclassification, custom Outfit font, tap-to-categorize, split from categorize/edit sheets. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.17.0 — pre-release. WidgetKit widgets: 3 medium (Spending Pace chart, Uncategorized Transactions, Category Rings) + 4 small (Spending Pace arc, Single Category Ring w/ AppIntent config, Budget Overview nested rings, Budget Item Ring w/ AppIntent config). Manual funding adjustment, tag reclassification, custom Outfit font, tap-to-categorize, split from categorize/edit sheets. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 
 **Pending migrations:** Run in Supabase SQL Editor, then `db:push` to confirm no drift:
 - `ALTER TABLE transactions ADD COLUMN tag_category_type text;`
