@@ -4,7 +4,7 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.12.0 (stable)  |  **iOS App:** v0.17.0 (pre-release) — **iOS app name: Happy Tusk**
+**Web App:** v1.13.0 (stable)  |  **iOS App:** v0.17.0 (pre-release) — **iOS app name: Happy Tusk**
 **Last Session:** 2026-03-01
 
 ## Instructions for Claude
@@ -83,7 +83,7 @@ Budget (month/year) → Buffer + Categories (Income, Giving, Household, Transpor
 
 **Pages:** `page.tsx` (budget), `recurring/page.tsx`, `settings/page.tsx`, `insights/page.tsx`, `onboarding/page.tsx`, `sign-in/`, `sign-up/`
 
-**Components:** `BudgetSection.tsx` (category+items), `BudgetSummary.tsx` (sidebar), `MonthlyReportModal.tsx`, `DashboardLayout.tsx`, `Sidebar.tsx`, `AddTransactionModal.tsx`, `SplitTransactionModal.tsx`, `MobileBlockScreen.tsx`, `onboarding/*.tsx`, `charts/*.tsx`
+**Components:** `BudgetSection.tsx` (category+items), `BudgetSummary.tsx` (sidebar), `MonthlyReportModal.tsx`, `DashboardLayout.tsx`, `Sidebar.tsx`, `MonthBanner.tsx` (past/future month indicator), `AddTransactionModal.tsx`, `SplitTransactionModal.tsx`, `MobileBlockScreen.tsx`, `onboarding/*.tsx`, `charts/*.tsx`
 
 **API Routes:** `budgets/` (GET auto-creates), `budget-categories/`, `transactions/`, `transactions/split/`, `recurring-payments/`, `teller/` (accounts, sync, balances), `onboarding/`, `budgets/copy/`, `budgets/reset/`, `auth/claim-data/`
 
@@ -129,7 +129,7 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 ## Working Features
 
-**Web (v1.12.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller) with per-account sync toggle, recurring payments (with manual funding adjustment), budget copy/reset, insights (D3 charts + Sankey), monthly report, tag reclassification, non-earned income marking, transaction search & filters, drag-to-assign uncategorized transactions, onboarding, tablet responsive.
+**Web (v1.13.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller) with per-account sync toggle, recurring payments (with manual funding adjustment), budget copy/reset, insights (D3 charts + Sankey), monthly report, tag reclassification, non-earned income marking, transaction search & filters, drag-to-assign uncategorized transactions, onboarding, tablet responsive, month/year picker dropdown, live account balances, past/future month banner.
 
 **iOS (v0.17.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment, account balances (live from Teller). See `ios/BudgetApp/CHANGELOG.md`.
 
@@ -165,7 +165,7 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 ## Current State & Next Steps
 
-**Web:** v1.12.0 — stable, production-ready on Vercel
+**Web:** v1.13.0 — stable, production-ready on Vercel
 
 **iOS:** v0.17.0 — pre-release. WidgetKit widgets: 3 medium (Spending Pace chart, Uncategorized Transactions, Category Rings) + 3 small (Spending Pace arc, Single Category Ring w/ AppIntent config, Budget Overview nested rings). Manual funding adjustment, tag reclassification, custom Outfit font, tap-to-categorize, split from categorize/edit sheets. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 

@@ -37,10 +37,23 @@ declare global {
 export default function SettingsPage() {
   const toast = useToast();
   const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
+  const [balances, setBalances] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ synced: number; skipped: number } | null>(null);
   const [tellerReady, setTellerReady] = useState(false);
+
+  const fetchBalances = useCallback(async () => {
+    try {
+      const response = await fetch('/api/teller/balances');
+      if (response.ok) {
+        const data = await response.json();
+        setBalances(data);
+      }
+    } catch (error) {
+      console.error('Error fetching balances:', error);
+    }
+  }, []);
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -57,8 +70,8 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    fetchAccounts().then(() => fetchBalances());
+  }, [fetchAccounts, fetchBalances]);
 
   const handleConnectBank = () => {
     if (!tellerReady || !window.TellerConnect) {
@@ -253,6 +266,11 @@ export default function SettingsPage() {
                             </p>
                           </div>
                           <div className="flex items-center gap-3">
+                            {balances[String(account.id)] && (
+                              <span className="text-sm font-semibold text-text-primary">
+                                ${parseFloat(balances[String(account.id)]).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            )}
                             <span
                               className={`px-2 py-1 text-xs rounded-full ${
                                 account.status === 'open'

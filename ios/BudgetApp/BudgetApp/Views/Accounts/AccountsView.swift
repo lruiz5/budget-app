@@ -39,7 +39,7 @@ struct AccountsView: View {
         }
         .refreshable {
             await viewModel.loadAccounts()
-            await viewModel.loadBalances()
+            await viewModel.loadBalances(forceRefresh: true)
         }
         .task {
             await viewModel.loadAccounts()

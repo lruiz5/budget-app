@@ -73,7 +73,18 @@ class AccountsViewModel: ObservableObject {
 
     // MARK: - Load Balances
 
-    func loadBalances() async {
+    private static let balancesCacheKey = "account_balances"
+    private static let balanceCacheTTL: TimeInterval = 24 * 60 * 60 // 24 hours
+
+    func loadBalances(forceRefresh: Bool = false) async {
+        // Load from cache first
+        if !forceRefresh, let cached: CachedBalances = await CacheManager.shared.load(forKey: Self.balancesCacheKey) {
+            if Date().timeIntervalSince(cached.fetchedAt) < Self.balanceCacheTTL {
+                balances = cached.balances
+                return
+            }
+        }
+
         isLoadingBalances = true
         do {
             let raw = try await accountsService.getBalances()
@@ -84,6 +95,8 @@ class AccountsViewModel: ObservableObject {
                 }
             }
             balances = parsed
+            let cached = CachedBalances(balances: parsed, fetchedAt: Date())
+            await CacheManager.shared.save(cached, forKey: Self.balancesCacheKey)
         } catch {
             // Silently fail — balances are supplementary
         }
@@ -163,4 +176,11 @@ class AccountsViewModel: ObservableObject {
             showToast(error.localizedDescription, isError: true)
         }
     }
+}
+
+// MARK: - Cached Balances
+
+private struct CachedBalances: Codable {
+    let balances: [String: Decimal]
+    let fetchedAt: Date
 }
