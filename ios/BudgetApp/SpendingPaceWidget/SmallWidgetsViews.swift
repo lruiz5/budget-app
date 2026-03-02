@@ -502,6 +502,207 @@ private struct NestedBudgetRingsView: View {
     }
 }
 
+// MARK: - ═══════════════════════════════════════════
+// MARK: Widget 4: Budget Item Ring (Configurable)
+// MARK: - ═══════════════════════════════════════════
+
+// MARK: AppIntent — Budget Item Picker
+
+struct BudgetItemEntity: AppEntity {
+    let id: String          // budget item ID as string
+    let displayName: String // "Personal Spending Money"
+    let categoryEmoji: String
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Budget Item")
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(categoryEmoji) \(displayName)")
+    }
+
+    static var defaultQuery = BudgetItemEntityQuery()
+}
+
+struct BudgetItemEntityQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [BudgetItemEntity] {
+        allItems().filter { identifiers.contains($0.id) }
+    }
+
+    func suggestedEntities() async throws -> [BudgetItemEntity] {
+        allItems()
+    }
+
+    func defaultResult() async -> BudgetItemEntity? {
+        allItems().first
+    }
+
+    private func allItems() -> [BudgetItemEntity] {
+        guard let data = WidgetDataManager.readBudgetItemRings() else {
+            return [
+                BudgetItemEntity(id: "0", displayName: "Spending Money", categoryEmoji: "👤"),
+            ]
+        }
+        return data.items.map { item in
+            BudgetItemEntity(id: String(item.id), displayName: item.name, categoryEmoji: item.categoryEmoji)
+        }
+    }
+}
+
+struct BudgetItemSelectionIntent: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "Choose Budget Item"
+    static let description = IntentDescription("Select a budget line item to track.")
+
+    @Parameter(title: "Budget Item")
+    var budgetItem: BudgetItemEntity?
+}
+
+// MARK: Provider
+
+struct BudgetItemRingEntry: TimelineEntry {
+    let date: Date
+    let item: BudgetItemRingItem?
+    let monthLabel: String
+    var lastUpdated: Date = .now
+}
+
+struct BudgetItemRingProvider: AppIntentTimelineProvider {
+    typealias Entry = BudgetItemRingEntry
+    typealias Intent = BudgetItemSelectionIntent
+
+    func placeholder(in context: Context) -> BudgetItemRingEntry {
+        BudgetItemRingEntry(
+            date: .now,
+            item: BudgetItemRingItem(id: 0, name: "Spending Money", categoryName: "Personal", categoryEmoji: "👤", planned: 200, actual: 135),
+            monthLabel: "Mar 2026"
+        )
+    }
+
+    func snapshot(for configuration: BudgetItemSelectionIntent, in context: Context) async -> BudgetItemRingEntry {
+        if context.isPreview {
+            return placeholder(in: context)
+        }
+        return makeEntry(for: configuration)
+    }
+
+    func timeline(for configuration: BudgetItemSelectionIntent, in context: Context) async -> Timeline<BudgetItemRingEntry> {
+        let entry = makeEntry(for: configuration)
+        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: .now) ?? .now
+        return Timeline(entries: [entry], policy: .after(nextRefresh))
+    }
+
+    private func makeEntry(for configuration: BudgetItemSelectionIntent) -> BudgetItemRingEntry {
+        guard let data = WidgetDataManager.readBudgetItemRings() else {
+            return BudgetItemRingEntry(date: .now, item: nil, monthLabel: "")
+        }
+        let targetId = configuration.budgetItem?.id
+        let item: BudgetItemRingItem?
+        if let targetId, let id = Int(targetId) {
+            item = data.items.first { $0.id == id } ?? data.items.first
+        } else {
+            item = data.items.first
+        }
+        return BudgetItemRingEntry(date: .now, item: item, monthLabel: data.monthLabel, lastUpdated: data.lastUpdated)
+    }
+}
+
+// MARK: Widget Configuration
+
+struct BudgetItemRingSmallWidget: Widget {
+    let kind = "BudgetItemRingSmallWidget"
+
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: kind, intent: BudgetItemSelectionIntent.self, provider: BudgetItemRingProvider()) { entry in
+            BudgetItemRingSmallEntryView(entry: entry)
+                .containerBackground(.fill.tertiary, for: .widget)
+                .widgetURL(URL(string: "happytusk://budget"))
+        }
+        .configurationDisplayName("Budget Item")
+        .description("Track spending for a single budget line item.")
+        .supportedFamilies([.systemSmall])
+    }
+}
+
+// MARK: View
+
+struct BudgetItemRingSmallEntryView: View {
+    let entry: BudgetItemRingEntry
+
+    var body: some View {
+        if let item = entry.item {
+            VStack(spacing: 4) {
+                // Month label + stale icon
+                HStack(spacing: 4) {
+                    Text(entry.monthLabel)
+                        .font(.custom("Outfit", size: 10))
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    if isStale(entry.lastUpdated) {
+                        Image(systemName: "arrow.trianglehead.clockwise")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                Spacer()
+
+                // Progress ring with emoji
+                ZStack {
+                    Circle()
+                        .stroke(Color(.systemGray5), lineWidth: 7)
+
+                    Circle()
+                        .trim(from: 0, to: CGFloat(item.progress))
+                        .stroke(
+                            item.isOver ? Color.red : Color.green,
+                            style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+
+                    VStack(spacing: 1) {
+                        Text(item.categoryEmoji)
+                            .font(.system(size: 28))
+                    }
+                }
+                .frame(width: 90, height: 90)
+
+                Spacer()
+
+                // Item name + remaining
+                VStack(spacing: 1) {
+                    Text(item.name)
+                        .font(.custom("Outfit", size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    HStack(spacing: 3) {
+                        Text(item.isOver
+                            ? formatCompact(item.actual - item.planned, isOver: true)
+                            : formatCompact(item.remaining))
+                            .font(.custom("Outfit", size: 14))
+                            .fontWeight(.semibold)
+                            .foregroundStyle(item.isOver ? Color.red : .primary)
+
+                        Text(item.isOver ? "over" : "left")
+                            .font(.custom("Outfit", size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                }
+            }
+        } else {
+            VStack(spacing: 8) {
+                Image(systemName: "circle.dotted")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                Text("Open Happy Tusk\nto load data")
+                    .font(.custom("Outfit", size: 12))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
+}
+
 // MARK: - Preview Data
 
 extension BudgetOverviewData {
@@ -540,4 +741,15 @@ extension BudgetOverviewData {
 } timeline: {
     BudgetOverviewEntry(date: .now, data: .preview)
     BudgetOverviewEntry(date: .now, data: nil)
+}
+
+#Preview("Budget Item Ring Small", as: .systemSmall) {
+    BudgetItemRingSmallWidget()
+} timeline: {
+    BudgetItemRingEntry(
+        date: .now,
+        item: BudgetItemRingItem(id: 1, name: "Spending Money", categoryName: "Personal", categoryEmoji: "👤", planned: 200, actual: 135),
+        monthLabel: "Mar 2026"
+    )
+    BudgetItemRingEntry(date: .now, item: nil, monthLabel: "")
 }

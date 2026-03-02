@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5489106D2F556CB800C810A2 /* BudgetItemRingsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5489106C2F556CB800C810A2 /* BudgetItemRingsData.swift */; };
+		5489106E2F556CB800C810A2 /* BudgetItemRingsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5489106C2F556CB800C810A2 /* BudgetItemRingsData.swift */; };
 		54B7B6252F32C114006D5BE2 /* Clerk in Frameworks */ = {isa = PBXBuildFile; productRef = 54B7B6242F32C114006D5BE2 /* Clerk */; };
 		54C4BEFC2F4FC33B009FF56A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54C4BEFB2F4FC33B009FF56A /* WidgetKit.framework */; };
 		54C4BEFE2F4FC33B009FF56A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54C4BEFD2F4FC33B009FF56A /* SwiftUI.framework */; };
@@ -62,6 +64,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		5489106C2F556CB800C810A2 /* BudgetItemRingsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetItemRingsData.swift; sourceTree = "<group>"; };
 		54B7B5B22F32BDE1006D5BE2 /* Happy Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Happy Tusk.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54B7B5BF2F32BDE2006D5BE2 /* BudgetAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BudgetAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		54B7B5C92F32BDE2006D5BE2 /* BudgetAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BudgetAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -196,6 +199,7 @@
 		54C4BF2B2F503443009FF56A /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				5489106C2F556CB800C810A2 /* BudgetItemRingsData.swift */,
 				54C4C1052F511024009FF56A /* BudgetOverviewData.swift */,
 				54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */,
 				54C4BF282F503443009FF56A /* LatestTransactionsData.swift */,
@@ -388,6 +392,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5489106E2F556CB800C810A2 /* BudgetItemRingsData.swift in Sources */,
 				54C4BF2F2F503443009FF56A /* LatestTransactionsData.swift in Sources */,
 				54C4BF302F503443009FF56A /* WidgetDataManager.swift in Sources */,
 				54C4BFD52F50BC12009FF56A /* CategoryRingsData.swift in Sources */,
@@ -417,6 +422,7 @@
 				54C4BF2C2F503443009FF56A /* LatestTransactionsData.swift in Sources */,
 				54C4BFD42F50BC12009FF56A /* CategoryRingsData.swift in Sources */,
 				54C4C1062F511024009FF56A /* BudgetOverviewData.swift in Sources */,
+				5489106D2F556CB800C810A2 /* BudgetItemRingsData.swift in Sources */,
 				54C4BF2D2F503443009FF56A /* WidgetDataManager.swift in Sources */,
 				54C4BF2E2F503443009FF56A /* SpendingPaceData.swift in Sources */,
 			);
@@ -727,6 +733,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VGZGTYTT7T;
+				GENERATE_APPINTENT_METADATA = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SpendingPaceWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = SpendingPaceWidget;
@@ -759,6 +766,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VGZGTYTT7T;
+				GENERATE_APPINTENT_METADATA = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SpendingPaceWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = SpendingPaceWidget;

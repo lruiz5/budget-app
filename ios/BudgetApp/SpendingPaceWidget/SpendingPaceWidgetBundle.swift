@@ -43,6 +43,7 @@ struct HappyTuskWidgetBundle: WidgetBundle {
         SpendingPaceSmallWidget()
         SingleCategoryRingSmallWidget()
         BudgetOverviewSmallWidget()
+        BudgetItemRingSmallWidget()
     }
 }
 
