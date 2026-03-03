@@ -313,13 +313,15 @@ class BudgetViewModel: ObservableObject {
             .filter { $0.categoryType.lowercased() != "income" }
             .flatMap { category in
                 category.items.map { item in
-                    BudgetItemRingItem(
+                    let key = AvatarManager.key(categoryType: category.categoryType, itemName: item.name)
+                    return BudgetItemRingItem(
                         id: item.id,
                         name: item.name,
                         categoryName: category.name,
                         categoryEmoji: category.categoryEmoji,
                         planned: item.planned,
-                        actual: item.actual
+                        actual: item.actual,
+                        avatarKey: AvatarManager.exists(forKey: key) ? key : nil
                     )
                 }
             }

@@ -226,6 +226,8 @@ extension String {
 
 extension Notification.Name {
     static let widgetDeepLink = Notification.Name("widgetDeepLink")
+    static let budgetItemDeepLink = Notification.Name("budgetItemDeepLink")
+    static let insightsSectionDeepLink = Notification.Name("insightsSectionDeepLink")
 }
 
 // MARK: - Array Extensions

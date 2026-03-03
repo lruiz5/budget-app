@@ -18,6 +18,11 @@ actor BudgetService {
         ])
     }
 
+    /// Returns all existing budgets for the user (read-only, no auto-create).
+    func listBudgets() async throws -> [Budget] {
+        try await api.get("/api/budgets/list")
+    }
+
     func updateBudget(_ budget: BudgetUpdateRequest) async throws -> SuccessResponse {
         try await api.put("/api/budgets", body: budget)
     }

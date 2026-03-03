@@ -43,21 +43,9 @@ class InsightsViewModel: ObservableObject {
             prevYear -= 1
         }
 
-        let monthsToLoad = [
-            (month: prevMonth - 1 < 0 ? 11 : prevMonth - 1, year: prevMonth - 1 < 0 ? prevYear - 1 : prevYear),
-            (month: prevMonth, year: prevYear),
-            (month: selectedMonth, year: selectedYear)
-        ]
-
         // Load from cache first (instant, no spinner)
-        var cachedBudgets: [Budget] = []
-        for target in monthsToLoad {
-            if let cached: Budget = await CacheManager.shared.load(forKey: "budget_\(target.month)_\(target.year)") {
-                cachedBudgets.append(cached)
-            }
-        }
-        if !cachedBudgets.isEmpty {
-            budgets = cachedBudgets.sorted { ($0.year, $0.month) < ($1.year, $1.month) }
+        if let cached: [Budget] = await CacheManager.shared.load(forKey: "budgets_all") {
+            budgets = cached.sorted { ($0.year, $0.month) < ($1.year, $1.month) }
             previousBudget = budgets.first { $0.month == prevMonth && $0.year == prevYear }
             updateComputedData()
         }
@@ -66,24 +54,17 @@ class InsightsViewModel: ObservableObject {
             isLoading = true
         }
 
-        // Fetch fresh data from network (parallel)
-        let t0 = monthsToLoad[0], t1 = monthsToLoad[1], t2 = monthsToLoad[2]
-        async let b0: Budget? = try? budgetService.getBudget(month: t0.month, year: t0.year)
-        async let b1: Budget? = try? budgetService.getBudget(month: t1.month, year: t1.year)
-        async let b2: Budget? = try? budgetService.getBudget(month: t2.month, year: t2.year)
-
-        var loadedBudgets: [Budget] = []
-        for budget in await [b0, b1, b2] {
-            if let budget {
-                loadedBudgets.append(budget)
-                await CacheManager.shared.save(budget, forKey: "budget_\(budget.month)_\(budget.year)")
-            }
-        }
-
-        if !loadedBudgets.isEmpty {
-            budgets = loadedBudgets.sorted { ($0.year, $0.month) < ($1.year, $1.month) }
+        // Fetch all existing budgets in one call (read-only, no auto-create)
+        do {
+            let allBudgets = try await budgetService.listBudgets()
+            budgets = allBudgets.sorted { ($0.year, $0.month) < ($1.year, $1.month) }
             previousBudget = budgets.first { $0.month == prevMonth && $0.year == prevYear }
+            await CacheManager.shared.save(allBudgets, forKey: "budgets_all")
             updateComputedData()
+        } catch {
+            if budgets.isEmpty {
+                self.error = error.localizedDescription
+            }
         }
         isLoading = false
     }
@@ -155,7 +136,9 @@ class InsightsViewModel: ObservableObject {
     func getSpendingTrendData() -> [TrendDataPoint] {
         var dataPoints: [TrendDataPoint] = []
         for budget in budgets {
-            let monthLabel = "\(shortMonthName(budget.month)) \(budget.year)"
+            // Use short month name; add year suffix at January or when year changes
+            let monthName = shortMonthName(budget.month)
+            let monthLabel = budget.month == 0 ? "\(monthName) '\(String(budget.year).suffix(2))" : monthName
             let tagAdj = getTagAdjustments(from: budget)
             for (_, category) in budget.categories {
                 if category.categoryType.lowercased() != "income" && category.categoryType.lowercased() != "saving" {

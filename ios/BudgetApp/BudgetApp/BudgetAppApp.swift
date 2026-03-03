@@ -77,9 +77,7 @@ struct BudgetAppApp: App {
                 isLoading = false
             }
             .onOpenURL { url in
-                if let host = url.host() {
-                    NotificationCenter.default.post(name: .widgetDeepLink, object: host)
-                }
+                NotificationCenter.default.post(name: .widgetDeepLink, object: url)
             }
             .onChange(of: clerk.user) { oldValue, newValue in
                 // Reset auth ready state when user changes (sign out/sign in)

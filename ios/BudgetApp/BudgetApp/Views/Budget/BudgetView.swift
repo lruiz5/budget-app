@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Sheet Enum (single .sheet pattern to avoid SwiftUI multi-sheet bug)
 
 enum BudgetActiveSheet: Identifiable {
-    case itemDetail(BudgetItem)
+    case itemDetail(BudgetItem, categoryType: String)
     case addItem(categoryId: Int)
     case addCategory
     case resetBudget
@@ -12,7 +12,7 @@ enum BudgetActiveSheet: Identifiable {
 
     var id: String {
         switch self {
-        case .itemDetail(let item): return "detail-\(item.id)"
+        case .itemDetail(let item, _): return "detail-\(item.id)"
         case .addItem(let catId): return "add-\(catId)"
         case .addCategory: return "add-category"
         case .resetBudget: return "reset-budget"
@@ -58,11 +58,15 @@ struct BudgetView: View {
         .task {
             await viewModel.loadBudget()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .budgetItemDeepLink)) { notification in
+            handleBudgetItemDeepLink(notification)
+        }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
-            case .itemDetail(let item):
+            case .itemDetail(let item, let categoryType):
                 BudgetItemDetail(
                     item: item,
+                    categoryType: categoryType,
                     onUpdate: {
                         Task { await viewModel.loadBudget() }
                     },
@@ -121,6 +125,19 @@ struct BudgetView: View {
         )
     }
 
+    // MARK: - Deep Link Handling
+
+    private func handleBudgetItemDeepLink(_ notification: NotificationCenter.Publisher.Output) {
+        guard let itemId = notification.object as? Int else { return }
+        guard let budget = viewModel.budget else { return }
+        for category in viewModel.sortedCategories {
+            if let item = category.items.first(where: { $0.id == itemId }) {
+                activeSheet = .itemDetail(item, categoryType: category.categoryType)
+                return
+            }
+        }
+    }
+
     // MARK: - Budget Content
 
     @ViewBuilder
@@ -148,7 +165,7 @@ struct BudgetView: View {
                     CategorySection(
                         category: category,
                         onItemTap: { item in
-                            activeSheet = .itemDetail(item)
+                            activeSheet = .itemDetail(item, categoryType: category.categoryType)
                         },
                         onAddItem: {
                             activeSheet = .addItem(categoryId: category.id)
