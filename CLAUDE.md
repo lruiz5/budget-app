@@ -167,7 +167,7 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 **Web:** v1.13.0 — stable, production-ready on Vercel
 
-**iOS:** v0.18.0 — pre-release. WidgetKit widgets: 3 medium + 4 small (with deep links to specific views + Memoji avatar support on Budget Item Ring). Full spending trends (all months). See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.18.1 — pre-release. WidgetKit widgets: 3 medium + 4 small (with deep links to specific views + Memoji avatar support on Budget Item Ring). Spending trends: 6-month rolling window with parallel fetch. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 
 **Pending migrations:** Run in Supabase SQL Editor, then `db:push` to confirm no drift:
 - `ALTER TABLE transactions ADD COLUMN tag_category_type text;`

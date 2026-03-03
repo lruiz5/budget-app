@@ -6,6 +6,21 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [0.18.1] - 2026-03-03 - Spending Trends Expansion
+
+### Changed
+
+- **Spending Trends chart** — expanded from 3 months to 6 months of rolling data
+- **Month labels** — switched to compact `MM/YY` format (e.g., `03/26`) for readability at 6 months
+- **Parallel budget fetching** — `InsightsViewModel.loadData()` now uses `withTaskGroup` for concurrent network requests
+- **Per-month caching** — individual budget caching (`budget_{month}_{year}`) replaces bulk cache for faster incremental loads
+
+### Files Modified
+
+- `ViewModels/InsightsViewModel.swift` — refactored `loadData()` to loop-based month generation with parallel fetch, updated `getSpendingTrendData()` month label format
+
+---
+
 ## [0.17.0] - 2026-02-26 - Home Screen Widgets
 
 ### Added
