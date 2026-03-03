@@ -58,7 +58,7 @@ struct SpendingPaceSmallWidget: Widget {
         StaticConfiguration(kind: kind, provider: SpendingPaceSmallProvider()) { entry in
             SpendingPaceSmallEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
-                .widgetURL(URL(string: "happytusk://insights"))
+                .widgetURL(URL(string: "happytusk://insights?section=spendingPace"))
         }
         .configurationDisplayName("Spending Pace")
         .description("Your remaining budget at a glance.")
@@ -72,11 +72,8 @@ struct SpendingPaceSmallEntryView: View {
     var body: some View {
         if let data = entry.data {
             VStack(spacing: 4) {
-                // Month label + stale icon
-                HStack(spacing: 4) {
-                    Text(data.monthLabel)
-                        .font(.custom("Outfit", size: 10))
-                        .foregroundStyle(.tertiary)
+                // Stale icon
+                HStack {
                     Spacer()
                     if isStale(data.lastUpdated) {
                         Image(systemName: "arrow.trianglehead.clockwise")
@@ -274,11 +271,8 @@ struct SingleCategoryRingSmallEntryView: View {
     var body: some View {
         if let ring = entry.ring {
             VStack(spacing: 4) {
-                // Month label + stale icon
-                HStack(spacing: 4) {
-                    Text(entry.monthLabel)
-                        .font(.custom("Outfit", size: 10))
-                        .foregroundStyle(.tertiary)
+                // Stale icon
+                HStack {
                     Spacer()
                     if isStale(entry.lastUpdated) {
                         Image(systemName: "arrow.trianglehead.clockwise")
@@ -398,11 +392,8 @@ struct BudgetOverviewSmallEntryView: View {
     var body: some View {
         if let data = entry.data {
             VStack(spacing: 4) {
-                // Month label + stale icon
-                HStack(spacing: 4) {
-                    Text(data.monthLabel)
-                        .font(.custom("Outfit", size: 10))
-                        .foregroundStyle(.tertiary)
+                // Stale icon
+                HStack {
                     Spacer()
                     if isStale(data.lastUpdated) {
                         Image(systemName: "arrow.trianglehead.clockwise")
@@ -613,7 +604,7 @@ struct BudgetItemRingSmallWidget: Widget {
         AppIntentConfiguration(kind: kind, intent: BudgetItemSelectionIntent.self, provider: BudgetItemRingProvider()) { entry in
             BudgetItemRingSmallEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
-                .widgetURL(URL(string: "happytusk://budget"))
+                .widgetURL(URL(string: "happytusk://budget\(entry.item.map { "?itemId=\($0.id)" } ?? "")"))
         }
         .configurationDisplayName("Budget Item")
         .description("Track spending for a single budget line item.")
@@ -629,11 +620,8 @@ struct BudgetItemRingSmallEntryView: View {
     var body: some View {
         if let item = entry.item {
             VStack(spacing: 4) {
-                // Month label + stale icon
-                HStack(spacing: 4) {
-                    Text(entry.monthLabel)
-                        .font(.custom("Outfit", size: 10))
-                        .foregroundStyle(.tertiary)
+                // Stale icon
+                HStack {
                     Spacer()
                     if isStale(entry.lastUpdated) {
                         Image(systemName: "arrow.trianglehead.clockwise")
@@ -657,7 +645,15 @@ struct BudgetItemRingSmallEntryView: View {
                         )
                         .rotationEffect(.degrees(-90))
 
-                    VStack(spacing: 1) {
+                    if let avatarKey = item.avatarKey,
+                       let avatarUIImage = AvatarManager.load(forKey: avatarKey) {
+                        Image(uiImage: avatarUIImage)
+                            .resizable()
+                            .scaledToFill()
+                            .padding(8)
+                            .frame(width: 76, height: 76)
+                            .clipShape(Circle())
+                    } else {
                         Text(item.categoryEmoji)
                             .font(.system(size: 28))
                     }

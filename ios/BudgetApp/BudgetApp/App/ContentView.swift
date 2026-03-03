@@ -53,12 +53,25 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: networkMonitor.isConnected)
         .onReceive(NotificationCenter.default.publisher(for: .widgetDeepLink)) { notification in
-            if let destination = notification.object as? String {
-                switch destination {
-                case "insights": selectedTab = 3
-                case "budget": selectedTab = 0
-                default: break
+            guard let url = notification.object as? URL, let host = url.host() else { return }
+            switch host {
+            case "insights":
+                selectedTab = 3
+                if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                   let section = components.queryItems?.first(where: { $0.name == "section" })?.value {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        NotificationCenter.default.post(name: .insightsSectionDeepLink, object: section)
+                    }
                 }
+            case "budget":
+                selectedTab = 0
+                // Forward item ID if present (e.g. happytusk://budget?itemId=123)
+                if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                   let itemIdStr = components.queryItems?.first(where: { $0.name == "itemId" })?.value,
+                   let itemId = Int(itemIdStr) {
+                    NotificationCenter.default.post(name: .budgetItemDeepLink, object: itemId)
+                }
+            default: break
             }
         }
     }

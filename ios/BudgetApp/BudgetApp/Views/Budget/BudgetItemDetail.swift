@@ -1,7 +1,9 @@
 import SwiftUI
+import WidgetKit
 
 struct BudgetItemDetail: View {
     let item: BudgetItem
+    let categoryType: String
     let onUpdate: () -> Void
     let onUpdatePlanned: (Int, Decimal) async -> Void
     let onUpdateName: (Int, String) async -> Void
@@ -14,6 +16,8 @@ struct BudgetItemDetail: View {
     @State private var isSaving = false
     @State private var activeSheet: ActiveSheet?
     @State private var transactions: [Transaction]
+    @State private var avatarImage: UIImage?
+    @State private var showMemojiSheet = false
 
     enum ActiveSheet: Identifiable {
         case addTransaction
@@ -29,8 +33,13 @@ struct BudgetItemDetail: View {
         }
     }
 
-    init(item: BudgetItem, onUpdate: @escaping () -> Void, onUpdatePlanned: @escaping (Int, Decimal) async -> Void, onUpdateName: @escaping (Int, String) async -> Void) {
+    private var avatarKey: String {
+        AvatarManager.key(categoryType: categoryType, itemName: item.name)
+    }
+
+    init(item: BudgetItem, categoryType: String, onUpdate: @escaping () -> Void, onUpdatePlanned: @escaping (Int, Decimal) async -> Void, onUpdateName: @escaping (Int, String) async -> Void) {
         self.item = item
+        self.categoryType = categoryType
         self.onUpdate = onUpdate
         self.onUpdatePlanned = onUpdatePlanned
         self.onUpdateName = onUpdateName
@@ -45,6 +54,9 @@ struct BudgetItemDetail: View {
                 VStack(spacing: 24) {
                     // Progress Ring
                     progressSection
+
+                    // Widget Avatar
+                    avatarSection
 
                     // Item Name
                     nameSection
@@ -106,6 +118,9 @@ struct BudgetItemDetail: View {
                     )
                 }
             }
+            .onAppear {
+                avatarImage = AvatarManager.load(forKey: avatarKey)
+            }
         }
     }
 
@@ -164,6 +179,84 @@ struct BudgetItemDetail: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+    }
+
+    // MARK: - Avatar Section
+
+    private var avatarSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Widget Avatar")
+                .font(.outfitHeadline)
+
+            HStack(spacing: 16) {
+                // Preview circle
+                ZStack {
+                    Circle()
+                        .fill(Color(.systemGray5))
+                        .frame(width: 60, height: 60)
+
+                    if let avatarImage {
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 56, height: 56)
+                            .clipShape(Circle())
+                    } else {
+                        Text(BudgetCategory.emojiForCategoryType(categoryType))
+                            .font(.system(size: 32))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Tap a Memoji sticker from the keyboard to set a custom avatar.")
+                        .font(.outfitCaption)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 12) {
+                        Button {
+                            showMemojiSheet = true
+                        } label: {
+                            Label("Memoji", systemImage: "face.smiling")
+                                .font(.outfitSubheadline)
+                        }
+                        .buttonStyle(.bordered)
+
+                        if avatarImage != nil {
+                            Button(role: .destructive) {
+                                clearAvatar()
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.outfitSubheadline)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+        .sheet(isPresented: $showMemojiSheet) {
+            MemojiStickerSheet { image in
+                saveAndShowAvatar(image)
+                showMemojiSheet = false
+            }
+            .presentationDetents([.medium])
+        }
+    }
+
+    private func saveAndShowAvatar(_ image: UIImage) {
+        if AvatarManager.save(image: image, forKey: avatarKey) {
+            avatarImage = AvatarManager.load(forKey: avatarKey)
+            WidgetCenter.shared.reloadTimelines(ofKind: "BudgetItemRingSmallWidget")
+        }
+    }
+
+    private func clearAvatar() {
+        AvatarManager.remove(forKey: avatarKey)
+        avatarImage = nil
+        WidgetCenter.shared.reloadTimelines(ofKind: "BudgetItemRingSmallWidget")
     }
 
     // MARK: - Name Section
@@ -417,6 +510,136 @@ struct BudgetItemDetail: View {
     }
 }
 
+// MARK: - Memoji Sticker Sheet
+
+struct MemojiStickerSheet: View {
+    let onImageReceived: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var hasContent = false
+    @State private var captureAction: (() -> Void)?
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                Text("Switch to the Memoji keyboard tab, then tap a sticker.")
+                    .font(.outfitBody)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                StickerInputField(
+                    onContentChanged: { hasSomething in
+                        hasContent = hasSomething
+                    },
+                    captureAction: $captureAction
+                )
+                .frame(height: 100)
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                .padding(.horizontal)
+
+                if hasContent {
+                    Button {
+                        captureAction?()
+                    } label: {
+                        Text("Use This")
+                            .font(.outfitHeadline)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.horizontal)
+                }
+
+                Spacer()
+            }
+            .padding(.top, 24)
+            .navigationTitle("Choose Memoji")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .stickerCaptured)) { notification in
+            if let image = notification.object as? UIImage {
+                onImageReceived(image)
+            }
+        }
+    }
+}
+
+extension Notification.Name {
+    static let stickerCaptured = Notification.Name("stickerCaptured")
+}
+
+/// UITextView wrapper that renders its visible content as an image on demand.
+struct StickerInputField: UIViewRepresentable {
+    let onContentChanged: (Bool) -> Void
+    @Binding var captureAction: (() -> Void)?
+
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.delegate = context.coordinator
+        textView.allowsEditingTextAttributes = true
+        textView.font = .systemFont(ofSize: 60)
+        textView.textAlignment = .center
+        textView.backgroundColor = .clear
+        textView.textContainerInset = UIEdgeInsets(top: 16, left: 8, bottom: 16, right: 8)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            textView.becomeFirstResponder()
+        }
+        return textView
+    }
+
+    func updateUIView(_ uiView: UITextView, context: Context) {
+        // Set up the capture closure so the parent can trigger it
+        DispatchQueue.main.async {
+            self.captureAction = {
+                guard let image = Self.renderTextViewContent(uiView) else { return }
+                NotificationCenter.default.post(name: .stickerCaptured, object: image)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onContentChanged: onContentChanged)
+    }
+
+    /// Captures the visible content of the text view using drawHierarchy (captures system-rendered stickers).
+    private static func renderTextViewContent(_ textView: UITextView) -> UIImage? {
+        guard textView.textStorage.length > 0 else { return nil }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = false
+        format.scale = UIScreen.main.scale
+        let renderer = UIGraphicsImageRenderer(size: textView.bounds.size, format: format)
+        let fullImage = renderer.image { _ in
+            textView.drawHierarchy(in: textView.bounds, afterScreenUpdates: true)
+        }
+
+        // Trim transparent edges to get just the sticker content
+        guard let cgImage = fullImage.cgImage,
+              let trimmed = cgImage.trimmingTransparentPixels() else {
+            return fullImage
+        }
+        return UIImage(cgImage: trimmed, scale: fullImage.scale, orientation: .up)
+    }
+
+    class Coordinator: NSObject, UITextViewDelegate {
+        let onContentChanged: (Bool) -> Void
+
+        init(onContentChanged: @escaping (Bool) -> Void) {
+            self.onContentChanged = onContentChanged
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            let hasContent = textView.textStorage.length > 0
+            onContentChanged(hasContent)
+        }
+    }
+}
+
 #Preview {
     BudgetItemDetail(
         item: BudgetItem(
@@ -429,6 +652,7 @@ struct BudgetItemDetail: View {
             recurringPaymentId: nil,
             transactions: []
         ),
+        categoryType: "food",
         onUpdate: {},
         onUpdatePlanned: { _, _ in },
         onUpdateName: { _, _ in }

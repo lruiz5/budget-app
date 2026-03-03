@@ -32,24 +32,34 @@ struct InsightsView: View {
     }()
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Monthly Report Card
-                monthlyReportCard
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Monthly Report Card
+                    monthlyReportCard
 
-                // Budget vs Actual Chart
-                if let budget = viewModel.currentBudget {
-                    budgetVsActualChart(budget)
-                    spendingPaceChart(budget)
-                    spendingHeatmap(budget)
+                    // Budget vs Actual Chart
+                    if let budget = viewModel.currentBudget {
+                        budgetVsActualChart(budget)
+                        spendingPaceChart(budget)
+                            .id("spendingPace")
+                        spendingHeatmap(budget)
+                    }
+
+                    // Spending Trends (requires multiple months)
+                    if viewModel.budgets.count >= 2 {
+                        spendingTrendsChart
+                    }
                 }
-
-                // Spending Trends (requires multiple months)
-                if viewModel.budgets.count >= 2 {
-                    spendingTrendsChart
+                .padding()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .insightsSectionDeepLink)) { notification in
+                if let section = notification.object as? String, section == "spendingPace" {
+                    withAnimation {
+                        proxy.scrollTo("spendingPace", anchor: .top)
+                    }
                 }
             }
-            .padding()
         }
         .refreshable {
             await viewModel.loadData()
@@ -286,13 +296,13 @@ struct InsightsView: View {
 
     private func isCurrentMonth(_ budget: Budget) -> Bool {
         let now = Date()
-        let currentMonth = Self.utcCalendar.component(.month, from: now) - 1  // 0-indexed
-        let currentYear = Self.utcCalendar.component(.year, from: now)
+        let currentMonth = Calendar.current.component(.month, from: now) - 1  // 0-indexed
+        let currentYear = Calendar.current.component(.year, from: now)
         return budget.month == currentMonth && budget.year == currentYear
     }
 
     private func todayDay() -> Int {
-        Self.utcCalendar.component(.day, from: Date())
+        Calendar.current.component(.day, from: Date())
     }
 
     private func formatCurrencyShort(_ value: Decimal) -> String {

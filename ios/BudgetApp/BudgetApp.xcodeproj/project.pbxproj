@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		54793F042F56BF2A005017E5 /* AvatarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54793F032F56BF2A005017E5 /* AvatarManager.swift */; };
+		54793F052F56BF2A005017E5 /* AvatarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54793F032F56BF2A005017E5 /* AvatarManager.swift */; };
 		5489106D2F556CB800C810A2 /* BudgetItemRingsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5489106C2F556CB800C810A2 /* BudgetItemRingsData.swift */; };
 		5489106E2F556CB800C810A2 /* BudgetItemRingsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5489106C2F556CB800C810A2 /* BudgetItemRingsData.swift */; };
 		54B7B6252F32C114006D5BE2 /* Clerk in Frameworks */ = {isa = PBXBuildFile; productRef = 54B7B6242F32C114006D5BE2 /* Clerk */; };
@@ -64,6 +66,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		54793F032F56BF2A005017E5 /* AvatarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarManager.swift; sourceTree = "<group>"; };
 		5489106C2F556CB800C810A2 /* BudgetItemRingsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetItemRingsData.swift; sourceTree = "<group>"; };
 		54B7B5B22F32BDE1006D5BE2 /* Happy Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Happy Tusk.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54B7B5BF2F32BDE2006D5BE2 /* BudgetAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BudgetAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -199,6 +202,7 @@
 		54C4BF2B2F503443009FF56A /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				54793F032F56BF2A005017E5 /* AvatarManager.swift */,
 				5489106C2F556CB800C810A2 /* BudgetItemRingsData.swift */,
 				54C4C1052F511024009FF56A /* BudgetOverviewData.swift */,
 				54C4BFD32F50BC12009FF56A /* CategoryRingsData.swift */,
@@ -395,6 +399,7 @@
 				5489106E2F556CB800C810A2 /* BudgetItemRingsData.swift in Sources */,
 				54C4BF2F2F503443009FF56A /* LatestTransactionsData.swift in Sources */,
 				54C4BF302F503443009FF56A /* WidgetDataManager.swift in Sources */,
+				54793F042F56BF2A005017E5 /* AvatarManager.swift in Sources */,
 				54C4BFD52F50BC12009FF56A /* CategoryRingsData.swift in Sources */,
 				54C4BF312F503443009FF56A /* SpendingPaceData.swift in Sources */,
 				54C4C1072F511024009FF56A /* BudgetOverviewData.swift in Sources */,
@@ -421,6 +426,7 @@
 			files = (
 				54C4BF2C2F503443009FF56A /* LatestTransactionsData.swift in Sources */,
 				54C4BFD42F50BC12009FF56A /* CategoryRingsData.swift in Sources */,
+				54793F052F56BF2A005017E5 /* AvatarManager.swift in Sources */,
 				54C4C1062F511024009FF56A /* BudgetOverviewData.swift in Sources */,
 				5489106D2F556CB800C810A2 /* BudgetItemRingsData.swift in Sources */,
 				54C4BF2D2F503443009FF56A /* WidgetDataManager.swift in Sources */,

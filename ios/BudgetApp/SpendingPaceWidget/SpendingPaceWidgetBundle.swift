@@ -56,7 +56,7 @@ struct SpendingPaceWidget: Widget {
         StaticConfiguration(kind: kind, provider: SpendingPaceProvider()) { entry in
             SpendingPaceWidgetEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
-                .widgetURL(URL(string: "happytusk://insights"))
+                .widgetURL(URL(string: "happytusk://insights?section=spendingPace"))
         }
         .configurationDisplayName("Spending Pace")
         .description("Track your monthly spending against your budget.")

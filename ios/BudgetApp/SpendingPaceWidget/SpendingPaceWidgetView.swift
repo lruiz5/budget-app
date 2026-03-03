@@ -94,8 +94,9 @@ struct SpendingPaceChartView: View {
                 }
 
                 if !points.isEmpty {
-                    // Find last point with actual spending data
-                    let lastDataIndex = lastNonZeroIndex(in: data.dailyCumulative)
+                    // Draw line only up to today's date
+                    let today = Calendar.current.component(.day, from: Date())
+                    let lastDataIndex = min(today - 1, days - 1) // 0-indexed, clamped
 
                     Path { path in
                         path.move(to: points[0])
@@ -120,13 +121,6 @@ struct SpendingPaceChartView: View {
                 }
             }
         }
-    }
-
-    private func lastNonZeroIndex(in values: [Decimal]) -> Int {
-        for i in stride(from: values.count - 1, through: 0, by: -1) {
-            if values[i] != 0 { return i }
-        }
-        return 0
     }
 
     private var dotColor: Color {
