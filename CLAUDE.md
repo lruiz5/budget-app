@@ -4,8 +4,8 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.13.0 (stable)  |  **iOS App:** v0.17.0 (pre-release) — **iOS app name: Happy Tusk**
-**Last Session:** 2026-03-01
+**Web App:** v1.14.0 (stable)  |  **iOS App:** v0.17.0 (pre-release) — **iOS app name: Happy Tusk**
+**Last Session:** 2026-03-05
 
 ## Instructions for Claude
 
@@ -129,7 +129,7 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 ## Working Features
 
-**Web (v1.13.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/soft-delete), bank sync (Teller) with per-account sync toggle, recurring payments (with manual funding adjustment), budget copy/reset, insights (D3 charts + Sankey), monthly report, tag reclassification, non-earned income marking, transaction search & filters, drag-to-assign uncategorized transactions, onboarding, tablet responsive, month/year picker dropdown, live account balances, past/future month banner.
+**Web (v1.14.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/unsplit/soft-delete), bank sync (Teller) with per-account sync toggle, recurring payments (with manual funding adjustment), budget copy/reset, insights (D3 charts + Sankey, 6-month spending trends), monthly report, tag reclassification, non-earned income marking, transaction search & filters, drag-to-assign uncategorized transactions, onboarding, tablet responsive, month/year picker dropdown, live account balances, past/future month banner.
 
 **iOS (v0.17.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment, account balances (live from Teller). See `ios/BudgetApp/CHANGELOG.md`.
 
@@ -165,7 +165,7 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 ## Current State & Next Steps
 
-**Web:** v1.13.0 — stable, production-ready on Vercel
+**Web:** v1.14.0 — stable, production-ready on Vercel
 
 **iOS:** v0.18.1 — pre-release. WidgetKit widgets: 3 medium + 4 small (with deep links to specific views + Memoji avatar support on Budget Item Ring). Spending trends: 6-month rolling window with parallel fetch. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
 

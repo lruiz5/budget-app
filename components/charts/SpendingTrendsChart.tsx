@@ -1,20 +1,22 @@
-'use client';
+"use client";
 
-import { useRef, useEffect, useState, useMemo } from 'react';
-import * as d3 from 'd3';
-import { Budget } from '@/types/budget';
-import { transformBudgetsToTrendData } from '@/lib/chartHelpers';
-import { formatCurrency } from '@/lib/formatCurrency';
-import { getCategoryColor, getCategoryEmoji } from '@/lib/chartColors';
-import ChartTooltip from './ChartTooltip';
-import ChartEmptyState from './ChartEmptyState';
-import { FaChartLine } from 'react-icons/fa';
+import { useRef, useEffect, useState, useMemo } from "react";
+import * as d3 from "d3";
+import { Budget } from "@/types/budget";
+import { transformBudgetsToTrendData } from "@/lib/chartHelpers";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { getCategoryColor, getCategoryEmoji } from "@/lib/chartColors";
+import ChartTooltip from "./ChartTooltip";
+import ChartEmptyState from "./ChartEmptyState";
+import { FaChartLine } from "react-icons/fa";
 
 interface SpendingTrendsChartProps {
   budgets: Budget[];
 }
 
-export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProps) {
+export default function SpendingTrendsChart({
+  budgets,
+}: SpendingTrendsChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState({
@@ -28,13 +30,15 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
   const categoryKeys = useMemo(() => {
     const keys = new Set<string>();
     budgets.forEach((b) => {
-      Object.keys(b.categories).filter(k => k !== 'income').forEach(k => keys.add(k));
+      Object.keys(b.categories)
+        .filter((k) => k !== "income")
+        .forEach((k) => keys.add(k));
     });
     return Array.from(keys);
   }, [budgets]);
 
   const [visibleCategories, setVisibleCategories] = useState<Set<string>>(
-    new Set(categoryKeys)
+    new Set(categoryKeys),
   );
 
   // Keep visibleCategories in sync when categoryKeys change
@@ -42,7 +46,18 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
     setVisibleCategories(new Set(categoryKeys));
   }, [categoryKeys]);
 
-  const trendData = useMemo(() => transformBudgetsToTrendData(budgets), [budgets]);
+  const trendData = useMemo(
+    () => transformBudgetsToTrendData(budgets),
+    [budgets],
+  );
+
+  // Find category metadata from the most recent budget that has it
+  const findCategory = (key: string) => {
+    for (let i = budgets.length - 1; i >= 0; i--) {
+      if (budgets[i]?.categories[key]) return budgets[i].categories[key];
+    }
+    return undefined;
+  };
 
   const toggleCategory = (key: string) => {
     setVisibleCategories((prev) => {
@@ -57,10 +72,11 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
   };
 
   useEffect(() => {
-    if (!svgRef.current || !containerRef.current || trendData.length < 2) return;
+    if (!svgRef.current || !containerRef.current || trendData.length < 2)
+      return;
 
     // Clear previous render
-    d3.select(svgRef.current).selectAll('*').remove();
+    d3.select(svgRef.current).selectAll("*").remove();
 
     // Get container dimensions
     const container = containerRef.current;
@@ -72,10 +88,12 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
 
     const svg = d3
       .select(svgRef.current)
-      .attr('viewBox', `0 0 ${width} ${height}`)
-      .attr('preserveAspectRatio', 'xMidYMid meet');
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("preserveAspectRatio", "xMidYMid meet");
 
-    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+    const g = svg
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
     // Scales
     const xScale = d3
@@ -84,7 +102,7 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
       .range([0, chartWidth]);
 
     const allValues = trendData.flatMap((d) =>
-      categoryKeys.map((key) => d.categories[key] || 0)
+      categoryKeys.map((key) => d.categories[key] || 0),
     );
     const maxValue = d3.max(allValues) || 0;
 
@@ -94,49 +112,49 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
       .range([chartHeight, 0]);
 
     // Grid lines
-    g.append('g')
-      .attr('class', 'grid')
+    g.append("g")
+      .attr("class", "grid")
       .call(
         d3
           .axisLeft(yScale)
           .ticks(5)
           .tickSize(-chartWidth)
-          .tickFormat(() => '')
+          .tickFormat(() => ""),
       )
-      .style('stroke', '#f3f4f6')
-      .style('stroke-opacity', 0.7)
-      .select('.domain')
+      .style("stroke", "#f3f4f6")
+      .style("stroke-opacity", 0.25)
+      .select(".domain")
       .remove();
 
     // X-axis
     const xAxis = g
-      .append('g')
-      .attr('transform', `translate(0,${chartHeight})`)
+      .append("g")
+      .attr("transform", `translate(0,${chartHeight})`)
       .call(
         d3
           .axisBottom(xScale)
           .ticks(trendData.length)
           .tickFormat((d) => {
             const date = d as Date;
-            return `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
-          })
+            return `${date.toLocaleString("default", { month: "short" })} '${String(date.getFullYear()).slice(2)}`;
+          }),
       );
 
-    xAxis.selectAll('text').style('font-size', '12px').style('fill', '#6b7280');
+    xAxis.selectAll("text").style("font-size", "12px").style("fill", "#6b7280");
 
-    xAxis.selectAll('line').style('stroke', '#e5e7eb');
+    xAxis.selectAll("line").style("stroke", "#e5e7eb");
 
     // Y-axis
-    const yAxis = g.append('g').call(
+    const yAxis = g.append("g").call(
       d3
         .axisLeft(yScale)
         .ticks(5)
-        .tickFormat((d) => formatCurrency(d as number))
+        .tickFormat((d) => formatCurrency(d as number)),
     );
 
-    yAxis.selectAll('text').style('font-size', '12px').style('fill', '#6b7280');
+    yAxis.selectAll("text").style("font-size", "12px").style("fill", "#6b7280");
 
-    yAxis.selectAll('line').style('stroke', '#e5e7eb');
+    yAxis.selectAll("line").style("stroke", "#e5e7eb");
 
     // Line generator
     const line = d3
@@ -157,29 +175,31 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
       const color = getCategoryColor(key);
 
       // Line path
-      g.append('path')
+      g.append("path")
         .datum(lineData)
-        .attr('fill', 'none')
-        .attr('stroke', color)
-        .attr('stroke-width', 2.5)
-        .attr('d', line);
+        .attr("fill", "none")
+        .attr("stroke", color)
+        .attr("stroke-width", 2.5)
+        .attr("d", line);
 
       // Dots
       g.selectAll(`.dot-${key}`)
         .data(lineData)
         .enter()
-        .append('circle')
-        .attr('class', `dot-${key}`)
-        .attr('cx', (d) => xScale(d.date))
-        .attr('cy', (d) => yScale(d.value))
-        .attr('r', 4)
-        .attr('fill', color)
-        .attr('stroke', '#ffffff')
-        .attr('stroke-width', 2)
-        .style('cursor', 'pointer')
-        .on('mouseenter', function (event, d) {
-          d3.select(this).attr('r', 6);
-          const monthData = trendData.find((td) => td.date.getTime() === d.date.getTime());
+        .append("circle")
+        .attr("class", `dot-${key}`)
+        .attr("cx", (d) => xScale(d.date))
+        .attr("cy", (d) => yScale(d.value))
+        .attr("r", 4)
+        .attr("fill", color)
+        .attr("stroke", "#ffffff")
+        .attr("stroke-width", 2)
+        .style("cursor", "pointer")
+        .on("mouseenter", function (event, d) {
+          d3.select(this).attr("r", 6);
+          const monthData = trendData.find(
+            (td) => td.date.getTime() === d.date.getTime(),
+          );
           if (monthData) {
             setTooltip({
               visible: true,
@@ -191,19 +211,19 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
                     {monthData.month} {monthData.year}
                   </div>
                   <div className="text-text-secondary">
-                    {getCategoryEmoji(key, budgets[0]?.categories[key]?.emoji)} {budgets[0]?.categories[key]?.name || key}:{' '}
-                    {formatCurrency(d.value)}
+                    {getCategoryEmoji(key, findCategory(key)?.emoji)}{" "}
+                    {findCategory(key)?.name || key}: {formatCurrency(d.value)}
                   </div>
                 </div>
               ),
             });
           }
         })
-        .on('mousemove', function (event) {
+        .on("mousemove", function (event) {
           setTooltip((prev) => ({ ...prev, x: event.pageX, y: event.pageY }));
         })
-        .on('mouseleave', function () {
-          d3.select(this).attr('r', 4);
+        .on("mouseleave", function () {
+          d3.select(this).attr("r", 4);
           setTooltip((prev) => ({ ...prev, visible: false }));
         });
     });
@@ -227,7 +247,7 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
           {categoryKeys.map((key) => {
             const isVisible = visibleCategories.has(key);
             const color = getCategoryColor(key);
-            const cat = budgets[0]?.categories[key];
+            const cat = findCategory(key);
             const emoji = getCategoryEmoji(key, cat?.emoji);
             const name = cat?.name || key;
 
@@ -237,15 +257,21 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
                 onClick={() => toggleCategory(key)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all ${
                   isVisible
-                    ? 'bg-surface-secondary border-2 border-border-strong'
-                    : 'bg-surface-secondary border-2 border-border opacity-50'
+                    ? "bg-surface-secondary border-2 border-border-strong"
+                    : "bg-surface-secondary border-2 border-border opacity-50"
                 }`}
               >
                 <div
                   className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: isVisible ? color : '#d1d5db' }}
+                  style={{ backgroundColor: isVisible ? color : "#d1d5db" }}
                 />
-                <span className={isVisible ? 'text-text-primary font-medium' : 'text-text-tertiary'}>
+                <span
+                  className={
+                    isVisible
+                      ? "text-text-primary font-medium"
+                      : "text-text-tertiary"
+                  }
+                >
                   {emoji} {name}
                 </span>
               </button>

@@ -24,6 +24,7 @@ interface SplitTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSplit: (splits: { budgetItemId: number; amount: number; description?: string; isNonEarned?: boolean }[]) => void;
+  onUnsplit?: () => void;
   transactionId: number;
   transactionAmount: number;
   transactionDescription: string;
@@ -36,6 +37,7 @@ export default function SplitTransactionModal({
   isOpen,
   onClose,
   onSplit,
+  onUnsplit,
   transactionId,
   transactionAmount,
   transactionDescription,
@@ -50,10 +52,12 @@ export default function SplitTransactionModal({
   ]);
 
   const [isNonEarned, setIsNonEarned] = useState(false);
+  const [showUnsplitConfirm, setShowUnsplitConfirm] = useState(false);
   const isEditMode = existingSplits && existingSplits.length > 0;
 
   // Populate form when modal opens
   useEffect(() => {
+    setShowUnsplitConfirm(false);
     if (isOpen) {
       if (existingSplits && existingSplits.length > 0) {
         // Pre-populate with existing splits
@@ -276,6 +280,43 @@ export default function SplitTransactionModal({
               Cancel
             </button>
           </div>
+
+          {/* Remove split button - only in edit mode */}
+          {isEditMode && onUnsplit && (
+            <div className="mt-2">
+              {!showUnsplitConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowUnsplitConfirm(true)}
+                  className="w-full px-4 py-2 text-danger hover:bg-danger-light rounded font-medium text-sm"
+                >
+                  Remove Split
+                </button>
+              ) : (
+                <div className="p-3 bg-danger-light rounded-lg space-y-2">
+                  <p className="text-sm text-danger">
+                    This will remove all splits and return the transaction to uncategorized.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={onUnsplit}
+                      className="flex-1 px-3 py-1.5 bg-danger text-white rounded text-sm font-medium hover:bg-danger"
+                    >
+                      Remove Split
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowUnsplitConfirm(false)}
+                      className="flex-1 px-3 py-1.5 bg-border-strong text-text-secondary rounded text-sm font-medium"
+                    >
+                      Keep Split
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </form>
       </div>
     </div>
