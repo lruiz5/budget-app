@@ -618,6 +618,28 @@ export default function BudgetSummary({
     }
   };
 
+  const handleUnsplitTransaction = async () => {
+    if (!transactionToSplit) return;
+
+    try {
+      const response = await fetch(
+        `/api/transactions/split?transactionId=${transactionToSplit.id}`,
+        { method: "DELETE" },
+      );
+
+      if (response.ok) {
+        closeSplitModal();
+        onRefresh?.();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to remove split");
+      }
+    } catch (error) {
+      console.error("Error removing split:", error);
+      toast.error("Failed to remove split");
+    }
+  };
+
   // Item Detail View - shown when a budget item is selected
   if (selectedBudgetItem) {
     const { item, categoryName } = selectedBudgetItem;
@@ -813,6 +835,7 @@ export default function BudgetSummary({
           isOpen={isSplitModalOpen}
           onClose={closeSplitModal}
           onSplit={handleSplitTransaction}
+          onUnsplit={handleUnsplitTransaction}
           transactionId={transactionToSplit?.id || 0}
           transactionAmount={transactionToSplit?.amount || 0}
           transactionDescription={

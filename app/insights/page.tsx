@@ -44,10 +44,10 @@ function InsightsPage() {
 
   const fetchMultiMonthBudgets = useCallback(async () => {
     setIsLoading(true);
-    const budgetsData: Budget[] = [];
 
-    // Fetch last 3 months of budgets (centered on selected month)
-    for (let i = 0; i < 3; i++) {
+    // Build list of months to fetch (current + 5 previous = 6 total)
+    const monthsToFetch: { month: number; year: number }[] = [];
+    for (let i = 0; i < 6; i++) {
       let month = selectedMonth - i;
       let year = selectedYear;
 
@@ -57,17 +57,26 @@ function InsightsPage() {
         year -= 1;
       }
 
-      try {
-        const response = await fetch(`/api/budgets?month=${month}&year=${year}`);
-        const data = await response.json();
-        const transformedBudget = transformDbBudgetToAppBudget(data);
-        budgetsData.push(transformedBudget);
-      } catch (error) {
-        console.error(`Error fetching budget for ${month}/${year}:`, error);
-      }
+      monthsToFetch.push({ month, year });
     }
 
-    setBudgets(budgetsData.reverse()); // Oldest to newest
+    // Fetch all months in parallel
+    const results = await Promise.all(
+      monthsToFetch.map(async ({ month, year }) => {
+        try {
+          const response = await fetch(`/api/budgets?month=${month}&year=${year}`);
+          const data = await response.json();
+          return transformDbBudgetToAppBudget(data);
+        } catch (error) {
+          console.error(`Error fetching budget for ${month}/${year}:`, error);
+          return null;
+        }
+      })
+    );
+
+    const budgetsData = results.filter((b): b is Budget => b !== null);
+    budgetsData.reverse(); // Oldest to newest
+    setBudgets(budgetsData);
     setCurrentBudget(budgetsData[budgetsData.length - 1] || null);
     setIsLoading(false);
   }, [selectedMonth, selectedYear]);
@@ -149,7 +158,7 @@ function InsightsPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold text-text-primary">Spending Trends</h2>
-                    <p className="text-text-secondary">Track your spending over the last 3 months</p>
+                    <p className="text-text-secondary">Track your spending over the last 6 months</p>
                   </div>
                 </div>
                 <div className="h-[400px]">

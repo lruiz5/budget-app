@@ -4,11 +4,31 @@ All notable changes to this project will be documented in this file.
 
 ## Versioning Strategy
 
-- **Web App**: Versioned independently (currently v1.12.0)
+- **Web App**: Versioned independently (currently v1.14.0)
 - **iOS App**: Versioned independently in `ios/BudgetApp/CHANGELOG.md` (currently v0.17.0, pre-release)
-- **Project**: Overall version tracks major milestones (currently v1.12.0)
+- **Project**: Overall version tracks major milestones (currently v1.14.0)
 
 **Note:** iOS app uses 0.x.x versioning until first App Store release (v1.0.0).
+
+---
+
+## [1.14.0] - 2026-03-05 - Unsplit Transactions & Insights Improvements
+
+### Added
+
+- **Unsplit transactions** — remove split from a previously split transaction
+  - "Remove Split" button in SplitTransactionModal (edit mode only)
+  - Inline confirmation with warning before removing
+  - Transaction returns to uncategorized after unsplitting
+  - Uses existing DELETE `/api/transactions/split` endpoint
+
+### Changed
+
+- **Spending Trends** — expanded from 3-month to 6-month rolling window, matching iOS
+  - Parallel fetch via `Promise.all` for faster loading
+  - Compact x-axis labels (`Jan '26` format) to fit 6 months
+- **Chart category labels** — custom categories now resolve name/emoji from most recent budget, fixing slug fallback (e.g., "travel-vacation" → "Travel & Vacation")
+- **Chart grid lines** — reduced opacity on Spending Trends and Budget vs Actual charts for cleaner appearance
 
 ---
 
