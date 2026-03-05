@@ -4,23 +4,26 @@ import { useRef, useEffect, useState, useMemo } from 'react';
 import * as d3 from 'd3';
 import { sankey, sankeyLinkHorizontal, SankeyNode, SankeyLink } from 'd3-sankey';
 import { Budget } from '@/types/budget';
-import { transformBudgetToFlowData, transformBudgetToDiscretionaryFlowData, hasIncomeAndExpenses, hasDiscretionarySpending } from '@/lib/chartHelpers';
+import { transformBudgetToFlowData, transformBudgetToDiscretionaryFlowData, transformBudgetToPaymentMethodFlowData, hasIncomeAndExpenses, hasDiscretionarySpending, PaymentMethodAccount } from '@/lib/chartHelpers';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { IncomeAllocation } from '@/lib/api-client';
 import ChartTooltip from './ChartTooltip';
 import ChartEmptyState from './ChartEmptyState';
 import { FaChartPie } from 'react-icons/fa';
 
+type FlowMode = 'all' | 'discretionary' | 'payment-method';
+
 interface FlowDiagramProps {
   budget: Budget | null;
   allocations?: IncomeAllocation[];
+  linkedAccounts?: PaymentMethodAccount[];
 }
 
 interface ExtendedSankeyNode extends SankeyNode<{}, {}> {
   id?: string;
   label?: string;
   color?: string;
-  column?: 'source' | 'category' | 'item';
+  column?: 'source' | 'method' | 'category' | 'item';
   lineItems?: { name: string; amount: number }[];
 }
 
@@ -29,7 +32,7 @@ interface ExtendedSankeyLink extends SankeyLink<ExtendedSankeyNode, {}> {
   value: number;
 }
 
-export default function FlowDiagram({ budget, allocations = [] }: FlowDiagramProps) {
+export default function FlowDiagram({ budget, allocations = [], linkedAccounts = [] }: FlowDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState({
@@ -38,13 +41,16 @@ export default function FlowDiagram({ budget, allocations = [] }: FlowDiagramPro
     y: 0,
     content: null as React.ReactNode,
   });
-  const [discretionaryMode, setDiscretionaryMode] = useState(false);
+  const [flowMode, setFlowMode] = useState<FlowMode>('all');
 
   const allFlowData = useMemo(() => transformBudgetToFlowData(budget, allocations), [budget, allocations]);
   const discretionaryFlowData = useMemo(() => transformBudgetToDiscretionaryFlowData(budget, allocations), [budget, allocations]);
-  const flowData = discretionaryMode ? discretionaryFlowData : allFlowData;
+  const paymentMethodFlowData = useMemo(() => transformBudgetToPaymentMethodFlowData(budget, linkedAccounts), [budget, linkedAccounts]);
+  const flowData = flowMode === 'payment-method' ? paymentMethodFlowData : flowMode === 'discretionary' ? discretionaryFlowData : allFlowData;
   const hasData = hasIncomeAndExpenses(budget);
   const hasDiscretionary = hasDiscretionarySpending(budget);
+  const hasPaymentMethodData = paymentMethodFlowData.nodes.some(n => n.column === 'method');
+  const is4Column = flowMode === 'payment-method';
 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current || !hasData || flowData.nodes.length === 0) return;
@@ -236,21 +242,22 @@ export default function FlowDiagram({ budget, allocations = [] }: FlowDiagramPro
       });
 
     // Node labels — positioned based on column
+    const middleColumns = is4Column ? ['method', 'category'] : ['category'];
     nodeGroups
       .append('text')
       .attr('x', (d) => {
         const col = d.column;
-        if (col === 'source') return (d.x0 || 0) - 8; // Left of node
-        if (col === 'item') return (d.x1 || 0) + 8; // Right of node
-        // category (middle) — place above or to the side depending on space
+        if (col === 'source') return (d.x0 || 0) - 8;
+        if (col === 'item') return (d.x1 || 0) + 8;
+        // Middle columns: label above the node
         return ((d.x0 || 0) + (d.x1 || 0)) / 2;
       })
       .attr('y', (d) => {
         const col = d.column;
-        if (col === 'category') return (d.y0 || 0) - 6; // Above the node
+        if (middleColumns.includes(col || '')) return (d.y0 || 0) - 6;
         return ((d.y1 || 0) + (d.y0 || 0)) / 2;
       })
-      .attr('dy', (d) => (d.column === 'category' ? '0em' : '0.35em'))
+      .attr('dy', (d) => (middleColumns.includes(d.column || '') ? '0em' : '0.35em'))
       .attr('text-anchor', (d) => {
         const col = d.column;
         if (col === 'source') return 'end';
@@ -258,8 +265,8 @@ export default function FlowDiagram({ budget, allocations = [] }: FlowDiagramPro
         return 'middle';
       })
       .text((d) => d.label || '')
-      .style('font-size', (d) => (d.column === 'category' ? '13px' : '11px'))
-      .style('font-weight', (d) => (d.column === 'category' ? '600' : '500'))
+      .style('font-size', (d) => (middleColumns.includes(d.column || '') ? '12px' : '11px'))
+      .style('font-weight', (d) => (middleColumns.includes(d.column || '') ? '600' : '500'))
       .style('fill', '#111827');
 
     // Amount labels on nodes
@@ -271,7 +278,6 @@ export default function FlowDiagram({ budget, allocations = [] }: FlowDiagramPro
       .attr('text-anchor', 'middle')
       .text((d) => {
         const nodeHeight = (d.y1 || 0) - (d.y0 || 0);
-        // Only show amount on bars tall enough
         if (nodeHeight < 20) return '';
         return formatCurrency(d.value || 0);
       })
@@ -281,43 +287,61 @@ export default function FlowDiagram({ budget, allocations = [] }: FlowDiagramPro
 
     // Column headers
     const headerY = -12;
+    const headerStyle = (text: d3.Selection<SVGTextElement, unknown, null, undefined>) => {
+      text
+        .style('font-size', '11px')
+        .style('font-weight', '700')
+        .style('text-transform', 'uppercase')
+        .style('letter-spacing', '0.05em');
+    };
 
-    svg
-      .append('text')
-      .attr('x', margin.left)
-      .attr('y', margin.top + headerY)
-      .attr('text-anchor', 'start')
-      .text('Sources')
-      .style('font-size', '12px')
-      .style('font-weight', '700')
-      .style('fill', '#059669')
-      .style('text-transform', 'uppercase')
-      .style('letter-spacing', '0.05em');
+    if (is4Column) {
+      // 4-column layout: Sources | Payment Methods | Categories | Budget Items
+      const colPositions = [0, chartWidth / 3, (chartWidth * 2) / 3, chartWidth];
 
-    svg
-      .append('text')
-      .attr('x', margin.left + chartWidth / 2)
-      .attr('y', margin.top + headerY)
-      .attr('text-anchor', 'middle')
-      .text('Categories')
-      .style('font-size', '12px')
-      .style('font-weight', '700')
-      .style('fill', '#4b5563')
-      .style('text-transform', 'uppercase')
-      .style('letter-spacing', '0.05em');
+      const headers = [
+        { x: colPositions[0], text: 'Sources', fill: '#059669', anchor: 'start' },
+        { x: colPositions[1], text: 'Accounts', fill: '#3b82f6', anchor: 'middle' },
+        { x: colPositions[2], text: 'Categories', fill: '#4b5563', anchor: 'middle' },
+        { x: colPositions[3], text: 'Items', fill: '#6b7280', anchor: 'end' },
+      ];
 
-    svg
-      .append('text')
-      .attr('x', margin.left + chartWidth)
-      .attr('y', margin.top + headerY)
-      .attr('text-anchor', 'end')
-      .text('Budget Items')
-      .style('font-size', '12px')
-      .style('font-weight', '700')
-      .style('fill', '#6b7280')
-      .style('text-transform', 'uppercase')
-      .style('letter-spacing', '0.05em');
-  }, [flowData, hasData, discretionaryMode]);
+      headers.forEach(h => {
+        const t = svg.append('text')
+          .attr('x', margin.left + h.x)
+          .attr('y', margin.top + headerY)
+          .attr('text-anchor', h.anchor)
+          .text(h.text)
+          .style('fill', h.fill);
+        headerStyle(t);
+      });
+    } else {
+      // 3-column layout
+      const t1 = svg.append('text')
+        .attr('x', margin.left)
+        .attr('y', margin.top + headerY)
+        .attr('text-anchor', 'start')
+        .text('Sources')
+        .style('fill', '#059669');
+      headerStyle(t1);
+
+      const t2 = svg.append('text')
+        .attr('x', margin.left + chartWidth / 2)
+        .attr('y', margin.top + headerY)
+        .attr('text-anchor', 'middle')
+        .text('Categories')
+        .style('fill', '#4b5563');
+      headerStyle(t2);
+
+      const t3 = svg.append('text')
+        .attr('x', margin.left + chartWidth)
+        .attr('y', margin.top + headerY)
+        .attr('text-anchor', 'end')
+        .text('Budget Items')
+        .style('fill', '#6b7280');
+      headerStyle(t3);
+    }
+  }, [flowData, hasData, flowMode, is4Column]);
 
   if (!hasData) {
     return (
@@ -329,26 +353,44 @@ export default function FlowDiagram({ budget, allocations = [] }: FlowDiagramPro
     );
   }
 
+  const modeOptions: { value: FlowMode; label: string; disabled?: boolean }[] = [
+    { value: 'all', label: 'All Spending' },
+    { value: 'discretionary', label: 'Discretionary' },
+    ...(linkedAccounts.length > 0 ? [{ value: 'payment-method' as FlowMode, label: 'By Account' }] : []),
+  ];
+
   const toggle = (
-    <div className="flex items-center justify-end gap-2 mb-2">
-      <span className={`text-xs font-medium ${!discretionaryMode ? 'text-text-primary' : 'text-text-tertiary'}`}>
-        All Spending
-      </span>
-      <button
-        onClick={() => setDiscretionaryMode(!discretionaryMode)}
-        className={`relative w-10 h-5 rounded-full transition-colors ${discretionaryMode ? 'bg-primary' : 'bg-border'}`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${discretionaryMode ? 'translate-x-5' : 'translate-x-0'}`}
-        />
-      </button>
-      <span className={`text-xs font-medium ${discretionaryMode ? 'text-text-primary' : 'text-text-tertiary'}`}>
-        Discretionary
-      </span>
+    <div className="flex items-center justify-end gap-1 mb-2">
+      {modeOptions.map(opt => (
+        <button
+          key={opt.value}
+          onClick={() => setFlowMode(opt.value)}
+          className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+            flowMode === opt.value
+              ? 'bg-primary text-white'
+              : 'bg-surface-secondary text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   );
 
-  if (discretionaryMode && !hasDiscretionary) {
+  if (flowMode === 'payment-method' && !hasPaymentMethodData) {
+    return (
+      <>
+        {toggle}
+        <ChartEmptyState
+          icon={<FaChartPie />}
+          title="No account data"
+          message="Link bank accounts and sync transactions to see spending broken down by payment method."
+        />
+      </>
+    );
+  }
+
+  if (flowMode === 'discretionary' && !hasDiscretionary) {
     return (
       <>
         {toggle}

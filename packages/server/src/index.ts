@@ -2,10 +2,16 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { requireAuth } from './middleware/auth';
 import type { AppEnv } from './types';
 import { isSupabaseEnabled } from '@budget-app/shared/db/supabase-config';
 import { startSyncScheduler } from '@budget-app/shared/db/sync-scheduler';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SERVER_VERSION = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')).version;
 
 // Route imports
 import databaseRoutes from './routes/database';
@@ -19,6 +25,7 @@ import csvRoutes from './routes/csv';
 import onboardingRoutes from './routes/onboarding';
 import authRoutes from './routes/auth';
 import incomeAllocationRoutes from './routes/income-allocations';
+import creditCardRoutes from './routes/credit-cards';
 import supabaseRoutes from './routes/supabase';
 
 const app = new Hono<AppEnv>();
@@ -40,10 +47,10 @@ app.use('*', cors({
   credentials: true,
 }));
 
-// Health check endpoint (no auth)
-app.get('/health', (c) => {
-  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Health check endpoint (no auth) — /health for direct access, /api/health for proxy
+const healthResponse = (c: any) => c.json({ status: 'ok', version: SERVER_VERSION, timestamp: new Date().toISOString() });
+app.get('/health', healthResponse);
+app.get('/api/health', healthResponse);
 
 // Database routes - mounted BEFORE auth middleware (no auth required)
 app.route('/api/database', databaseRoutes);
@@ -63,6 +70,7 @@ app.route('/api/csv', csvRoutes);
 app.route('/api/onboarding', onboardingRoutes);
 app.route('/api/auth/claim-data', authRoutes);
 app.route('/api/income-allocations', incomeAllocationRoutes);
+app.route('/api/credit-cards', creditCardRoutes);
 
 // Start the server
 const port = parseInt(process.env.API_PORT || '3001', 10);

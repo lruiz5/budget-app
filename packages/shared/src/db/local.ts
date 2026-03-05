@@ -314,7 +314,13 @@ async function initializeSchema(client: PGlite): Promise<void> {
       status TEXT NOT NULL,
       last_synced_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ DEFAULT NOW(),
-      csv_column_mapping TEXT
+      csv_column_mapping TEXT,
+      current_balance NUMERIC(10, 2),
+      available_balance NUMERIC(10, 2),
+      credit_limit NUMERIC(10, 2),
+      minimum_payment NUMERIC(10, 2),
+      payment_due_date TEXT,
+      balance_updated_at TIMESTAMPTZ
     );
 
     -- Recurring payments table
@@ -357,6 +363,8 @@ async function initializeSchema(client: PGlite): Promise<void> {
       teller_transaction_id TEXT UNIQUE,
       teller_account_id TEXT,
       status TEXT,
+      is_transfer BOOLEAN NOT NULL DEFAULT false,
+      transfer_pair_id UUID,
       deleted_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
@@ -434,6 +442,15 @@ async function initializeSchema(client: PGlite): Promise<void> {
     'ALTER TABLE linked_accounts ALTER COLUMN access_token DROP NOT NULL',
     'ALTER TABLE linked_accounts ALTER COLUMN institution_id DROP NOT NULL',
     'ALTER TABLE linked_accounts ALTER COLUMN last_four DROP NOT NULL',
+    // Credit card / transfer fields (for existing databases)
+    'ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_transfer BOOLEAN NOT NULL DEFAULT false',
+    'ALTER TABLE transactions ADD COLUMN IF NOT EXISTS transfer_pair_id UUID',
+    'ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS current_balance NUMERIC(10, 2)',
+    'ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS available_balance NUMERIC(10, 2)',
+    'ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS credit_limit NUMERIC(10, 2)',
+    'ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS minimum_payment NUMERIC(10, 2)',
+    'ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS payment_due_date TEXT',
+    'ALTER TABLE linked_accounts ADD COLUMN IF NOT EXISTS balance_updated_at TIMESTAMPTZ',
   ];
   for (const cmd of alterCommands) {
     await client.exec(cmd).catch(() => {});

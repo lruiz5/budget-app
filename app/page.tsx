@@ -114,12 +114,13 @@ function Home() {
   };
 
   const fetchLinkedAccounts = useCallback(async () => {
-    try {
-      const data = await api.teller.listAccounts();
-      setLinkedAccounts(data as LinkedAccount[]);
-    } catch (error) {
-      console.error('Error fetching linked accounts:', error);
-    }
+    const results = await Promise.allSettled([
+      api.teller.listAccounts(),
+      api.csv.listAccounts(),
+    ]);
+    const tellerAccounts = results[0].status === 'fulfilled' ? results[0].value : [];
+    const csvAccounts = results[1].status === 'fulfilled' ? results[1].value : [];
+    setLinkedAccounts([...tellerAccounts, ...csvAccounts] as LinkedAccount[]);
   }, []);
 
   useEffect(() => {

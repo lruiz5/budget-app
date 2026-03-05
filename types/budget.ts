@@ -12,6 +12,42 @@ export interface Transaction {
   tellerTransactionId?: string | null;
   tellerAccountId?: string | null;
   status?: 'posted' | 'pending' | null;
+  // Credit card / transfer fields
+  isTransfer?: boolean;
+  transferPairId?: string | null;
+}
+
+export interface LinkedAccount {
+  id: string;
+  accountName: string;
+  institutionName: string;
+  lastFour: string;
+  accountType: string;
+  accountSubtype: string;
+  status: string;
+  lastSyncedAt?: string | null;
+  // Credit card balance fields
+  currentBalance?: number | null;
+  availableBalance?: number | null;
+  creditLimit?: number | null;
+  minimumPayment?: number | null;
+  paymentDueDate?: string | null;
+  balanceUpdatedAt?: string | null;
+}
+
+export interface CreditCardSummary {
+  accountId: string;
+  accountName: string;
+  institutionName: string;
+  lastFour: string;
+  currentBalance: number;
+  availableBalance: number;
+  creditLimit: number;
+  minimumPayment: number;
+  paymentDueDate: string | null;
+  utilization: number;
+  recentPayments: Transaction[];
+  monthlyCharges: number;
 }
 
 export interface SplitTransaction {

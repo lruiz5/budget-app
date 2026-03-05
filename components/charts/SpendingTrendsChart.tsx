@@ -223,22 +223,26 @@ export default function SpendingTrendsChart({ budgets }: SpendingTrendsChartProp
     );
   }
 
+  const modeOptions: { value: boolean; label: string }[] = [
+    { value: false, label: 'All Spending' },
+    { value: true, label: 'Discretionary' },
+  ];
+
   const toggle = (
-    <div className="flex items-center justify-end gap-2 mb-2">
-      <span className={`text-xs font-medium ${!discretionaryMode ? 'text-text-primary' : 'text-text-tertiary'}`}>
-        All Spending
-      </span>
-      <button
-        onClick={() => setDiscretionaryMode(!discretionaryMode)}
-        className={`relative w-10 h-5 rounded-full transition-colors ${discretionaryMode ? 'bg-primary' : 'bg-border'}`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${discretionaryMode ? 'translate-x-5' : 'translate-x-0'}`}
-        />
-      </button>
-      <span className={`text-xs font-medium ${discretionaryMode ? 'text-text-primary' : 'text-text-tertiary'}`}>
-        Discretionary
-      </span>
+    <div className="flex items-center justify-end gap-1 mb-2">
+      {modeOptions.map(opt => (
+        <button
+          key={opt.label}
+          onClick={() => setDiscretionaryMode(opt.value)}
+          className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+            discretionaryMode === opt.value
+              ? 'bg-primary text-white'
+              : 'bg-surface-secondary text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   );
 

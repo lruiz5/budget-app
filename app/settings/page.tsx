@@ -8,6 +8,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { formatTimestamp } from '@/lib/dateHelpers';
 import CsvImportModal from '@/components/csv/CsvImportModal';
 import DatabaseManagement from '@/components/DatabaseManagement';
+import CreditCardDashboard from '@/components/CreditCardDashboard';
 import SupabaseSyncPanel from '@/components/SupabaseSyncPanel';
 import { CsvAccount } from '@/types/csv';
 import { api, IncomeAllocation, getServerUrl, setServerUrl } from '@/lib/api-client';
@@ -62,6 +63,7 @@ export default function SettingsPage() {
   const [serverUrlInput, setServerUrlInput] = useState(() => getServerUrl());
   const [serverTesting, setServerTesting] = useState(false);
   const [serverTestResult, setServerTestResult] = useState<'success' | 'error' | null>(null);
+  const [serverVersion, setServerVersion] = useState<string | null>(null);
 
   // Income allocation state
   const [allocations, setAllocations] = useState<IncomeAllocation[]>([]);
@@ -110,12 +112,24 @@ export default function SettingsPage() {
     }
   }, []);
 
+  const fetchServerVersion = useCallback(async () => {
+    try {
+      const baseUrl = getServerUrl() || '';
+      const res = await fetch(`${baseUrl}/api/health`);
+      const data = await res.json();
+      if (data.version) setServerVersion(data.version);
+    } catch {
+      // Server might not support version yet
+    }
+  }, []);
+
   useEffect(() => {
     fetchAccounts();
     fetchCsvAccounts();
     fetchAllocations();
     fetchCurrentBudget();
-  }, [fetchAccounts, fetchCsvAccounts, fetchAllocations, fetchCurrentBudget]);
+    fetchServerVersion();
+  }, [fetchAccounts, fetchCsvAccounts, fetchAllocations, fetchCurrentBudget, fetchServerVersion]);
 
   const handleConnectBank = () => {
     if (!tellerReady || !window.TellerConnect) {
@@ -259,6 +273,9 @@ export default function SettingsPage() {
                     {getServerUrl()
                       ? `Connected to ${getServerUrl()}`
                       : 'Running on this machine'}
+                    {serverVersion && (
+                      <span className="text-text-tertiary ml-2">v{serverVersion}</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -371,6 +388,9 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
+
+          {/* Credit Cards Dashboard */}
+          <CreditCardDashboard />
 
           {/* Bank Connections Section */}
           <div className="bg-surface rounded-lg shadow p-6 mb-6">

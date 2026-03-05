@@ -24,8 +24,8 @@ export function transformDbBudgetToAppBudget(dbBudget: any): Budget {
       const categoryType = cat.categoryType;
 
       const mapItem = (item: any) => {
-        // Filter out soft-deleted transactions
-        const activeTransactions = item.transactions.filter((t: any) => !t.deletedAt);
+        // Filter out soft-deleted and transfer transactions (transfers don't count toward actuals)
+        const activeTransactions = item.transactions.filter((t: any) => !t.deletedAt && !t.isTransfer);
 
         // Calculate actual from direct transactions
         const directActual = activeTransactions.reduce((sum: number, t: any) => {
@@ -63,6 +63,8 @@ export function transformDbBudgetToAppBudget(dbBudget: any): Budget {
             linkedAccountId: t.linkedAccountId,
             type: t.type,
             merchant: t.merchant,
+            isTransfer: t.isTransfer || false,
+            transferPairId: t.transferPairId || null,
           })),
           splitTransactions: (item.splitTransactions || []).map((s: any) => ({
             id: s.id.toString(),

@@ -11,6 +11,7 @@ import FlowDiagram from '@/components/charts/FlowDiagram';
 import { Budget } from '@/types/budget';
 import { transformDbBudgetToAppBudget } from '@/lib/budgetHelpers';
 import { api, IncomeAllocation } from '@/lib/api-client';
+import type { PaymentMethodAccount } from '@/lib/chartHelpers';
 
 export default function InsightsPageWrapper() {
   return (
@@ -26,6 +27,7 @@ function InsightsPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [currentBudget, setCurrentBudget] = useState<Budget | null>(null);
   const [allocations, setAllocations] = useState<IncomeAllocation[]>([]);
+  const [linkedAccounts, setLinkedAccounts] = useState<PaymentMethodAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const selectedMonth = searchParams.get('month') !== null ? parseInt(searchParams.get('month')!) : new Date().getMonth();
@@ -69,10 +71,27 @@ function InsightsPage() {
     }
   }, []);
 
+  const fetchLinkedAccounts = useCallback(async () => {
+    const results = await Promise.allSettled([
+      api.teller.listAccounts(),
+      api.csv.listAccounts(),
+    ]);
+    const tellerAccounts = results[0].status === 'fulfilled' ? results[0].value as any[] : [];
+    const csvAccounts = results[1].status === 'fulfilled' ? results[1].value as any[] : [];
+    const all = [...tellerAccounts, ...csvAccounts];
+    setLinkedAccounts(all.map((a: any) => ({
+      id: a.id,
+      accountName: a.accountName,
+      accountType: a.accountType,
+      lastFour: a.lastFour || '',
+    })));
+  }, []);
+
   useEffect(() => {
     fetchMultiMonthBudgets();
     fetchAllocations();
-  }, [fetchMultiMonthBudgets, fetchAllocations]);
+    fetchLinkedAccounts();
+  }, [fetchMultiMonthBudgets, fetchAllocations, fetchLinkedAccounts]);
 
   return (
     <DashboardLayout>
@@ -160,7 +179,7 @@ function InsightsPage() {
                   </div>
                 </div>
                 <div className="h-[500px]">
-                  <FlowDiagram budget={currentBudget} allocations={allocations} />
+                  <FlowDiagram budget={currentBudget} allocations={allocations} linkedAccounts={linkedAccounts} />
                 </div>
               </div>
             </div>

@@ -457,6 +457,185 @@ export function transformBudgetToDiscretionaryFlowData(budget: Budget | null, al
 }
 
 /**
+ * Account info for payment method flow diagram
+ */
+export interface PaymentMethodAccount {
+  id: string;
+  accountName: string;
+  accountType: string; // 'depository' | 'credit' | 'csv'
+  lastFour: string;
+}
+
+/**
+ * Transform a budget into 4-column flow diagram with payment methods (Sankey)
+ * Sources → Payment Methods → Categories → Items
+ */
+export function transformBudgetToPaymentMethodFlowData(
+  budget: Budget | null,
+  accounts: PaymentMethodAccount[] = [],
+): FlowData {
+  if (!budget) return { nodes: [], links: [] };
+
+  const nodes: FlowNode[] = [];
+  const links: FlowLink[] = [];
+
+  const accountMap = new Map(accounts.map(a => [a.id, a]));
+
+  const bufferAmount = budget.buffer || 0;
+  const incomeCategory = budget.categories.income;
+  const incomeItems = incomeCategory ? incomeCategory.items.filter(i => i.actual > 0) : [];
+  const totalIncome = incomeItems.reduce((sum, i) => sum + i.actual, 0);
+  const totalSources = bufferAmount + totalIncome;
+
+  if (totalSources === 0) return { nodes: [], links: [] };
+
+  const expenseKeys = getExpenseCategoryKeys(budget);
+  const categoriesWithSpending = expenseKeys
+    .map(key => ({
+      key,
+      category: budget.categories[key],
+      total: budget.categories[key].items.reduce((sum, item) => sum + item.actual, 0),
+      items: budget.categories[key].items.filter(item => item.actual > 0),
+    }))
+    .filter(c => c.total > 0);
+
+  if (categoriesWithSpending.length === 0) return { nodes: [], links: [] };
+
+  // Aggregate spending by account → category
+  const methodCategorySpending: Record<string, Record<string, number>> = {};
+  const unlinkedSpending: Record<string, number> = {};
+
+  categoriesWithSpending.forEach(({ key, category }) => {
+    category.items.forEach(item => {
+      item.transactions.forEach(txn => {
+        if (txn.isTransfer) return;
+        const amount = txn.type === 'expense' ? txn.amount : 0;
+        if (amount <= 0) return;
+
+        if (txn.linkedAccountId && accountMap.has(txn.linkedAccountId)) {
+          if (!methodCategorySpending[txn.linkedAccountId]) {
+            methodCategorySpending[txn.linkedAccountId] = {};
+          }
+          methodCategorySpending[txn.linkedAccountId][key] =
+            (methodCategorySpending[txn.linkedAccountId][key] || 0) + amount;
+        } else {
+          unlinkedSpending[key] = (unlinkedSpending[key] || 0) + amount;
+        }
+      });
+    });
+  });
+
+  // Column 1: Sources
+  if (bufferAmount > 0) {
+    nodes.push({
+      id: 'source-buffer', label: '💼 Buffer', color: '#6b7280', column: 'source',
+      lineItems: [{ name: 'Carried over', amount: bufferAmount }],
+    });
+  }
+  if (totalIncome > 0) {
+    nodes.push({
+      id: 'source-income', label: '💰 Income', color: getCategoryColor('income'), column: 'source',
+      lineItems: incomeItems.map(i => ({ name: i.name, amount: i.actual })),
+    });
+  }
+
+  // Column 2: Payment Methods
+  const checkingColor = '#3b82f6';
+  const creditColor = '#f59e0b';
+
+  const activeAccountIds = Object.keys(methodCategorySpending);
+  activeAccountIds.forEach(id => {
+    const account = accountMap.get(id);
+    if (!account) return;
+    const isCredit = account.accountType === 'credit';
+    const emoji = isCredit ? '💳' : '🏦';
+    const color = isCredit ? creditColor : checkingColor;
+    const suffix = account.lastFour ? ` ••${account.lastFour}` : '';
+
+    nodes.push({
+      id: `method-${id}`,
+      label: `${emoji} ${account.accountName}${suffix}`,
+      color,
+      column: 'method',
+      lineItems: Object.entries(methodCategorySpending[id]).map(([catKey, amt]) => ({
+        name: budget.categories[catKey]?.name || catKey,
+        amount: amt,
+      })),
+    });
+  });
+
+  const totalUnlinked = Object.values(unlinkedSpending).reduce((s, v) => s + v, 0);
+  if (totalUnlinked > 0.01) {
+    nodes.push({
+      id: 'method-manual', label: '💵 Cash/Manual', color: '#6b7280', column: 'method',
+      lineItems: Object.entries(unlinkedSpending).map(([catKey, amt]) => ({
+        name: budget.categories[catKey]?.name || catKey,
+        amount: amt,
+      })),
+    });
+  }
+
+  // Column 3: Categories
+  categoriesWithSpending.forEach(({ key, category, items }) => {
+    nodes.push({
+      id: `category-${key}`,
+      label: `${getCategoryEmoji(key, category.emoji)} ${category.name}`,
+      color: getCategoryColor(key), column: 'category',
+      lineItems: items.map(item => ({ name: item.name, amount: item.actual })),
+    });
+  });
+
+  // Column 4: Items
+  categoriesWithSpending.forEach(({ key, items }) => {
+    items.forEach(item => {
+      nodes.push({ id: `item-${item.id}`, label: item.name, color: getCategoryColor(key), column: 'item' });
+    });
+  });
+
+  // Links: Sources → Payment Methods (proportional)
+  const allMethodNodes = nodes.filter(n => n.column === 'method');
+  const totalMethodSpending = allMethodNodes.reduce((s, n) =>
+    s + (n.lineItems?.reduce((sum, li) => sum + li.amount, 0) || 0), 0);
+
+  if (totalMethodSpending > 0.01) {
+    const sourceNodes = nodes.filter(n => n.column === 'source');
+    sourceNodes.forEach(sourceNode => {
+      const sourceAmount = sourceNode.id === 'source-buffer' ? bufferAmount : totalIncome;
+      allMethodNodes.forEach(methodNode => {
+        const methodTotal = methodNode.lineItems?.reduce((s, li) => s + li.amount, 0) || 0;
+        const flowAmount = sourceAmount * (methodTotal / totalMethodSpending);
+        if (flowAmount > 0.01) {
+          links.push({ source: sourceNode.id, target: methodNode.id, value: flowAmount, color: methodNode.color || '#6b7280' });
+        }
+      });
+    });
+  }
+
+  // Links: Payment Methods → Categories
+  Object.entries(methodCategorySpending).forEach(([accountId, catSpending]) => {
+    Object.entries(catSpending).forEach(([catKey, amount]) => {
+      if (amount > 0.01) {
+        links.push({ source: `method-${accountId}`, target: `category-${catKey}`, value: amount, color: getCategoryColor(catKey) });
+      }
+    });
+  });
+  Object.entries(unlinkedSpending).forEach(([catKey, amount]) => {
+    if (amount > 0.01) {
+      links.push({ source: 'method-manual', target: `category-${catKey}`, value: amount, color: getCategoryColor(catKey) });
+    }
+  });
+
+  // Links: Categories → Items
+  categoriesWithSpending.forEach(({ key, items }) => {
+    items.forEach(item => {
+      links.push({ source: `category-${key}`, target: `item-${item.id}`, value: item.actual, color: getCategoryColor(key) });
+    });
+  });
+
+  return { nodes, links };
+}
+
+/**
  * Check if budget has discretionary spending (non-recurring items with actuals)
  */
 export function hasDiscretionarySpending(budget: Budget | null): boolean {

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { getDb } from '@budget-app/shared/db';
 import { linkedAccounts, transactions, splitTransactions, budgets, budgetCategories, budgetItems } from '@budget-app/shared/schema';
-import { eq, and, isNull, isNotNull, notInArray, inArray } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, notInArray, inArray, sql } from 'drizzle-orm';
 import { getUserId } from '../middleware/auth';
 import { createTellerClient } from '../lib/teller';
 import type { TellerAccount, TellerTransaction } from '../lib/teller';
@@ -240,6 +240,9 @@ route.post('/sync', async (c) => {
               results.skipped++;
             }
           } else {
+            // Detect transfers: Teller marks card payments and transfers
+            const isTransfer = ['card_payment', 'transfer'].includes(txn.type);
+
             toInsert.push({
               budgetItemId: null,
               linkedAccountId: account.id,
@@ -251,6 +254,7 @@ route.post('/sync', async (c) => {
               tellerTransactionId: txn.id,
               tellerAccountId: account.tellerAccountId,
               status: txn.status,
+              isTransfer,
             });
             results.synced++;
           }
@@ -276,6 +280,38 @@ route.post('/sync', async (c) => {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         results.errors.push(`Account ${account.accountName}: ${errorMsg}`);
       }
+    }
+
+    // After syncing all accounts, run transfer pair matching
+    try {
+      await matchTransferPairs(db, userId);
+    } catch (error) {
+      console.error('Error matching transfer pairs:', error);
+      results.errors.push('Transfer pair matching failed');
+    }
+
+    // Fetch balances for credit card accounts
+    try {
+      const creditAccounts = accountsToSync.filter(a => a.accountType === 'credit');
+      for (const account of creditAccounts) {
+        if (!account.accessToken || !account.tellerAccountId) continue;
+        try {
+          const tellerClient = createTellerClient(account.accessToken);
+          const balance = await tellerClient.getAccountBalance(account.tellerAccountId);
+          await db.update(linkedAccounts)
+            .set({
+              currentBalance: balance.ledger || null,
+              availableBalance: balance.available || null,
+              balanceUpdatedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(linkedAccounts.id, account.id));
+        } catch (error) {
+          console.error(`Error fetching balance for ${account.accountName}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching credit card balances:', error);
     }
 
     return c.json(results);
@@ -313,11 +349,12 @@ route.get('/sync', async (c) => {
       .from(splitTransactions);
     const splitParentIdList = splitParentIds.map(s => s.parentId);
 
-    // Get uncategorized, non-deleted, non-split transactions
+    // Get uncategorized, non-deleted, non-split, non-transfer transactions
     const uncategorizedTransactions = await db.query.transactions.findMany({
       where: and(
         isNull(transactions.budgetItemId),
         isNull(transactions.deletedAt),
+        eq(transactions.isTransfer, false),
         splitParentIdList.length > 0
           ? notInArray(transactions.id, splitParentIdList)
           : undefined
@@ -438,5 +475,84 @@ route.get('/sync', async (c) => {
     return c.json({ error: 'Failed to fetch uncategorized transactions' }, 500);
   }
 });
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Match transfer pairs: find unmatched transfers and link them.
+ * Pairs are matched between depository ↔ credit accounts with same |amount| and date within ±3 days.
+ */
+async function matchTransferPairs(db: Awaited<ReturnType<typeof getDb>>, userId: string) {
+  // Get user's account IDs with their types
+  const userAccounts = await db
+    .select({ id: linkedAccounts.id, accountType: linkedAccounts.accountType })
+    .from(linkedAccounts)
+    .where(and(eq(linkedAccounts.userId, userId), isNull(linkedAccounts.deletedAt)));
+
+  const accountTypeMap = new Map(userAccounts.map(a => [a.id, a.accountType]));
+  const userAccountIds = userAccounts.map(a => a.id);
+
+  if (userAccountIds.length === 0) return;
+
+  // Find unmatched transfers
+  const unmatchedTransfers = await db
+    .select()
+    .from(transactions)
+    .where(and(
+      eq(transactions.isTransfer, true),
+      isNull(transactions.transferPairId),
+      isNull(transactions.deletedAt),
+      inArray(transactions.linkedAccountId, userAccountIds)
+    ));
+
+  if (unmatchedTransfers.length === 0) return;
+
+  // Try to pair them: same |amount|, date within ±3 days, one depository + one credit
+  const paired = new Set<string>();
+
+  for (const txn of unmatchedTransfers) {
+    if (paired.has(txn.id)) continue;
+    if (!txn.linkedAccountId) continue;
+
+    const txnAccountType = accountTypeMap.get(txn.linkedAccountId);
+    const txnAmount = Math.abs(parseFloat(String(txn.amount)));
+
+    for (const candidate of unmatchedTransfers) {
+      if (candidate.id === txn.id || paired.has(candidate.id)) continue;
+      if (!candidate.linkedAccountId) continue;
+
+      const candAccountType = accountTypeMap.get(candidate.linkedAccountId);
+
+      // Must be different account types (depository ↔ credit)
+      if (txnAccountType === candAccountType) continue;
+      if (!((txnAccountType === 'depository' && candAccountType === 'credit') ||
+            (txnAccountType === 'credit' && candAccountType === 'depository'))) continue;
+
+      // Same amount (within $0.01)
+      const candAmount = Math.abs(parseFloat(String(candidate.amount)));
+      if (Math.abs(txnAmount - candAmount) > 0.01) continue;
+
+      // Date within ±3 days
+      const txnDate = new Date(txn.date);
+      const candDate = new Date(candidate.date);
+      const daysDiff = Math.abs((txnDate.getTime() - candDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff > 3) continue;
+
+      // Match found — link them
+      await db.update(transactions)
+        .set({ transferPairId: candidate.id, updatedAt: new Date() })
+        .where(eq(transactions.id, txn.id));
+      await db.update(transactions)
+        .set({ transferPairId: txn.id, updatedAt: new Date() })
+        .where(eq(transactions.id, candidate.id));
+
+      paired.add(txn.id);
+      paired.add(candidate.id);
+      break;
+    }
+  }
+}
 
 export default route;

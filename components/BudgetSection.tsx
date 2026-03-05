@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BudgetCategory, BudgetItem, Transaction } from "@/types/budget";
-import { FaTrash, FaChevronDown, FaChevronRight } from "react-icons/fa";
+import { FaTrash, FaChevronDown, FaChevronRight, FaExchangeAlt } from "react-icons/fa";
 import {
   DndContext,
   closestCenter,
@@ -23,6 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatDateLocale } from "@/lib/dateHelpers";
 import { api } from "@/lib/api-client";
+
 
 interface BudgetSectionProps {
   category: BudgetCategory;
@@ -46,6 +47,7 @@ interface SortableItemProps {
   onUpdatePlanned: (id: string, value: number) => void;
   onDelete: (id: string) => void;
   onDeleteTransaction: (id: string) => void;
+  onToggleTransfer?: (id: string, isTransfer: boolean) => void;
   onTransactionClick?: (transaction: Transaction) => void;
   onSplitClick?: (parentTransactionId: string) => void;
   setEditingNames: (names: Record<string, string>) => void;
@@ -66,6 +68,7 @@ function SortableItem({
   onUpdatePlanned,
   onDelete,
   onDeleteTransaction,
+  onToggleTransfer,
   onTransactionClick,
   onSplitClick,
   setEditingNames,
@@ -255,20 +258,36 @@ function SortableItem({
               <div
                 key={transaction.id}
                 onClick={() => onTransactionClick?.(transaction)}
-                className="flex items-center justify-between text-sm py-1 hover:bg-surface rounded px-2 cursor-pointer transition-colors"
+                className={`flex items-center justify-between text-sm py-1 hover:bg-surface rounded px-2 cursor-pointer transition-colors ${transaction.isTransfer ? 'opacity-60' : ''}`}
               >
-                <div className="flex-1">
+                <div className="flex-1 flex items-center">
+                  {transaction.isTransfer && (
+                    <FaExchangeAlt className="text-text-tertiary text-xs mr-2 flex-shrink-0" />
+                  )}
                   <span className="text-text-secondary">
                     {formatDateLocale(transaction.date)}
                   </span>
-                  <span className="ml-3 text-text-primary">
+                  <span className={`ml-3 ${transaction.isTransfer ? 'text-text-secondary' : 'text-text-primary'}`}>
                     {transaction.merchant || transaction.description}
                   </span>
+                  {transaction.isTransfer && (
+                    <span className="ml-2 text-xs bg-surface-secondary text-text-secondary px-1.5 py-0.5 rounded">CC Payment</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`font-medium ${transaction.type === 'income' ? 'text-success' : 'text-text-primary'}`}>
+                  <span className={`font-medium ${transaction.isTransfer ? 'text-text-secondary' : transaction.type === 'income' ? 'text-success' : 'text-text-primary'}`}>
                     {transaction.type === 'income' ? '+' : ''}${formatCurrency(transaction.amount)}
                   </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleTransfer?.(transaction.id, !transaction.isTransfer);
+                    }}
+                    className={`text-xs ${transaction.isTransfer ? 'text-primary hover:text-primary-hover' : 'text-text-tertiary hover:text-text-secondary'}`}
+                    title={transaction.isTransfer ? 'Unmark as transfer' : 'Mark as transfer'}
+                  >
+                    <FaExchangeAlt />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -399,6 +418,15 @@ export default function BudgetSection({
     }
   };
 
+  const toggleTransfer = async (transactionId: string, isTransfer: boolean) => {
+    try {
+      await api.transaction.update(transactionId, { isTransfer });
+      onRefresh();
+    } catch (error) {
+      console.error("Error toggling transfer:", error);
+    }
+  };
+
   const deleteItem = async (itemId: string) => {
     // Clear editing state for this item
     const newNames = { ...editingNames };
@@ -526,6 +554,7 @@ export default function BudgetSection({
                       onUpdatePlanned={updateItemPlanned}
                       onDelete={deleteItem}
                       onDeleteTransaction={uncategorizeTransaction}
+                      onToggleTransfer={toggleTransfer}
                       onTransactionClick={onTransactionClick}
                       onSplitClick={onSplitClick}
                       setEditingNames={setEditingNames}

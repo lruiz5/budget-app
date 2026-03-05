@@ -27,7 +27,7 @@ export interface FlowNode {
   id: string;            // Unique node ID
   label: string;         // Display name
   color: string;         // Node color
-  column?: 'source' | 'category' | 'item'; // Which column this node belongs to
+  column?: 'source' | 'method' | 'category' | 'item'; // Which column this node belongs to
   lineItems?: { name: string; amount: number }[]; // Constituent items for hover detail
 }
 
