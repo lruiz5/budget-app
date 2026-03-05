@@ -48,6 +48,9 @@ export const transactions = pgTable('transactions', {
   tellerTransactionId: text('teller_transaction_id').unique(),
   tellerAccountId: text('teller_account_id'),
   status: text('status').$type<'posted' | 'pending'>(),
+  // Credit card / transfer fields
+  isTransfer: boolean('is_transfer').notNull().default(false),
+  transferPairId: uuid('transfer_pair_id'), // Points to matching transaction on other account
   // Soft delete
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
@@ -88,6 +91,13 @@ export const linkedAccounts = pgTable('linked_accounts', {
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
   // CSV-specific fields (null for Teller accounts)
   csvColumnMapping: text('csv_column_mapping'), // JSON string of CsvColumnMapping
+  // Credit card balance fields (from Teller API or user-entered)
+  currentBalance: numeric('current_balance', { precision: 10, scale: 2 }),
+  availableBalance: numeric('available_balance', { precision: 10, scale: 2 }),
+  creditLimit: numeric('credit_limit', { precision: 10, scale: 2 }),
+  minimumPayment: numeric('minimum_payment', { precision: 10, scale: 2 }),
+  paymentDueDate: text('payment_due_date'), // YYYY-MM-DD
+  balanceUpdatedAt: timestamp('balance_updated_at', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).$defaultFn(() => new Date()),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });

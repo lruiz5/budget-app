@@ -136,7 +136,7 @@ route.put('/', async (c) => {
   const userId = getUserId(c);
   const db = await getDb();
   const body = await c.req.json();
-  const { id, budgetItemId, linkedAccountId, date, description, amount, type, merchant } = body;
+  const { id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, isTransfer } = body;
 
   if (!id) {
     return c.json({ error: 'Missing transaction id' }, 400);
@@ -161,6 +161,7 @@ route.put('/', async (c) => {
   if (amount !== undefined) updateData.amount = amount;
   if (type !== undefined) updateData.type = type;
   if (merchant !== undefined) updateData.merchant = merchant || null;
+  if (isTransfer !== undefined) updateData.isTransfer = !!isTransfer;
 
   const result = await db
     .update(transactions)

@@ -372,6 +372,7 @@ export const transactionApi = {
     amount: number;
     type: 'income' | 'expense';
     merchant: string;
+    isTransfer: boolean;
   }>): Promise<Transaction> {
     return request('/api/transactions', {
       method: 'PUT',
@@ -924,6 +925,35 @@ export const supabaseApi = {
 };
 
 // ============================================================================
+// CREDIT CARD API
+// ============================================================================
+
+import type { CreditCardSummary } from '@/types/budget';
+
+export const creditCardApi = {
+  /**
+   * Get credit card summaries with balances and payment info.
+   */
+  async getSummary(): Promise<CreditCardSummary[]> {
+    return request('/api/credit-cards/summary');
+  },
+
+  /**
+   * Update user-editable credit card fields.
+   */
+  async update(id: string, data: {
+    creditLimit?: number;
+    minimumPayment?: number;
+    paymentDueDate?: string;
+  }): Promise<void> {
+    return request(`/api/credit-cards/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// ============================================================================
 // CONVENIENCE EXPORTS
 // ============================================================================
 
@@ -944,6 +974,7 @@ export const api = {
   onboarding: onboardingApi,
   database: databaseApi,
   incomeAllocation: incomeAllocationApi,
+  creditCard: creditCardApi,
   supabase: supabaseApi,
 };
 

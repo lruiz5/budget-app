@@ -28,9 +28,9 @@ function getTableColumns(tableName: string): string[] {
     budgets: ['id', 'user_id', 'month', 'year', 'buffer', 'created_at', 'updated_at'],
     budget_categories: ['id', 'budget_id', 'category_type', 'name', 'emoji', 'category_order', 'updated_at', 'deleted_at'],
     budget_items: ['id', 'category_id', 'name', 'planned', 'order', 'recurring_payment_id', 'created_at', 'updated_at', 'deleted_at'],
-    transactions: ['id', 'budget_item_id', 'linked_account_id', 'date', 'description', 'amount', 'type', 'merchant', 'check_number', 'teller_transaction_id', 'teller_account_id', 'status', 'deleted_at', 'created_at', 'updated_at'],
+    transactions: ['id', 'budget_item_id', 'linked_account_id', 'date', 'description', 'amount', 'type', 'merchant', 'check_number', 'teller_transaction_id', 'teller_account_id', 'status', 'is_transfer', 'transfer_pair_id', 'deleted_at', 'created_at', 'updated_at'],
     split_transactions: ['id', 'parent_transaction_id', 'budget_item_id', 'amount', 'description', 'created_at', 'updated_at', 'deleted_at'],
-    linked_accounts: ['id', 'user_id', 'account_source', 'teller_account_id', 'teller_enrollment_id', 'access_token', 'institution_name', 'institution_id', 'account_name', 'account_type', 'account_subtype', 'last_four', 'status', 'last_synced_at', 'created_at', 'csv_column_mapping', 'updated_at', 'deleted_at'],
+    linked_accounts: ['id', 'user_id', 'account_source', 'teller_account_id', 'teller_enrollment_id', 'access_token', 'institution_name', 'institution_id', 'account_name', 'account_type', 'account_subtype', 'last_four', 'status', 'last_synced_at', 'created_at', 'csv_column_mapping', 'current_balance', 'available_balance', 'credit_limit', 'minimum_payment', 'payment_due_date', 'balance_updated_at', 'updated_at', 'deleted_at'],
     recurring_payments: ['id', 'user_id', 'name', 'amount', 'frequency', 'next_due_date', 'funded_amount', 'category_type', 'is_active', 'created_at', 'updated_at', 'deleted_at'],
     user_onboarding: ['id', 'user_id', 'current_step', 'completed_at', 'skipped_at', 'created_at', 'updated_at', 'deleted_at'],
     csv_import_hashes: ['id', 'linked_account_id', 'hash', 'transaction_id', 'created_at', 'updated_at'],
@@ -355,6 +355,12 @@ function q(name: string): string {
   return `"${name}"`;
 }
 
+/** Tables with unique constraints beyond the primary key (id).
+ *  When upserting, we must handle conflicts on these columns too. */
+const UNIQUE_CONSTRAINTS: Record<string, string> = {
+  user_onboarding: 'user_id',
+};
+
 /** Upsert a record into the remote Supabase database */
 async function upsertToRemote(sql: ReturnType<typeof postgres>, tableName: string, record: Record<string, any>): Promise<void> {
   const columns = getTableColumns(tableName);
@@ -372,6 +378,38 @@ async function upsertToRemote(sql: ReturnType<typeof postgres>, tableName: strin
   }
 
   const quotedCols = columns.map(q).join(', ');
+  const uniqueCol = UNIQUE_CONSTRAINTS[tableName];
+
+  // If this table has an additional unique constraint (e.g. user_onboarding.user_id),
+  // first try to resolve by updating the existing record that matches the unique column.
+  // This handles the case where two devices create records with different UUIDs but the
+  // same unique value (e.g. same user_id).
+  if (uniqueCol && record[uniqueCol]) {
+    const existing = await sql.unsafe(
+      `SELECT "id" FROM ${q(tableName)} WHERE ${q(uniqueCol)} = $1 AND "id" != $2`,
+      [record[uniqueCol], record.id]
+    );
+
+    if (existing.length > 0) {
+      // A record with a different id but same unique value exists — update it in place
+      const updateValues: any[] = [];
+      const setParts: string[] = [];
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i];
+        if (col !== 'id') {
+          updateValues.push(record[col] ?? null);
+          setParts.push(`${q(col)} = $${updateValues.length}`);
+        }
+      }
+      updateValues.push(existing[0].id);
+      await sql.unsafe(
+        `UPDATE ${q(tableName)} SET ${setParts.join(', ')} WHERE "id" = $${updateValues.length}`,
+        updateValues
+      );
+      return;
+    }
+  }
+
   const upsertSQL = `
     INSERT INTO ${q(tableName)} (${quotedCols})
     VALUES (${placeholders.join(', ')})
@@ -402,15 +440,44 @@ async function upsertToLocal(
   }
 
   const quotedCols = columns.map(q).join(', ');
-  const upsertSQL = `
-    INSERT INTO ${q(tableName)} (${quotedCols})
-    VALUES (${placeholders.join(', ')})
-    ON CONFLICT (id) DO UPDATE SET ${updateParts.join(', ')}
-  `;
+  const uniqueCol = UNIQUE_CONSTRAINTS[tableName];
 
   // Wrap in transaction with syncing flag to suppress changelog trigger
   await localClient.transaction(async (tx: any) => {
     await tx.query("SET LOCAL app.syncing = 'true'");
+
+    // Handle tables with additional unique constraints (e.g. user_onboarding.user_id)
+    if (uniqueCol && record[uniqueCol]) {
+      const existing = await tx.query(
+        `SELECT "id" FROM ${q(tableName)} WHERE ${q(uniqueCol)} = $1 AND "id" != $2`,
+        [record[uniqueCol], record.id]
+      );
+
+      if (existing.rows.length > 0) {
+        // A record with a different id but same unique value exists — update it in place
+        const updateValues: any[] = [];
+        const setParts: string[] = [];
+        for (let i = 0; i < columns.length; i++) {
+          const col = columns[i];
+          if (col !== 'id') {
+            updateValues.push(record[col] ?? null);
+            setParts.push(`${q(col)} = $${updateValues.length}`);
+          }
+        }
+        updateValues.push(existing.rows[0].id);
+        await tx.query(
+          `UPDATE ${q(tableName)} SET ${setParts.join(', ')} WHERE "id" = $${updateValues.length}`,
+          updateValues
+        );
+        return;
+      }
+    }
+
+    const upsertSQL = `
+      INSERT INTO ${q(tableName)} (${quotedCols})
+      VALUES (${placeholders.join(', ')})
+      ON CONFLICT (id) DO UPDATE SET ${updateParts.join(', ')}
+    `;
     await tx.query(upsertSQL, values);
   });
 }

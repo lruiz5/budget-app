@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { getDb } from '@budget-app/shared/db';
-import { budgets, budgetCategories, budgetItems, transactions, userOnboarding, recurringPayments } from '@budget-app/shared/schema';
+import { budgets, budgetCategories, budgetItems, transactions, userOnboarding, recurringPayments, linkedAccounts } from '@budget-app/shared/schema';
 import { eq, and, asc, inArray } from 'drizzle-orm';
 import { getUserId } from '../middleware/auth';
 import { getMonthlyContribution, CATEGORY_TYPES } from '../lib/helpers';
 import type { AppEnv } from '../types';
-import { DEMO_DATA, DEMO_BUFFER } from '../lib/demoData';
+import { DEMO_DATA, DEMO_BUFFER, DEMO_ACCOUNTS, DEMO_TRANSFER } from '../lib/demoData';
 
 // Helper to fetch a full budget with nested relations
 async function fetchBudgetFull(budgetId: string) {
@@ -570,6 +570,24 @@ route.post('/demo', async (c) => {
     await db.delete(budgets).where(eq(budgets.id, existing.id));
   }
 
+  // Create demo linked accounts (checking + credit card)
+  const accountIdMap: Record<string, string> = {};
+  for (const [key, acct] of Object.entries(DEMO_ACCOUNTS)) {
+    const [created] = await db.insert(linkedAccounts).values({
+      userId,
+      accountSource: 'csv',
+      accountName: acct.accountName,
+      institutionName: acct.institutionName,
+      accountType: acct.accountType,
+      accountSubtype: acct.accountSubtype,
+      lastFour: acct.lastFour,
+      status: 'open',
+      currentBalance: acct.currentBalance != null ? String(acct.currentBalance) : null,
+      creditLimit: acct.creditLimit != null ? String(acct.creditLimit) : null,
+    }).returning();
+    accountIdMap[key] = created.id;
+  }
+
   // Create budget with demo buffer
   const [budget] = await db.insert(budgets).values({
     userId,
@@ -600,6 +618,7 @@ route.post('/demo', async (c) => {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(txn.day).padStart(2, '0')}`;
         await db.insert(transactions).values({
           budgetItemId: budgetItem.id,
+          linkedAccountId: txn.account ? accountIdMap[txn.account] : accountIdMap['checking'],
           date: dateStr,
           description: txn.description,
           amount: String(txn.amount),
@@ -609,6 +628,35 @@ route.post('/demo', async (c) => {
       }
     }
   }
+
+  // Create a CC payment transfer (checking → credit card)
+  // This shows how transfers are detected and excluded from budget actuals
+  const transferDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(DEMO_TRANSFER.day).padStart(2, '0')}`;
+  const transferPairId = crypto.randomUUID();
+
+  // Checking side: money leaving checking
+  await db.insert(transactions).values({
+    linkedAccountId: accountIdMap['checking'],
+    date: transferDate,
+    description: DEMO_TRANSFER.description,
+    amount: String(DEMO_TRANSFER.amount),
+    type: 'expense',
+    merchant: DEMO_TRANSFER.merchant,
+    isTransfer: true,
+    transferPairId,
+  });
+
+  // Credit card side: payment received
+  await db.insert(transactions).values({
+    linkedAccountId: accountIdMap['credit'],
+    date: transferDate,
+    description: 'Payment Received',
+    amount: String(DEMO_TRANSFER.amount),
+    type: 'income',
+    merchant: DEMO_TRANSFER.merchant,
+    isTransfer: true,
+    transferPairId,
+  });
 
   // Mark onboarding complete
   const existingOnboarding = await db.select().from(userOnboarding).where(eq(userOnboarding.userId, userId));

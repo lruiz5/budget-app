@@ -10,6 +10,7 @@ import {
   FaTimes,
   FaUndo,
   FaPlus,
+  FaExchangeAlt,
 } from "react-icons/fa";
 import { HiOutlineScissors } from "react-icons/hi2";
 import AddTransactionModal, { TransactionToEdit } from "./AddTransactionModal";
@@ -252,14 +253,15 @@ export default function BudgetSummary({
     }
   }, [budget.month, budget.year]);
 
-  // Fetch linked accounts
+  // Fetch linked accounts (both Teller and CSV/demo)
   const fetchLinkedAccounts = useCallback(async () => {
-    try {
-      const data = await api.teller.listAccounts() as LinkedAccount[];
-      setLinkedAccounts(data);
-    } catch (error) {
-      console.error("Error fetching linked accounts:", error);
-    }
+    const results = await Promise.allSettled([
+      api.teller.listAccounts(),
+      api.csv.listAccounts(),
+    ]);
+    const tellerAccounts = results[0].status === 'fulfilled' ? results[0].value : [];
+    const csvAccounts = results[1].status === 'fulfilled' ? results[1].value : [];
+    setLinkedAccounts([...tellerAccounts, ...csvAccounts] as LinkedAccount[]);
   }, []);
 
   useEffect(() => {
@@ -1172,11 +1174,14 @@ export default function BudgetSummary({
                             openEditModal(transaction as Transaction);
                           }
                         }}
-                        className="border-b border-border pb-3 last:border-0 rounded px-2 -mx-2 py-2 transition-colors cursor-pointer hover:bg-surface-secondary"
+                        className={`border-b border-border pb-3 last:border-0 rounded px-2 -mx-2 py-2 transition-colors cursor-pointer hover:bg-surface-secondary ${('isTransfer' in transaction && transaction.isTransfer) ? 'opacity-60' : ''}`}
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
+                              {'isTransfer' in transaction && transaction.isTransfer && (
+                                <FaExchangeAlt className="text-text-tertiary text-xs flex-shrink-0" />
+                              )}
                               <span className="text-sm text-text-secondary">
                                 {transaction.date
                                   ? formatDate(transaction.date)
@@ -1187,12 +1192,15 @@ export default function BudgetSummary({
                                   split
                                 </span>
                               )}
+                              {'isTransfer' in transaction && transaction.isTransfer && (
+                                <span className="text-xs bg-surface-secondary text-text-secondary px-1.5 py-0.5 rounded">CC Payment</span>
+                              )}
                             </div>
-                            <p className="text-base text-text-primary truncate mt-1">
+                            <p className={`text-base truncate mt-1 ${('isTransfer' in transaction && transaction.isTransfer) ? 'text-text-secondary' : 'text-text-primary'}`}>
                               {transaction.merchant || transaction.description}
                             </p>
                           </div>
-                          <span className="text-base font-medium text-text-primary ml-3">
+                          <span className={`text-base font-medium ml-3 ${('isTransfer' in transaction && transaction.isTransfer) ? 'text-text-secondary' : 'text-text-primary'}`}>
                             ${formatCurrency(Math.abs(transaction.amount))}
                           </span>
                         </div>
