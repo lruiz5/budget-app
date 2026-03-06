@@ -53,11 +53,13 @@ actor BudgetService {
         ))
     }
 
-    func updateBudgetItem(id: Int, name: String?, planned: Decimal?) async throws -> BudgetItem {
+    func updateBudgetItem(id: Int, name: String?, planned: Decimal?, expectedDay: Int?? = nil) async throws -> BudgetItem {
         try await api.put("/api/budget-items", body: UpdateBudgetItemRequest(
             id: id,
             name: name,
-            planned: planned.map { String(describing: $0) }
+            planned: planned.map { String(describing: $0) },
+            clearExpectedDay: expectedDay == .some(nil),
+            expectedDay: expectedDay ?? nil
         ))
     }
 
@@ -120,6 +122,24 @@ struct UpdateBudgetItemRequest: Encodable {
     let id: Int
     let name: String?
     let planned: String?
+    var clearExpectedDay: Bool = false
+    var expectedDay: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, planned, expectedDay
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(name, forKey: .name)
+        try container.encodeIfPresent(planned, forKey: .planned)
+        if clearExpectedDay {
+            try container.encodeNil(forKey: .expectedDay)
+        } else {
+            try container.encodeIfPresent(expectedDay, forKey: .expectedDay)
+        }
+    }
 }
 
 struct ReorderItemsRequest: Encodable {

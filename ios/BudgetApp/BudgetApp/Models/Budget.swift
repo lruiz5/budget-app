@@ -205,6 +205,7 @@ struct BudgetItem: Codable, Identifiable, Equatable {
     var actual: Decimal
     let order: Int
     let recurringPaymentId: Int?
+    var expectedDay: Int?
     var transactions: [Transaction]
     var splitTransactions: [SplitTransactionWithParent]?
 
@@ -222,7 +223,7 @@ struct BudgetItem: Codable, Identifiable, Equatable {
     }
 
     // Memberwise initializer for previews and testing
-    init(id: Int, categoryId: Int, name: String, planned: Decimal, actual: Decimal = 0, order: Int = 0, recurringPaymentId: Int? = nil, transactions: [Transaction] = [], splitTransactions: [SplitTransactionWithParent]? = nil) {
+    init(id: Int, categoryId: Int, name: String, planned: Decimal, actual: Decimal = 0, order: Int = 0, recurringPaymentId: Int? = nil, expectedDay: Int? = nil, transactions: [Transaction] = [], splitTransactions: [SplitTransactionWithParent]? = nil) {
         self.id = id
         self.categoryId = categoryId
         self.name = name
@@ -230,12 +231,13 @@ struct BudgetItem: Codable, Identifiable, Equatable {
         self.actual = actual
         self.order = order
         self.recurringPaymentId = recurringPaymentId
+        self.expectedDay = expectedDay
         self.transactions = transactions
         self.splitTransactions = splitTransactions
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, categoryId, name, planned, actual, order, recurringPaymentId, transactions, splitTransactions
+        case id, categoryId, name, planned, actual, order, recurringPaymentId, expectedDay, transactions, splitTransactions
     }
 
     func encode(to encoder: Encoder) throws {
@@ -247,6 +249,7 @@ struct BudgetItem: Codable, Identifiable, Equatable {
         try container.encode(actual, forKey: .actual)
         try container.encode(order, forKey: .order)
         try container.encodeIfPresent(recurringPaymentId, forKey: .recurringPaymentId)
+        try container.encodeIfPresent(expectedDay, forKey: .expectedDay)
         try container.encode(transactions, forKey: .transactions)
         try container.encodeIfPresent(splitTransactions, forKey: .splitTransactions)
     }
@@ -258,6 +261,7 @@ struct BudgetItem: Codable, Identifiable, Equatable {
         name = try container.decode(String.self, forKey: .name)
         order = try container.decode(Int.self, forKey: .order)
         recurringPaymentId = try container.decodeIfPresent(Int.self, forKey: .recurringPaymentId)
+        expectedDay = try container.decodeIfPresent(Int.self, forKey: .expectedDay)
         transactions = try container.decodeIfPresent([Transaction].self, forKey: .transactions) ?? []
         splitTransactions = try container.decodeIfPresent([SplitTransactionWithParent].self, forKey: .splitTransactions)
 

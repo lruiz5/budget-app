@@ -25,6 +25,10 @@ class BudgetViewModel: ObservableObject {
     // Uncategorized transactions for drag-to-assign tray
     @Published var uncategorizedTransactions: [Transaction] = []
 
+    // Cash Flow: items with/without expectedDay
+    @Published var scheduledItems: [(item: BudgetItem, categoryName: String, categoryEmoji: String, categoryType: String)] = []
+    @Published var unscheduledItems: [(item: BudgetItem, categoryName: String, categoryEmoji: String, categoryType: String)] = []
+
     private static let defaultCategoryOrder = ["income", "giving", "household", "transportation", "food", "personal", "insurance", "saving"]
 
     private let budgetService = BudgetService.shared
@@ -216,6 +220,23 @@ class BudgetViewModel: ObservableObject {
         incomeActual = iActual
         expensePlanned = ePlanned
         expenseActual = eActual
+
+        // Cash Flow scheduled/unscheduled split
+        var scheduled: [(item: BudgetItem, categoryName: String, categoryEmoji: String, categoryType: String)] = []
+        var unscheduled: [(item: BudgetItem, categoryName: String, categoryEmoji: String, categoryType: String)] = []
+        for cat in budget.categories.values {
+            let emoji = BudgetCategory.emojiForCategoryType(cat.categoryType, customEmoji: cat.emoji)
+            for item in cat.items {
+                let entry = (item: item, categoryName: cat.name, categoryEmoji: emoji, categoryType: cat.categoryType)
+                if item.expectedDay != nil {
+                    scheduled.append(entry)
+                } else {
+                    unscheduled.append(entry)
+                }
+            }
+        }
+        scheduledItems = scheduled.sorted { ($0.item.expectedDay ?? 0) < ($1.item.expectedDay ?? 0) }
+        unscheduledItems = unscheduled
     }
 
     // MARK: - Widget Data
@@ -462,7 +483,7 @@ class BudgetViewModel: ObservableObject {
                         budget.categories[catKey]!.items[itemIndex] = {
                             var item = budget.categories[catKey]!.items[itemIndex]
                             // name is let, so rebuild
-                            return BudgetItem(id: item.id, categoryId: item.categoryId, name: name, planned: item.planned, actual: item.actual, order: item.order, recurringPaymentId: item.recurringPaymentId, transactions: item.transactions, splitTransactions: item.splitTransactions)
+                            return BudgetItem(id: item.id, categoryId: item.categoryId, name: name, planned: item.planned, actual: item.actual, order: item.order, recurringPaymentId: item.recurringPaymentId, expectedDay: item.expectedDay, transactions: item.transactions, splitTransactions: item.splitTransactions)
                         }()
                     }
                     if let planned = planned {
@@ -484,6 +505,16 @@ class BudgetViewModel: ObservableObject {
             showToast(error.localizedDescription, isError: true)
             // Reload to revert optimistic update on failure
             await loadBudget(skipCache: true)
+        }
+    }
+
+    func updateExpectedDay(id: Int, day: Int?) async {
+        guard requireOnline() else { return }
+        do {
+            _ = try await budgetService.updateBudgetItem(id: id, name: nil, planned: nil, expectedDay: .some(day))
+            await loadBudget(skipCache: true)
+        } catch {
+            showToast(error.localizedDescription, isError: true)
         }
     }
 

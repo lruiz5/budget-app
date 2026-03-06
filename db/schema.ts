@@ -26,6 +26,7 @@ export const budgetItems = pgTable('budget_items', {
   name: text('name').notNull(),
   planned: numeric('planned', { precision: 10, scale: 2 }).notNull().default('0'),
   order: integer('order').notNull().default(0),
+  expectedDay: integer('expected_day'), // Day of month (1-31) when this item is expected to hit
   recurringPaymentId: integer('recurring_payment_id'), // Links to recurring_payments table
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
 });
