@@ -20,17 +20,23 @@ struct ContentView: View {
                 .tag(1)
                 .badge(transactionsViewModel.uncategorizedTransactions.count)
 
+            CashFlowTab()
+                .tabItem {
+                    Label("Cash Flow", systemImage: "arrow.left.arrow.right")
+                }
+                .tag(2)
+
             AccountsTab()
                 .tabItem {
                     Label("Accounts", systemImage: "building.columns.fill")
                 }
-                .tag(2)
+                .tag(3)
 
             InsightsTab()
                 .tabItem {
                     Label("Insights", systemImage: "chart.bar.fill")
                 }
-                .tag(3)
+                .tag(4)
         }
         .tint(.green) // Emerald-like primary color
         .overlay(alignment: .top) {
@@ -56,7 +62,7 @@ struct ContentView: View {
             guard let url = notification.object as? URL, let host = url.host() else { return }
             switch host {
             case "insights":
-                selectedTab = 3
+                selectedTab = 4
                 if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                    let section = components.queryItems?.first(where: { $0.name == "section" })?.value {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -124,6 +130,23 @@ struct AccountsTab: View {
         NavigationStack {
             AccountsView()
                 .navigationTitle("Accounts")
+        }
+    }
+}
+
+struct CashFlowTab: View {
+    @StateObject private var budgetVM = BudgetViewModel()
+
+    var body: some View {
+        NavigationStack {
+            CashFlowView()
+                .navigationTitle("Cash Flow")
+                .environmentObject(budgetVM)
+                .onAppear {
+                    Task {
+                        await budgetVM.loadBudget()
+                    }
+                }
         }
     }
 }

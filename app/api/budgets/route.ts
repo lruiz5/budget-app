@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { budgets, budgetCategories, budgetItems, recurringPayments } from '@/db/schema';
-
+import { budgets, budgetCategories, budgetItems } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { requireAuth, isAuthError } from '@/lib/auth';
 
@@ -81,43 +80,6 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-  }
-
-  // Auto-advance recurring payment due dates (don't create budget items yet - that happens on copy/start)
-  if (budget) {
-    const activeRecurring = await db.query.recurringPayments.findMany({
-      where: and(eq(recurringPayments.userId, userId), eq(recurringPayments.isActive, true)),
-    });
-
-    // Auto-advance recurring payments whose due date has passed
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    for (const recurring of activeRecurring) {
-      const dueDate = new Date(recurring.nextDueDate);
-      dueDate.setHours(0, 0, 0, 0);
-
-      if (dueDate < today) {
-        // Advance nextDueDate by one frequency period (keep advancing until it's in the future)
-        const next = new Date(dueDate);
-        const monthsToAdd =
-          recurring.frequency === 'monthly' ? 1 :
-          recurring.frequency === 'quarterly' ? 3 :
-          recurring.frequency === 'semi-annually' ? 6 : 12;
-
-        while (next < today) {
-          next.setMonth(next.getMonth() + monthsToAdd);
-        }
-
-        await db.update(recurringPayments)
-          .set({ nextDueDate: next.toISOString().split('T')[0], fundedAmount: '0' })
-          .where(eq(recurringPayments.id, recurring.id));
-
-        recurring.nextDueDate = next.toISOString().split('T')[0];
-        recurring.fundedAmount = '0';
-      }
-    }
-
   }
 
   return NextResponse.json(budget);

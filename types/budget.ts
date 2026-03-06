@@ -37,6 +37,7 @@ export interface BudgetItem {
   transactions: Transaction[];
   splitTransactions?: SplitTransaction[];
   recurringPaymentId?: number | null;
+  expectedDay?: number | null;
 }
 
 export interface BudgetCategory {

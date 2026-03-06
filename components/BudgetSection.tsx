@@ -52,6 +52,7 @@ interface SortableItemProps {
   isSelected?: boolean;
   showRemaining?: boolean;
   onTransactionDrop?: (transactionId: string, budgetItemId: string) => void;
+  onUpdateExpectedDay?: (id: string, day: number | null) => void;
 }
 
 function SortableItem({
@@ -72,7 +73,9 @@ function SortableItem({
   isSelected = false,
   showRemaining = false,
   onTransactionDrop,
+  onUpdateExpectedDay,
 }: SortableItemProps) {
+  const [editingDay, setEditingDay] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const {
     attributes,
@@ -120,7 +123,7 @@ function SortableItem({
     >
       <div
         onClick={() => onItemClick?.(item)}
-        className={`grid grid-cols-10 gap-4 items-center py-2 rounded cursor-pointer transition-colors ${
+        className={`group grid grid-cols-10 gap-4 items-center py-2 rounded cursor-pointer transition-colors ${
           isSelected ? 'bg-primary-light ring-1 ring-primary-border' : 'hover:bg-surface-secondary'
         }`}
       >
@@ -195,6 +198,50 @@ function SortableItem({
             <span className="text-xs text-primary" title="Recurring payment">
               🔄
             </span>
+          )}
+          {editingDay ? (
+            <input
+              type="number"
+              min={1}
+              max={31}
+              defaultValue={item.expectedDay || ''}
+              placeholder="Day"
+              autoFocus
+              className="w-14 text-xs px-1.5 py-0.5 border border-primary rounded focus:outline-none focus:ring-1 focus:ring-primary text-center"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onBlur={(e) => {
+                const val = parseInt(e.target.value);
+                if (val >= 1 && val <= 31) {
+                  onUpdateExpectedDay?.(item.id, val);
+                } else if (!e.target.value) {
+                  onUpdateExpectedDay?.(item.id, null);
+                }
+                setEditingDay(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+                if (e.key === 'Escape') setEditingDay(false);
+              }}
+            />
+          ) : item.expectedDay ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); setEditingDay(true); }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="text-xs text-info bg-info-light px-1.5 py-0.5 rounded-full hover:bg-info/10 transition-colors"
+              title={`Expected on the ${item.expectedDay}${item.expectedDay >= 11 && item.expectedDay <= 13 ? 'th' : ['st','nd','rd'][(item.expectedDay % 10) - 1] || 'th'}`}
+            >
+              📅 {item.expectedDay}{item.expectedDay >= 11 && item.expectedDay <= 13 ? 'th' : ['st','nd','rd'][(item.expectedDay % 10) - 1] || 'th'}
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); setEditingDay(true); }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="text-xs text-text-tertiary hover:text-info opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Set expected day"
+            >
+              📅
+            </button>
           )}
           {(item.transactions.length > 0 || (item.splitTransactions?.length || 0) > 0) && (
             <span className="text-xs text-text-secondary">
@@ -435,6 +482,19 @@ export default function BudgetSection({
     }
   };
 
+  const updateItemExpectedDay = async (itemId: string, day: number | null) => {
+    try {
+      await fetch("/api/budget-items", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: itemId, expectedDay: day }),
+      });
+      onRefresh();
+    } catch (error) {
+      console.error("Error updating expected day:", error);
+    }
+  };
+
   const uncategorizeTransaction = async (transactionId: string) => {
     try {
       await fetch("/api/transactions", {
@@ -595,6 +655,7 @@ export default function BudgetSection({
                       isSelected={selectedItemId === item.id}
                       showRemaining={showRemaining}
                       onTransactionDrop={onTransactionDrop}
+                      onUpdateExpectedDay={updateItemExpectedDay}
                     />
                   ))}
                 </SortableContext>

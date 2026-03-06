@@ -5,7 +5,7 @@
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
 **Web App:** v1.14.0 (stable)  |  **iOS App:** v0.17.0 (pre-release) — **iOS app name: Happy Tusk**
-**Last Session:** 2026-03-05
+**Last Session:** 2026-03-06
 
 ## Instructions for Claude
 
@@ -32,7 +32,7 @@ Teller certs loaded via base64 env vars on Vercel, file paths locally (see `lib/
 Models/       Budget.swift, Transaction.swift, LinkedAccount.swift, RecurringPayment.swift
 Services/     APIClient.swift, BudgetService, AccountsService, TransactionService, RecurringService
 ViewModels/   BudgetViewModel, TransactionsViewModel, AccountsViewModel, InsightsViewModel, RecurringViewModel
-Views/        Budget/, Transactions/, Accounts/, Insights/, Settings/, Onboarding/, Components/
+Views/        Budget/, Transactions/, Accounts/, CashFlow/, Insights/, Settings/, Onboarding/, Components/
 Utilities/    Constants.swift, Extensions.swift
 ```
 
@@ -70,7 +70,7 @@ Budget (month/year) → Buffer + Categories (Income, Giving, Household, Transpor
 |-------|------------|-------|
 | budgets | id, **userId**, month, year, buffer | Monthly containers |
 | budget_categories | id, budgetId, categoryType, name, order, emoji | Includes custom cats |
-| budget_items | id, categoryId, name, planned, order, **recurringPaymentId** | Line items |
+| budget_items | id, categoryId, name, planned, order, **expectedDay**, recurringPaymentId | Line items, expectedDay=1-31 for cash flow scheduling |
 | transactions | id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, **isNonEarned**, **tagCategoryType**, deletedAt | Soft delete, tag reclassifies in cash flow/spending trends only |
 | split_transactions | id, parentTransactionId, budgetItemId, amount, description, **isNonEarned** | Split across items |
 | recurring_payments | id, **userId**, name, amount, frequency, nextDueDate, fundedAmount, **fundingAdjustment**, categoryType | Auto-reset on GET, manual funding adjustment |
@@ -81,7 +81,7 @@ Budget (month/year) → Buffer + Categories (Income, Giving, Household, Transpor
 
 ## Web App Key Files
 
-**Pages:** `page.tsx` (budget), `recurring/page.tsx`, `settings/page.tsx`, `insights/page.tsx`, `onboarding/page.tsx`, `sign-in/`, `sign-up/`
+**Pages:** `page.tsx` (budget), `cash-flow/page.tsx`, `settings/page.tsx`, `insights/page.tsx`, `onboarding/page.tsx`, `sign-in/`, `sign-up/`
 
 **Components:** `BudgetSection.tsx` (category+items), `BudgetSummary.tsx` (sidebar), `MonthlyReportModal.tsx`, `DashboardLayout.tsx`, `Sidebar.tsx`, `MonthBanner.tsx` (past/future month indicator), `AddTransactionModal.tsx`, `SplitTransactionModal.tsx`, `MobileBlockScreen.tsx`, `onboarding/*.tsx`, `charts/*.tsx`
 
@@ -99,14 +99,20 @@ if (isAuthError(authResult)) return authResult.error;
 const { userId } = authResult;
 ```
 
-### Recurring Payment Lifecycle
+### Cash Flow (expectedDay)
+
+- Budget items have optional `expectedDay` (1-31) for cash flow scheduling
+- Items with `expectedDay` appear in scheduled timeline, without appear as unscheduled
+- Budget copy carries `expectedDay` forward to new months
+- iOS: `BudgetViewModel.scheduledItems`/`unscheduledItems` precomputed in `updateComputedData()`
+- iOS: `updateBudgetItem` uses double-optional `Int??` — `.some(nil)` clears, `nil` skips
+
+### Recurring Payment Lifecycle (deprecated — being replaced by Cash Flow)
 
 - Budget items link via `recurringPaymentId`
-- Auto-reset: GET `/api/budgets` advances past-due `nextDueDate`, resets `fundedAmount`
-- Auto-create: POST `/api/budgets/copy` creates items for active recurring payments
+- Auto-reset and auto-create logic removed from GET `/api/budgets` and POST `/api/budgets/copy`
 - Delete: must unlink budget items FIRST (`set({ recurringPaymentId: null })`), then delete
-- Funding calculated dynamically from linked transactions (monthly=current month only, non-monthly=cumulative)
-- `fundingAdjustment` offset corrects calculated amount (e.g., after backlogging historical transactions)
+- Recurring routes/views still exist but are no longer used in navigation
 
 ### PostgreSQL Numeric Patterns (Web)
 
@@ -129,9 +135,9 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 ## Working Features
 
-**Web (v1.14.0):** Feature-complete. Full budget CRUD, custom categories, transactions (add/edit/split/unsplit/soft-delete), bank sync (Teller) with per-account sync toggle, recurring payments (with manual funding adjustment), budget copy/reset, insights (D3 charts + Sankey, 6-month spending trends), monthly report, tag reclassification, non-earned income marking, transaction search & filters, drag-to-assign uncategorized transactions, onboarding, tablet responsive, month/year picker dropdown, live account balances, past/future month banner.
+**Web (v1.15.0):** Full budget CRUD, custom categories, transactions (add/edit/split/unsplit/soft-delete), bank sync (Teller) with per-account sync toggle, **cash flow timeline** (expectedDay scheduling), budget copy/reset, insights (D3 charts + Sankey, 6-month spending trends), monthly report, tag reclassification, non-earned income marking, transaction search & filters, drag-to-assign uncategorized transactions, onboarding, tablet responsive, month/year picker dropdown, live account balances, past/future month banner.
 
-**iOS (v0.17.0 — Happy Tusk):** Feature-complete. All web features plus: native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment, account balances (live from Teller). See `ios/BudgetApp/CHANGELOG.md`.
+**iOS (v0.19.0 — Happy Tusk):** All web features plus: **cash flow tab** (scheduled/unscheduled timeline), native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment, account balances (live from Teller), WidgetKit widgets. See `ios/BudgetApp/CHANGELOG.md`.
 
 ## Common Issues
 
@@ -165,13 +171,11 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 ## Current State & Next Steps
 
-**Web:** v1.14.0 — stable, production-ready on Vercel
+**Web:** v1.15.0 — cash flow feature pending Vercel deployment
 
-**iOS:** v0.18.1 — pre-release. WidgetKit widgets: 3 medium + 4 small (with deep links to specific views + Memoji avatar support on Budget Item Ring). Spending trends: 6-month rolling window with parallel fetch. See `ios/BudgetApp/CHANGELOG.md` for roadmap to v1.0.0.
+**iOS:** v0.19.0 — pre-release. Cash flow tab + WidgetKit widgets (7 total) + deep links + Memoji. See `ios/BudgetApp/CHANGELOG.md`.
 
-**Pending migrations:** Run in Supabase SQL Editor, then `db:push` to confirm no drift:
-- `ALTER TABLE transactions ADD COLUMN tag_category_type text;`
-- `ALTER TABLE recurring_payments ADD COLUMN funding_adjustment numeric(10,2) NOT NULL DEFAULT '0';`
+**Pending deployment:** Cash flow feature code complete locally. Deploy to Vercel so iOS app receives `expectedDay` field from API. DB migration already applied (`expected_day` column exists).
 
 **Next iOS work:**
 - Renew Apple Developer membership ($99/yr) — required for TestFlight + App Store upload

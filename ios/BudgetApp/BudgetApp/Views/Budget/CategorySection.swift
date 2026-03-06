@@ -195,6 +195,16 @@ struct BudgetItemRow: View {
                                 Text("🔄")
                                     .font(.outfitCaption)
                             }
+
+                            if let day = item.expectedDay {
+                                Text("\(day)\(day >= 11 && day <= 13 ? "th" : [1: "st", 2: "nd", 3: "rd"][day % 10] ?? "th")")
+                                    .font(.outfitCaption2)
+                                    .foregroundStyle(.blue)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(Color.blue.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
                     .buttonStyle(.plain)

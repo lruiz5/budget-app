@@ -7,12 +7,15 @@ struct BudgetItemDetail: View {
     let onUpdate: () -> Void
     let onUpdatePlanned: (Int, Decimal) async -> Void
     let onUpdateName: (Int, String) async -> Void
+    let onUpdateExpectedDay: ((Int, Int?) async -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @State private var editedPlanned: String
     @State private var editedName: String
+    @State private var editedExpectedDay: String
     @State private var isEditingPlanned = false
     @State private var isEditingName = false
+    @State private var isEditingExpectedDay = false
     @State private var isSaving = false
     @State private var activeSheet: ActiveSheet?
     @State private var transactions: [Transaction]
@@ -37,14 +40,16 @@ struct BudgetItemDetail: View {
         AvatarManager.key(categoryType: categoryType, itemName: item.name)
     }
 
-    init(item: BudgetItem, categoryType: String, onUpdate: @escaping () -> Void, onUpdatePlanned: @escaping (Int, Decimal) async -> Void, onUpdateName: @escaping (Int, String) async -> Void) {
+    init(item: BudgetItem, categoryType: String, onUpdate: @escaping () -> Void, onUpdatePlanned: @escaping (Int, Decimal) async -> Void, onUpdateName: @escaping (Int, String) async -> Void, onUpdateExpectedDay: ((Int, Int?) async -> Void)? = nil) {
         self.item = item
         self.categoryType = categoryType
         self.onUpdate = onUpdate
         self.onUpdatePlanned = onUpdatePlanned
         self.onUpdateName = onUpdateName
+        self.onUpdateExpectedDay = onUpdateExpectedDay
         self._editedPlanned = State(initialValue: String(describing: item.planned))
         self._editedName = State(initialValue: item.name)
+        self._editedExpectedDay = State(initialValue: item.expectedDay.map { String($0) } ?? "")
         self._transactions = State(initialValue: item.transactions)
     }
 
@@ -63,6 +68,9 @@ struct BudgetItemDetail: View {
 
                     // Planned Amount
                     plannedSection
+
+                    // Expected Day
+                    expectedDaySection
 
                     // Transactions
                     transactionsSection
@@ -354,6 +362,82 @@ struct BudgetItemDetail: View {
                     .buttonStyle(.bordered)
                 }
             }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+
+    // MARK: - Expected Day Section
+
+    private var expectedDaySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Expected Day")
+                .font(.outfitHeadline)
+
+            HStack {
+                if isEditingExpectedDay {
+                    TextField("Day (1-31)", text: $editedExpectedDay)
+                        .keyboardType(.numberPad)
+                        .textFieldStyle(.roundedBorder)
+
+                    Button("Save") {
+                        let day = Int(editedExpectedDay)
+                        let value: Int? = (day != nil && day! >= 1 && day! <= 31) ? day : nil
+                        isSaving = true
+                        Task {
+                            await onUpdateExpectedDay?(item.id, value)
+                            isSaving = false
+                            isEditingExpectedDay = false
+                            onUpdate()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isSaving)
+
+                    if item.expectedDay != nil {
+                        Button("Clear") {
+                            editedExpectedDay = ""
+                            isSaving = true
+                            Task {
+                                await onUpdateExpectedDay?(item.id, nil)
+                                isSaving = false
+                                isEditingExpectedDay = false
+                                onUpdate()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(isSaving)
+                    }
+
+                    Button("Cancel") {
+                        editedExpectedDay = item.expectedDay.map { String($0) } ?? ""
+                        isEditingExpectedDay = false
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    if let day = item.expectedDay {
+                        Label("Day \(day)", systemImage: "calendar")
+                            .font(.outfitBody)
+                            .foregroundStyle(.blue)
+                    } else {
+                        Text("Not set")
+                            .font(.outfitBody)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button(item.expectedDay != nil ? "Edit" : "Set") {
+                        isEditingExpectedDay = true
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            Text("Set which day of the month this item is expected to hit your account. Appears on the Cash Flow timeline.")
+                .font(.outfitCaption)
+                .foregroundStyle(.secondary)
         }
         .padding()
         .background(Color(.systemGray6))

@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const { userId } = authResult;
 
   const body = await request.json();
-  const { categoryId, name, planned } = body;
+  const { categoryId, name, planned, expectedDay } = body;
 
   if (!categoryId || !name) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       name,
       planned: planned || '0',
       order: maxOrder + 1,
+      ...(expectedDay !== undefined && { expectedDay }),
     })
     .returning();
 
@@ -53,7 +54,7 @@ export async function PUT(request: NextRequest) {
   const { userId } = authResult;
 
   const body = await request.json();
-  const { id, name, planned } = body;
+  const { id, name, planned, expectedDay } = body;
 
   if (!id) {
     return NextResponse.json({ error: 'Missing item id' }, { status: 400 });
@@ -76,6 +77,7 @@ export async function PUT(request: NextRequest) {
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (planned !== undefined) updates.planned = planned;
+  if (expectedDay !== undefined) updates.expectedDay = expectedDay;
 
   const [updatedItem] = await db
     .update(budgetItems)

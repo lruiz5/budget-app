@@ -10,7 +10,7 @@ import {
   FaChartLine,
   FaChevronLeft,
   FaChevronRight,
-  FaRedo,
+  FaExchangeAlt,
   FaLightbulb,
 } from 'react-icons/fa';
 
@@ -48,10 +48,10 @@ export default function Sidebar() {
       href: '/',
     },
     {
-      id: 'recurring',
-      label: 'Recurring',
-      icon: <FaRedo size={20} />,
-      href: '/recurring',
+      id: 'cash-flow',
+      label: 'Cash Flow',
+      icon: <FaExchangeAlt size={20} />,
+      href: '/cash-flow',
     },
     {
       id: 'accounts',
