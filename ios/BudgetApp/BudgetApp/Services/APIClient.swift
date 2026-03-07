@@ -105,7 +105,9 @@ actor APIClient {
         }
 
         #if DEBUG
-        print("🌐 \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
+        let method = request.httpMethod ?? "?"
+        let url = request.url?.absoluteString ?? "?"
+        print("🌐 \(method) \(url)")
         if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
             print("📤 Body: \(bodyString)")
         }
@@ -124,16 +126,7 @@ actor APIClient {
         }
 
         #if DEBUG
-        print("📥 Status: \(httpResponse.statusCode)")
-        if let responseString = String(data: data, encoding: .utf8) {
-            print("📦 Response: \(responseString.prefix(500))")
-            // Check if transactions exist in raw response
-            if responseString.contains("\"transactions\"") {
-                let transactionMatches = responseString.components(separatedBy: "\"transactions\":[").count - 1
-                let nonEmptyCount = responseString.components(separatedBy: "\"transactions\":[{").count - 1
-                print("📊 Found \(transactionMatches) transaction arrays, \(nonEmptyCount) non-empty")
-            }
-        }
+        print("📥 \(method) \(url.components(separatedBy: "1821926.xyz").last ?? url) → \(httpResponse.statusCode)")
         #endif
 
         // Parse server error message from response body for non-2xx responses

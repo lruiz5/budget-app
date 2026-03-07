@@ -4,7 +4,7 @@
 
 Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
 
-**Web App:** v1.14.0 (stable)  |  **iOS App:** v0.17.0 (pre-release) — **iOS app name: Happy Tusk**
+**Web App:** v1.14.0 (stable)  |  **iOS App:** v0.20.0 (pre-release) — **iOS app name: Happy Tusk**
 **Last Session:** 2026-03-06
 
 ## Instructions for Claude
@@ -105,7 +105,8 @@ const { userId } = authResult;
 - Items with `expectedDay` appear in scheduled timeline, without appear as unscheduled
 - Budget copy carries `expectedDay` forward to new months
 - iOS: `BudgetViewModel.scheduledItems`/`unscheduledItems` precomputed in `updateComputedData()`
-- iOS: `updateBudgetItem` uses double-optional `Int??` — `.some(nil)` clears, `nil` skips
+- iOS: `updateBudgetItem` uses explicit `clearExpectedDay: Bool` flag (not `Int??` — causes async closure corruption)
+- iOS: `BudgetItemDetail.onUpdateExpectedDay` is a **synchronous** `(Int, Int) -> Void` closure. Uses `-1` sentinel to clear. Callers wrap in `Task { await ... }`. Async closures corrupt Int parameters in SwiftUI.
 
 ### Recurring Payment Lifecycle (deprecated — being replaced by Cash Flow)
 
@@ -137,7 +138,7 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 **Web (v1.15.0):** Full budget CRUD, custom categories, transactions (add/edit/split/unsplit/soft-delete), bank sync (Teller) with per-account sync toggle, **cash flow timeline** (expectedDay scheduling), budget copy/reset, insights (D3 charts + Sankey, 6-month spending trends), monthly report, tag reclassification, non-earned income marking, transaction search & filters, drag-to-assign uncategorized transactions, onboarding, tablet responsive, month/year picker dropdown, live account balances, past/future month banner.
 
-**iOS (v0.19.0 — Happy Tusk):** All web features plus: **cash flow tab** (scheduled/unscheduled timeline), native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment, account balances (live from Teller), WidgetKit widgets. See `ios/BudgetApp/CHANGELOG.md`.
+**iOS (v0.20.0 — Happy Tusk):** All web features plus: **cash flow tab** (scheduled/unscheduled timeline, buffer row, tap-to-edit items), native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment, account balances (live from Teller), WidgetKit widgets. See `ios/BudgetApp/CHANGELOG.md`.
 
 ## Common Issues
 
@@ -173,9 +174,9 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 **Web:** v1.15.0 — cash flow feature pending Vercel deployment
 
-**iOS:** v0.19.0 — pre-release. Cash flow tab + WidgetKit widgets (7 total) + deep links + Memoji. See `ios/BudgetApp/CHANGELOG.md`.
+**iOS:** v0.20.0 — pre-release. Cash flow tab (buffer + tap-to-edit) + WidgetKit widgets (7 total) + deep links + Memoji. See `ios/BudgetApp/CHANGELOG.md`.
 
-**Pending deployment:** Cash flow feature code complete locally. Deploy to Vercel so iOS app receives `expectedDay` field from API. DB migration already applied (`expected_day` column exists).
+**Pending deployment:** Cash flow deployed to Vercel. Budget items PUT route has try/catch error handling (local, not yet deployed).
 
 **Next iOS work:**
 - Renew Apple Developer membership ($99/yr) — required for TestFlight + App Store upload
