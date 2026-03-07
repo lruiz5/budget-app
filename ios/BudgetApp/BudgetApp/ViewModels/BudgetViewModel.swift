@@ -508,10 +508,11 @@ class BudgetViewModel: ObservableObject {
         }
     }
 
-    func updateExpectedDay(id: Int, day: Int?) async {
+    func updateExpectedDay(id: Int, day: Int) async {
         guard requireOnline() else { return }
+        let actualDay: Int? = day > 0 ? day : nil
         do {
-            _ = try await budgetService.updateBudgetItem(id: id, name: nil, planned: nil, expectedDay: .some(day))
+            _ = try await budgetService.updateBudgetItem(id: id, name: nil, planned: nil, expectedDay: actualDay, clearExpectedDay: actualDay == nil)
             await loadBudget(skipCache: true)
         } catch {
             showToast(error.localizedDescription, isError: true)

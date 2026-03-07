@@ -77,7 +77,7 @@ struct BudgetView: View {
                         await viewModel.updateItem(id: id, name: name, planned: nil)
                     },
                     onUpdateExpectedDay: { id, day in
-                        await viewModel.updateExpectedDay(id: id, day: day)
+                        Task { await viewModel.updateExpectedDay(id: id, day: day) }
                     }
                 )
             case .addItem(let categoryId):

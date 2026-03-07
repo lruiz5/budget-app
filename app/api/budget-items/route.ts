@@ -53,39 +53,44 @@ export async function PUT(request: NextRequest) {
   if (isAuthError(authResult)) return authResult.error;
   const { userId } = authResult;
 
-  const body = await request.json();
-  const { id, name, planned, expectedDay } = body;
+  try {
+    const body = await request.json();
+    const { id, name, planned, expectedDay } = body;
 
-  if (!id) {
-    return NextResponse.json({ error: 'Missing item id' }, { status: 400 });
-  }
+    if (!id) {
+      return NextResponse.json({ error: 'Missing item id' }, { status: 400 });
+    }
 
-  // Verify item ownership through category -> budget
-  const item = await db.query.budgetItems.findFirst({
-    where: eq(budgetItems.id, parseInt(id)),
-    with: {
-      category: {
-        with: { budget: true },
+    // Verify item ownership through category -> budget
+    const item = await db.query.budgetItems.findFirst({
+      where: eq(budgetItems.id, parseInt(id)),
+      with: {
+        category: {
+          with: { budget: true },
+        },
       },
-    },
-  });
+    });
 
-  if (!item || item.category.budget.userId !== userId) {
-    return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+    if (!item || item.category.budget.userId !== userId) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (name !== undefined) updates.name = name;
+    if (planned !== undefined) updates.planned = planned;
+    if (expectedDay !== undefined) updates.expectedDay = expectedDay;
+
+    const [updatedItem] = await db
+      .update(budgetItems)
+      .set(updates)
+      .where(eq(budgetItems.id, parseInt(id)))
+      .returning();
+
+    return NextResponse.json(updatedItem);
+  } catch (error) {
+    console.error('PUT /api/budget-items error:', error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
-
-  const updates: Record<string, unknown> = {};
-  if (name !== undefined) updates.name = name;
-  if (planned !== undefined) updates.planned = planned;
-  if (expectedDay !== undefined) updates.expectedDay = expectedDay;
-
-  const [updatedItem] = await db
-    .update(budgetItems)
-    .set(updates)
-    .where(eq(budgetItems.id, parseInt(id)))
-    .returning();
-
-  return NextResponse.json(updatedItem);
 }
 
 export async function DELETE(request: NextRequest) {

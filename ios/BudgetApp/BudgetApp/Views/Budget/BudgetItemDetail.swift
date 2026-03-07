@@ -7,7 +7,7 @@ struct BudgetItemDetail: View {
     let onUpdate: () -> Void
     let onUpdatePlanned: (Int, Decimal) async -> Void
     let onUpdateName: (Int, String) async -> Void
-    let onUpdateExpectedDay: ((Int, Int?) async -> Void)?
+    let onUpdateExpectedDay: (Int, Int) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var editedPlanned: String
@@ -40,7 +40,7 @@ struct BudgetItemDetail: View {
         AvatarManager.key(categoryType: categoryType, itemName: item.name)
     }
 
-    init(item: BudgetItem, categoryType: String, onUpdate: @escaping () -> Void, onUpdatePlanned: @escaping (Int, Decimal) async -> Void, onUpdateName: @escaping (Int, String) async -> Void, onUpdateExpectedDay: ((Int, Int?) async -> Void)? = nil) {
+    init(item: BudgetItem, categoryType: String, onUpdate: @escaping () -> Void, onUpdatePlanned: @escaping (Int, Decimal) async -> Void, onUpdateName: @escaping (Int, String) async -> Void, onUpdateExpectedDay: @escaping (Int, Int) -> Void) {
         self.item = item
         self.categoryType = categoryType
         self.onUpdate = onUpdate
@@ -382,32 +382,21 @@ struct BudgetItemDetail: View {
                         .textFieldStyle(.roundedBorder)
 
                     Button("Save") {
-                        let day = Int(editedExpectedDay)
-                        let value: Int? = (day != nil && day! >= 1 && day! <= 31) ? day : nil
-                        isSaving = true
-                        Task {
-                            await onUpdateExpectedDay?(item.id, value)
-                            isSaving = false
-                            isEditingExpectedDay = false
-                            onUpdate()
-                        }
+                        let trimmed = editedExpectedDay.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let day = Int(trimmed)
+                        let value: Int = (day != nil && day! >= 1 && day! <= 31) ? day! : -1
+                        onUpdateExpectedDay(item.id, value)
+                        isEditingExpectedDay = false
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(isSaving)
 
-                    if item.expectedDay != nil {
+                    if !editedExpectedDay.isEmpty {
                         Button("Clear") {
                             editedExpectedDay = ""
-                            isSaving = true
-                            Task {
-                                await onUpdateExpectedDay?(item.id, nil)
-                                isSaving = false
-                                isEditingExpectedDay = false
-                                onUpdate()
-                            }
+                            onUpdateExpectedDay(item.id, -1)
+                            isEditingExpectedDay = false
                         }
                         .buttonStyle(.bordered)
-                        .disabled(isSaving)
                     }
 
                     Button("Cancel") {
@@ -416,8 +405,8 @@ struct BudgetItemDetail: View {
                     }
                     .buttonStyle(.bordered)
                 } else {
-                    if let day = item.expectedDay {
-                        Label("Day \(day)", systemImage: "calendar")
+                    if let dayStr = Int(editedExpectedDay) {
+                        Label("Day \(dayStr)", systemImage: "calendar")
                             .font(.outfitBody)
                             .foregroundStyle(.blue)
                     } else {
@@ -428,7 +417,7 @@ struct BudgetItemDetail: View {
 
                     Spacer()
 
-                    Button(item.expectedDay != nil ? "Edit" : "Set") {
+                    Button(editedExpectedDay.isEmpty ? "Set" : "Edit") {
                         isEditingExpectedDay = true
                     }
                     .buttonStyle(.bordered)
@@ -739,6 +728,7 @@ struct StickerInputField: UIViewRepresentable {
         categoryType: "food",
         onUpdate: {},
         onUpdatePlanned: { _, _ in },
-        onUpdateName: { _, _ in }
+        onUpdateName: { _, _ in },
+        onUpdateExpectedDay: { _, _ in }
     )
 }

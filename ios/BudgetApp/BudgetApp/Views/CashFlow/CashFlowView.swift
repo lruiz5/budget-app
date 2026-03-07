@@ -1,7 +1,14 @@
 import SwiftUI
 
+private struct CashFlowSelectedItem: Identifiable {
+    let item: BudgetItem
+    let categoryType: String
+    var id: Int { item.id }
+}
+
 struct CashFlowView: View {
     @EnvironmentObject private var budgetVM: BudgetViewModel
+    @State private var selectedItem: CashFlowSelectedItem?
 
     private let monthNames = ["January", "February", "March", "April", "May", "June",
                               "July", "August", "September", "October", "November", "December"]
@@ -59,6 +66,24 @@ struct CashFlowView: View {
         .refreshable {
             await budgetVM.loadBudget(skipCache: true)
         }
+        .sheet(item: $selectedItem) { selected in
+            BudgetItemDetail(
+                item: selected.item,
+                categoryType: selected.categoryType,
+                onUpdate: {
+                    Task { await budgetVM.loadBudget(skipCache: true) }
+                },
+                onUpdatePlanned: { id, planned in
+                    await budgetVM.updateItem(id: id, name: nil, planned: planned)
+                },
+                onUpdateName: { id, name in
+                    await budgetVM.updateItem(id: id, name: name, planned: nil)
+                },
+                onUpdateExpectedDay: { id, day in
+                    Task { await budgetVM.updateExpectedDay(id: id, day: day) }
+                }
+            )
+        }
     }
 
     // MARK: - Summary Cards
@@ -96,9 +121,38 @@ struct CashFlowView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
 
+            // Buffer row at start of month
+            if let buffer = budgetVM.budget?.buffer, buffer > 0 {
+                let isToday = isCurrentMonth && todayDay == 1
+                dayHeader(day: 1, isToday: isToday)
+                HStack(spacing: 12) {
+                    Text("🛡️")
+                        .font(.outfit(20))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Buffer")
+                            .font(.outfitBody)
+                            .fontWeight(.medium)
+                        Text("Starting balance")
+                            .font(.outfitCaption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text("+$\(buffer.formatted())")
+                        .font(.outfitBody)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.blue)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+            }
+
             ForEach(Array(budgetVM.scheduledItems.enumerated()), id: \.element.item.id) { index, entry in
                 let day = entry.item.expectedDay ?? 0
-                let showDayHeader = index == 0 || day != (budgetVM.scheduledItems[index - 1].item.expectedDay ?? 0)
+                let bufferShown = (budgetVM.budget?.buffer ?? 0) > 0
+                let showDayHeader: Bool = {
+                    if index == 0 { return !(bufferShown && day == 1) }
+                    return day != (budgetVM.scheduledItems[index - 1].item.expectedDay ?? 0)
+                }()
                 let isToday = isCurrentMonth && day == todayDay
 
                 VStack(spacing: 0) {
@@ -106,6 +160,10 @@ struct CashFlowView: View {
                         dayHeader(day: day, isToday: isToday)
                     }
                     cashFlowRow(entry: entry, day: day)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedItem = CashFlowSelectedItem(item: entry.item, categoryType: entry.categoryType)
+                        }
                 }
             }
         }
@@ -226,6 +284,10 @@ struct CashFlowView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedItem = CashFlowSelectedItem(item: entry.item, categoryType: entry.categoryType)
+                }
 
                 if entry.item.id != budgetVM.unscheduledItems.last?.item.id {
                     Divider().padding(.leading, 52)

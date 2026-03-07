@@ -53,13 +53,13 @@ actor BudgetService {
         ))
     }
 
-    func updateBudgetItem(id: Int, name: String?, planned: Decimal?, expectedDay: Int?? = nil) async throws -> BudgetItem {
+    func updateBudgetItem(id: Int, name: String?, planned: Decimal?, expectedDay: Int? = nil, clearExpectedDay: Bool = false) async throws -> BudgetItem {
         try await api.put("/api/budget-items", body: UpdateBudgetItemRequest(
             id: id,
             name: name,
             planned: planned.map { String(describing: $0) },
-            clearExpectedDay: expectedDay == .some(nil),
-            expectedDay: expectedDay ?? nil
+            clearExpectedDay: clearExpectedDay,
+            expectedDay: expectedDay
         ))
     }
 
