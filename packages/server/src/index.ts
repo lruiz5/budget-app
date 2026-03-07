@@ -11,7 +11,17 @@ import { isSupabaseEnabled } from '@budget-app/shared/db/supabase-config';
 import { startSyncScheduler } from '@budget-app/shared/db/sync-scheduler';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SERVER_VERSION = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')).version;
+
+let SERVER_VERSION = 'unknown';
+try {
+  // Try multiple paths: works both in dev (src/) and bundled (dist/ or standalone)
+  for (const relPath of ['../package.json', './package.json', '../../package.json']) {
+    try {
+      SERVER_VERSION = JSON.parse(readFileSync(join(__dirname, relPath), 'utf-8')).version;
+      break;
+    } catch { /* try next path */ }
+  }
+} catch { /* version stays 'unknown' */ }
 
 // Route imports
 import databaseRoutes from './routes/database';

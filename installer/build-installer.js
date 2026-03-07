@@ -121,6 +121,13 @@ async function bundleApiServer() {
 
   copyDir(pgliteSrc, pgliteDest);
   logSuccess('PGlite runtime copied');
+
+  log('  Copying server package.json...');
+  const serverPkgSrc = path.join(PROJECT_ROOT, 'packages', 'server', 'package.json');
+  if (fs.existsSync(serverPkgSrc)) {
+    fs.copyFileSync(serverPkgSrc, path.join(outDir, 'package.json'));
+    logSuccess('Server package.json copied');
+  }
 }
 
 /**

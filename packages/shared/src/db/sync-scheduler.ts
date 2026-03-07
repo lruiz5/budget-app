@@ -15,6 +15,7 @@ export interface SyncStatus {
 const DEFAULT_INTERVAL = 30_000; // 30 seconds
 const MAX_BACKOFF = 300_000; // 5 minutes
 const POOL_RESET_THRESHOLD = 2;
+const MAX_CONSECUTIVE_FAILURES = 10; // Stop scheduler after this many failures
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 let currentInterval = DEFAULT_INTERVAL;
@@ -49,10 +50,14 @@ export function startSyncScheduler(intervalMs: number = DEFAULT_INTERVAL): void 
   console.log(`[Sync] Starting sync scheduler (interval: ${intervalMs}ms)`);
 
   // Run first sync immediately
-  runSyncTick().catch(() => {});
+  runSyncTick().catch((err) => {
+    console.error('[Sync] Unhandled error in initial sync tick:', err);
+  });
 
   intervalHandle = setInterval(() => {
-    runSyncTick().catch(() => {});
+    runSyncTick().catch((err) => {
+      console.error('[Sync] Unhandled error in sync tick:', err);
+    });
   }, currentInterval);
 }
 
@@ -94,15 +99,19 @@ async function runSyncTick(): Promise<any> {
       status.pendingCount = await getPendingCount();
       const result = await runSyncCycle();
 
-      status.state = result.pushErrors > 0 || result.pullErrors > 0 ? 'error' : 'idle';
-      status.lastError = result.pushErrors > 0 || result.pullErrors > 0
-        ? `Sync complete with ${result.pushErrors + result.pullErrors} errors.`
-        : null;
+      const totalErrors = result.pushErrors + result.pullErrors;
+      status.state = totalErrors > 0 ? 'error' : 'idle';
+      if (totalErrors > 0) {
+        const allDetails = [...(result.pushErrorDetails || []), ...(result.pullErrorDetails || [])];
+        status.lastError = `Sync completed with ${totalErrors} error(s): ${allDetails.join('; ')}`;
+      } else {
+        status.lastError = null;
+      }
       status.consecutiveFailures = 0;
       status.pendingCount = await getPendingCount();
 
-      if (result.pushed > 0 || result.pulled > 0 || result.pushErrors > 0 || result.pullErrors > 0) {
-        console.log(`[Sync] Cycle complete: pushed=${result.pushed}, pulled=${result.pulled}, errors=${result.pushErrors + result.pullErrors}`);
+      if (result.pushed > 0 || result.pulled > 0 || totalErrors > 0) {
+        console.log(`[Sync] Cycle complete: pushed=${result.pushed}, pulled=${result.pulled}, pushErrors=${result.pushErrors}, pullErrors=${result.pullErrors}`);
       }
 
       // Reset interval to default if we had backed off
@@ -110,7 +119,9 @@ async function runSyncTick(): Promise<any> {
         clearInterval(intervalHandle);
         currentInterval = DEFAULT_INTERVAL;
         intervalHandle = setInterval(() => {
-          runSyncTick().catch(() => {});
+          runSyncTick().catch((err) => {
+            console.error('[Sync] Unhandled error in sync tick:', err);
+          });
         }, currentInterval);
       }
       return result;
@@ -130,7 +141,22 @@ async function runSyncTick(): Promise<any> {
       status.lastError = message;
       status.consecutiveFailures++;
 
-      console.error(`[Sync] Error (attempt ${status.consecutiveFailures}): ${message}`);
+      // Log the full error with stack trace for debugging
+      if (error instanceof Error && error.stack) {
+        console.error(`[Sync] Error (attempt ${status.consecutiveFailures}):\n${error.stack}`);
+      } else {
+        console.error(`[Sync] Error (attempt ${status.consecutiveFailures}): ${message}`);
+      }
+
+      // Stop scheduler after too many consecutive failures
+      if (status.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        console.error(`[Sync] Stopping scheduler after ${MAX_CONSECUTIVE_FAILURES} consecutive failures. Last error: ${message}`);
+        if (intervalHandle) {
+          clearInterval(intervalHandle);
+          intervalHandle = null;
+        }
+        return null;
+      }
 
       if (status.consecutiveFailures >= POOL_RESET_THRESHOLD) {
         console.log('[Sync] Resetting Supabase connection after repeated failures');
@@ -151,7 +177,9 @@ async function runSyncTick(): Promise<any> {
         clearInterval(intervalHandle);
         currentInterval = backoffInterval;
         intervalHandle = setInterval(() => {
-          runSyncTick().catch(() => {});
+          runSyncTick().catch((err) => {
+            console.error('[Sync] Unhandled error in sync tick:', err);
+          });
         }, currentInterval);
         console.log(`[Sync] Backing off to ${currentInterval}ms interval`);
       }

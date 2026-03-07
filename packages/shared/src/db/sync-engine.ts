@@ -22,6 +22,18 @@ const SYNC_TABLE_ORDER = [
   'income_allocations',
 ] as const;
 
+/**
+ * FK dependency map: child_table -> { fk_column -> parent_table }
+ * Used to auto-push missing parent records when FK constraints fail.
+ */
+const FK_DEPENDENCIES: Record<string, Record<string, string>> = {
+  budget_categories: { budget_id: 'budgets' },
+  budget_items: { category_id: 'budget_categories', recurring_payment_id: 'recurring_payments' },
+  transactions: { budget_item_id: 'budget_items', linked_account_id: 'linked_accounts' },
+  split_transactions: { parent_transaction_id: 'transactions', budget_item_id: 'budget_items' },
+  csv_import_hashes: { linked_account_id: 'linked_accounts' },
+};
+
 /** Column definitions for each table (must match schema.ts exactly) */
 function getTableColumns(tableName: string): string[] {
   const columnMap: Record<string, string[]> = {
@@ -85,6 +97,7 @@ export async function pushChanges(): Promise<{ pushed: number; skipped: number; 
   const successfulIds: number[] = [];
 
   for (const entry of orderedEntries) {
+    let localRecord: Record<string, any> | null = null;
     try {
       if (entry.operation === 'DELETE') {
         // All our synced tables use soft deletes (deleted_at), so a DELETE trigger
@@ -116,18 +129,18 @@ export async function pushChanges(): Promise<{ pushed: number; skipped: number; 
         continue;
       }
 
-      const localRecord = localRow.rows[0];
+      localRecord = localRow.rows[0];
 
       // Conflict resolution: check if remote is newer
       const columns = getTableColumns(entry.table_name);
-      if (columns.includes('updated_at') && localRecord.updated_at) {
+      if (columns.includes('updated_at') && localRecord!.updated_at) {
         const remoteResult = await sql`
           SELECT updated_at FROM ${sql(entry.table_name)} WHERE id = ${entry.record_id}
         `;
 
         if (remoteResult.length > 0 && remoteResult[0].updated_at) {
           const remoteUpdatedAt = new Date(remoteResult[0].updated_at);
-          const localUpdatedAt = new Date(localRecord.updated_at);
+          const localUpdatedAt = new Date(localRecord!.updated_at);
           if (remoteUpdatedAt >= localUpdatedAt) {
             skipped++;
             successfulIds.push(entry.id);
@@ -136,12 +149,34 @@ export async function pushChanges(): Promise<{ pushed: number; skipped: number; 
         }
       }
 
-      await upsertToRemote(sql, entry.table_name, localRecord);
+      await upsertToRemote(sql, entry.table_name, localRecord!);
       pushed++;
       successfulIds.push(entry.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`[Sync Push] ${entry.table_name}:${entry.record_id}:`, message);
+      const isFkViolation = message.includes('violates foreign key constraint');
+
+      // Auto-resolve FK violations by pushing missing parent records
+      if (isFkViolation && localRecord) {
+        console.warn(`[Sync Push] FK violation for ${entry.table_name}:${entry.record_id}, attempting to push missing parent(s)...`);
+        const resolved = await tryPushMissingParents(sql, localClient, entry.table_name, localRecord);
+        if (resolved) {
+          try {
+            await upsertToRemote(sql, entry.table_name, localRecord);
+            pushed++;
+            successfulIds.push(entry.id);
+            console.log(`[Sync Push] Retry succeeded for ${entry.table_name}:${entry.record_id} after pushing parent(s)`);
+            continue;
+          } catch (retryError) {
+            const retryMsg = retryError instanceof Error ? retryError.message : String(retryError);
+            console.error(`[Sync Push] Retry failed for ${entry.table_name}:${entry.record_id}: ${retryMsg}`);
+          }
+        }
+      }
+
+      const stack = error instanceof Error ? error.stack : undefined;
+      console.error(`[Sync Push] ${entry.table_name}:${entry.record_id}: ${message}`);
+      if (stack) console.error(`  Stack: ${stack}`);
       await markSyncError(entry.id, message);
       errors.push({ message: `[${entry.table_name}] ${message}`, entry });
       skipped++;
@@ -210,7 +245,9 @@ export async function pullChanges(): Promise<{ pulled: number; skipped: number; 
         pulled++;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error(`[Sync Pull] ${tableName}:${remoteRecord.id}:`, message);
+        const stack = error instanceof Error ? error.stack : undefined;
+        console.error(`[Sync Pull] ${tableName}:${remoteRecord.id}: ${message}`);
+        if (stack) console.error(`  Stack: ${stack}`);
         errors.push({ message: `[${tableName}] ${message}`, recordId: remoteRecord.id });
         skipped++;
       }
@@ -237,12 +274,29 @@ export interface SyncCycleResult {
   skippedPull: number;
   pushErrors: number;
   pullErrors: number;
+  pushErrorDetails: string[];
+  pullErrorDetails: string[];
 }
 
 /** Run a complete sync cycle: push local changes, then pull remote changes */
 export async function runSyncCycle(): Promise<SyncCycleResult> {
+  console.log('[Sync] Starting sync cycle...');
+
   const pushResult = await pushChanges();
+  if (pushResult.errors.length > 0) {
+    console.error(`[Sync] Push completed with ${pushResult.errors.length} error(s):`);
+    for (const err of pushResult.errors) {
+      console.error(`  - ${err.message}`);
+    }
+  }
+
   const pullResult = await pullChanges();
+  if (pullResult.errors.length > 0) {
+    console.error(`[Sync] Pull completed with ${pullResult.errors.length} error(s):`);
+    for (const err of pullResult.errors) {
+      console.error(`  - ${err.message}`);
+    }
+  }
 
   return {
     pushed: pushResult.pushed,
@@ -251,6 +305,8 @@ export async function runSyncCycle(): Promise<SyncCycleResult> {
     skippedPull: pullResult.skipped,
     pushErrors: pushResult.errors.length,
     pullErrors: pullResult.errors.length,
+    pushErrorDetails: pushResult.errors.map(e => e.message),
+    pullErrorDetails: pullResult.errors.map(e => e.message),
   };
 }
 
@@ -353,6 +409,64 @@ export async function runInitialSync(direction: 'push' | 'pull' | 'merge'): Prom
 /** Quote a column/table name to handle PostgreSQL reserved words (e.g. "order") */
 function q(name: string): string {
   return `"${name}"`;
+}
+
+/**
+ * When a push fails with FK violation, look up the missing parent record locally
+ * and push it to Supabase. Recurses up the FK chain (e.g. budget_item -> category -> budget).
+ */
+async function tryPushMissingParents(
+  sql: ReturnType<typeof postgres>,
+  localClient: any,
+  tableName: string,
+  record: Record<string, any>,
+  depth: number = 0,
+): Promise<boolean> {
+  if (depth > 5) return false; // safety limit
+
+  const deps = FK_DEPENDENCIES[tableName];
+  if (!deps) return false;
+
+  let pushedAny = false;
+
+  for (const [fkColumn, parentTable] of Object.entries(deps)) {
+    const parentId = record[fkColumn];
+    if (!parentId) continue;
+
+    // Check if parent exists in Supabase
+    const remoteCheck = await sql`
+      SELECT id FROM ${sql(parentTable)} WHERE id = ${parentId}
+    `;
+
+    if (remoteCheck.length > 0) continue; // parent already exists remotely
+
+    // Fetch parent from local DB
+    const localRow = await localClient.query(
+      `SELECT * FROM ${q(parentTable)} WHERE id = $1`,
+      [parentId]
+    );
+
+    if (localRow.rows.length === 0) {
+      console.warn(`[Sync Push] Parent ${parentTable}:${parentId} not found locally either`);
+      continue;
+    }
+
+    const parentRecord = localRow.rows[0];
+
+    // Recursively push the parent's parents first
+    await tryPushMissingParents(sql, localClient, parentTable, parentRecord, depth + 1);
+
+    try {
+      await upsertToRemote(sql, parentTable, parentRecord);
+      console.log(`[Sync Push] Auto-pushed missing parent ${parentTable}:${parentId}`);
+      pushedAny = true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[Sync Push] Failed to auto-push parent ${parentTable}:${parentId}: ${msg}`);
+    }
+  }
+
+  return pushedAny;
 }
 
 /** Tables with unique constraints beyond the primary key (id).

@@ -56,6 +56,8 @@ export default function SupabaseSyncPanel() {
   const [syncing, setSyncing] = useState(false);
   const [initialSyncing, setInitialSyncing] = useState(false);
   const [initialSyncDirection, setInitialSyncDirection] = useState<'push' | 'pull' | 'merge'>('push');
+  const [resolvingIds, setResolvingIds] = useState<Set<number>>(new Set());
+  const [bulkResolving, setBulkResolving] = useState(false);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -88,11 +90,11 @@ export default function SupabaseSyncPanel() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      await Promise.all([fetchConfig(), fetchStatus()]);
+      await Promise.all([fetchConfig(), fetchStatus(), fetchConflicts()]);
       setLoading(false);
     };
     load();
-  }, [fetchConfig, fetchStatus]);
+  }, [fetchConfig, fetchStatus, fetchConflicts]);
 
   // Auto-refresh status every 10 seconds when enabled
   useEffect(() => {
@@ -207,6 +209,7 @@ export default function SupabaseSyncPanel() {
   };
 
   const handleResolveConflict = async (changelogId: number, strategy: 'keep-local' | 'use-remote' | 'discard') => {
+    setResolvingIds(prev => new Set(prev).add(changelogId));
     try {
       const result = await api.supabase.resolveConflict(changelogId, strategy);
       if (result.success) {
@@ -216,7 +219,48 @@ export default function SupabaseSyncPanel() {
       }
     } catch (error) {
       toast.error('Failed to resolve conflict');
+    } finally {
+      setResolvingIds(prev => {
+        const next = new Set(prev);
+        next.delete(changelogId);
+        return next;
+      });
     }
+  };
+
+  const handleBulkResolve = async (strategy: 'keep-local' | 'use-remote' | 'discard') => {
+    const label = strategy === 'keep-local' ? 'Keep Local' : strategy === 'use-remote' ? 'Use Remote' : 'Discard';
+    setBulkResolving(true);
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const conflict of conflicts) {
+      setResolvingIds(prev => new Set(prev).add(conflict.changelogId));
+      try {
+        const result = await api.supabase.resolveConflict(conflict.changelogId, strategy);
+        if (result.success) succeeded++;
+        else failed++;
+      } catch {
+        failed++;
+      } finally {
+        setResolvingIds(prev => {
+          const next = new Set(prev);
+          next.delete(conflict.changelogId);
+          return next;
+        });
+      }
+    }
+
+    setBulkResolving(false);
+
+    if (failed === 0) {
+      toast.success(`${label}: resolved ${succeeded} conflict(s)`);
+    } else {
+      toast.error(`${label}: ${succeeded} resolved, ${failed} failed`);
+    }
+
+    fetchConflicts();
+    fetchStatus();
   };
 
   const getStateBadge = (state: string) => {
@@ -465,36 +509,80 @@ export default function SupabaseSyncPanel() {
           <h3 className="text-sm font-medium text-text-primary mb-2">
             Sync Conflicts ({conflicts.length})
           </h3>
+
+          {/* Bulk action buttons when more than 5 conflicts */}
+          {conflicts.length > 5 && (
+            <div className="flex items-center gap-2 mb-3 p-3 bg-surface-secondary rounded-lg border border-border">
+              <span className="text-xs text-text-secondary mr-1">Resolve all:</span>
+              <button
+                onClick={() => handleBulkResolve('keep-local')}
+                disabled={bulkResolving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50"
+              >
+                {bulkResolving ? <FaSpinner className="animate-spin" /> : null}
+                Keep All Local
+              </button>
+              <button
+                onClick={() => handleBulkResolve('use-remote')}
+                disabled={bulkResolving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-text-secondary text-white rounded hover:opacity-80 disabled:opacity-50"
+              >
+                {bulkResolving ? <FaSpinner className="animate-spin" /> : null}
+                Use All Remote
+              </button>
+              <button
+                onClick={() => handleBulkResolve('discard')}
+                disabled={bulkResolving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-danger border border-danger rounded hover:bg-danger-light disabled:opacity-50"
+              >
+                {bulkResolving ? <FaSpinner className="animate-spin" /> : null}
+                Discard All
+              </button>
+            </div>
+          )}
+
           <div className="space-y-2">
-            {conflicts.map(conflict => (
-              <div key={conflict.changelogId} className="p-3 bg-surface-secondary rounded-lg border text-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-text-primary">
-                    {conflict.table} / {conflict.recordId.slice(0, 8)}...
-                  </span>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleResolveConflict(conflict.changelogId, 'keep-local')}
-                      className="px-2 py-1 text-xs bg-primary text-white rounded hover:bg-primary-hover"
-                    >
-                      Keep Local
-                    </button>
-                    <button
-                      onClick={() => handleResolveConflict(conflict.changelogId, 'use-remote')}
-                      className="px-2 py-1 text-xs bg-text-secondary text-white rounded hover:opacity-80"
-                    >
-                      Use Remote
-                    </button>
-                    <button
-                      onClick={() => handleResolveConflict(conflict.changelogId, 'discard')}
-                      className="px-2 py-1 text-xs text-danger border border-danger rounded hover:bg-danger-light"
-                    >
-                      Discard
-                    </button>
+            {conflicts.map(conflict => {
+              const isResolving = resolvingIds.has(conflict.changelogId);
+              return (
+                <div key={conflict.changelogId} className={`p-3 bg-surface-secondary rounded-lg border text-sm ${isResolving ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-text-primary">
+                      {conflict.table} / {conflict.recordId.slice(0, 8)}...
+                    </span>
+                    <div className="flex gap-1">
+                      {isResolving ? (
+                        <FaSpinner className="animate-spin text-text-tertiary" />
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleResolveConflict(conflict.changelogId, 'keep-local')}
+                            disabled={bulkResolving}
+                            className="px-2 py-1 text-xs bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50"
+                          >
+                            Keep Local
+                          </button>
+                          <button
+                            onClick={() => handleResolveConflict(conflict.changelogId, 'use-remote')}
+                            disabled={bulkResolving}
+                            className="px-2 py-1 text-xs bg-text-secondary text-white rounded hover:opacity-80 disabled:opacity-50"
+                          >
+                            Use Remote
+                          </button>
+                          <button
+                            onClick={() => handleResolveConflict(conflict.changelogId, 'discard')}
+                            disabled={bulkResolving}
+                            className="px-2 py-1 text-xs text-danger border border-danger rounded hover:bg-danger-light disabled:opacity-50"
+                          >
+                            Discard
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

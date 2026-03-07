@@ -1,6 +1,6 @@
 {
   "name": "budget-app",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
@@ -26,7 +26,7 @@
     "build:linux:quick": "node installer/build-cross-platform.js --platform linux --skip-build",
     "build:darwin": "node installer/build-cross-platform.js --platform darwin",
     "build:darwin:quick": "node installer/build-cross-platform.js --platform darwin --skip-build",
-    "build:all": "node installer/build-installer.js --skip-inno && node installer/build-cross-platform.js --platform linux --skip-build && node installer/build-cross-platform.js --platform darwin --skip-build"
+    "build:all": "node installer/build-installer.js && node installer/build-cross-platform.js --platform linux --skip-build && node installer/build-cross-platform.js --platform darwin --skip-build"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.2",
