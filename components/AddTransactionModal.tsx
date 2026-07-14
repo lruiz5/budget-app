@@ -86,6 +86,8 @@ export default function AddTransactionModal({
   const [isNonEarned, setIsNonEarned] = useState(false);
 
   const isEditMode = !!transactionToEdit;
+  // Editing a transaction that isn't assigned to a budget item yet — allow saving without one
+  const allowUncategorized = isEditMode && !transactionToEdit?.budgetItemId;
 
   // Populate form when editing
   useEffect(() => {
@@ -97,7 +99,13 @@ export default function AddTransactionModal({
       setLinkedAccountId(transactionToEdit.linkedAccountId?.toString() || "");
       setBudgetItemId(transactionToEdit.budgetItemId?.toString() || "");
       setTagCategoryType(transactionToEdit.tagCategoryType || "");
-      setDescription(transactionToEdit.description || "");
+      // Hide legacy auto-filled descriptions (merchant mirror / filler) — Notes is user context only
+      const desc = transactionToEdit.description || "";
+      const isAutoFilled =
+        desc === "Manual transaction" ||
+        (!!transactionToEdit.merchant &&
+          desc.toLowerCase() === transactionToEdit.merchant.toLowerCase());
+      setDescription(isAutoFilled ? "" : desc);
       setIsNonEarned(transactionToEdit.isNonEarned || false);
     } else {
       // Reset form for new transaction
@@ -116,15 +124,12 @@ export default function AddTransactionModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!amount || !budgetItemId) return;
+    if (!amount || (!budgetItemId && !allowUncategorized)) return;
 
-    // For edit mode, preserve the original description if merchant is empty
-    // For new transactions, use 'Manual transaction' as fallback
+    // Notes hold user-entered context only — never mirror the merchant into description.
+    // Lists render `merchant || description`, so a filler is only needed when both are empty.
     const descriptionValue =
-      description.trim() ||
-      (isEditMode
-        ? merchant.trim() || transactionToEdit.description
-        : merchant.trim() || "Manual transaction");
+      description.trim() || (merchant.trim() ? "" : "Manual transaction");
 
     const transactionData = {
       budgetItemId,
@@ -318,9 +323,13 @@ export default function AddTransactionModal({
               value={budgetItemId}
               onChange={(e) => setBudgetItemId(e.target.value)}
               className="w-full px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
-              required
+              required={!allowUncategorized}
             >
-              <option value="">Select a budget item...</option>
+              <option value="">
+                {allowUncategorized
+                  ? "Uncategorized (assign later)"
+                  : "Select a budget item..."}
+              </option>
               {budgetItems.map((group) => (
                 <optgroup key={group.category} label={group.category}>
                   {group.items.map((item) => (

@@ -138,9 +138,10 @@ struct AddTransactionSheet: View {
         guard let budgetItemId = selectedBudgetItemId,
               let amountDecimal = Decimal(string: amount) else { return }
 
-        // Use merchant as description fallback, matching web behavior
+        // Notes hold user context only — never mirror the merchant into description.
+        // Lists render merchant ?? description, so a filler is only needed when both are empty.
         let finalDescription = description.isEmpty
-            ? (merchant.isEmpty ? "Manual transaction" : merchant)
+            ? (merchant.isEmpty ? "Manual transaction" : "")
             : description
 
         isSaving = true
