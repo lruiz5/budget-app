@@ -6,7 +6,10 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Budget, BudgetItem, BudgetCategory } from "@/types/budget";
 import { transformDbBudgetToAppBudget } from "@/lib/budgetHelpers";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { FaCalendarAlt, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { Calendar } from "lucide-react";
+import MonthNavigator from "@/components/MonthNavigator";
+import Card from "@/components/ui/Card";
+import Skeleton from "@/components/ui/Skeleton";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -112,24 +115,6 @@ function CashFlowPage() {
     router.replace(`/cash-flow?month=${month}&year=${year}`, { scroll: false });
   }, [month, year, router]);
 
-  const goToPreviousMonth = () => {
-    if (month === 0) {
-      setMonth(11);
-      setYear(year - 1);
-    } else {
-      setMonth(month - 1);
-    }
-  };
-
-  const goToNextMonth = () => {
-    if (month === 11) {
-      setMonth(0);
-      setYear(year + 1);
-    } else {
-      setMonth(month + 1);
-    }
-  };
-
   // Build scheduled and unscheduled items from budget
   const { scheduledItems, unscheduledItems } = (() => {
     if (!budget) return { scheduledItems: [] as ScheduledItem[], unscheduledItems: [] as ScheduledItem[] };
@@ -188,55 +173,70 @@ function CashFlowPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <FaCalendarAlt className="text-primary" size={24} />
+            <Calendar className="text-primary" size={24} />
             <h1 className="text-2xl font-bold text-text-primary">Cash Flow</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={goToPreviousMonth}
-              className="p-2 rounded-lg hover:bg-surface-secondary transition-colors"
-            >
-              <FaChevronLeft size={14} className="text-text-secondary" />
-            </button>
-            <span className="text-lg font-semibold text-text-primary min-w-[180px] text-center">
-              {MONTH_NAMES[month]} {year}
-            </span>
-            <button
-              onClick={goToNextMonth}
-              className="p-2 rounded-lg hover:bg-surface-secondary transition-colors"
-            >
-              <FaChevronRight size={14} className="text-text-secondary" />
-            </button>
-          </div>
+          <MonthNavigator
+            month={month}
+            year={year}
+            onChange={(m, y) => {
+              setMonth(m);
+              setYear(y);
+            }}
+          />
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <div className="max-w-3xl mx-auto space-y-6">
+            <div className="grid grid-cols-3 gap-4">
+              {[0, 1, 2].map((i) => (
+                <Card key={i} className="p-4">
+                  <Skeleton className="h-4 w-28 mb-2" />
+                  <Skeleton className="h-7 w-24" />
+                </Card>
+              ))}
+            </div>
+            <Card className="overflow-hidden">
+              <div className="px-6 py-4 border-b border-border">
+                <Skeleton className="h-6 w-28" />
+              </div>
+              <div className="divide-y divide-border">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="px-6 py-3 flex items-center gap-4">
+                    <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                ))}
+              </div>
+            </Card>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto space-y-6">
             {/* Summary Cards */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-surface rounded-lg border border-border p-4">
+              <Card className="p-4">
                 <p className="text-sm text-text-tertiary mb-1">Scheduled Income</p>
                 <p className="text-xl font-bold text-success">+${formatCurrency(totalScheduledIncome)}</p>
-              </div>
-              <div className="bg-surface rounded-lg border border-border p-4">
+              </Card>
+              <Card className="p-4">
                 <p className="text-sm text-text-tertiary mb-1">Scheduled Expenses</p>
                 <p className="text-xl font-bold text-danger">-${formatCurrency(totalScheduledExpenses)}</p>
-              </div>
-              <div className="bg-surface rounded-lg border border-border p-4">
+              </Card>
+              <Card className="p-4">
                 <p className="text-sm text-text-tertiary mb-1">Net Cash Flow</p>
                 <p className={`text-xl font-bold ${runningBalance >= 0 ? "text-success" : "text-danger"}`}>
                   {runningBalance >= 0 ? "+" : "-"}${formatCurrency(Math.abs(runningBalance))}
                 </p>
-              </div>
+              </Card>
             </div>
 
             {/* Scheduled Timeline */}
             {scheduledItems.length > 0 && (
-              <div className="bg-surface rounded-lg border border-border overflow-hidden">
+              <Card className="overflow-hidden">
                 <div className="px-6 py-4 border-b border-border">
                   <h2 className="text-lg font-semibold text-text-primary">Scheduled</h2>
                 </div>
@@ -282,12 +282,12 @@ function CashFlowPage() {
                     );
                   })}
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Unscheduled */}
             {unscheduledItems.length > 0 && (
-              <div className="bg-surface rounded-lg border border-border overflow-hidden">
+              <Card className="overflow-hidden">
                 <div className="px-6 py-4 border-b border-border">
                   <h2 className="text-lg font-semibold text-text-secondary">Unscheduled</h2>
                   <p className="text-sm text-text-tertiary mt-0.5">
@@ -318,18 +318,18 @@ function CashFlowPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Empty State */}
             {scheduledItems.length === 0 && unscheduledItems.length === 0 && (
-              <div className="bg-surface rounded-lg border border-border p-12 text-center">
-                <FaCalendarAlt className="mx-auto text-text-tertiary mb-4" size={32} />
+              <Card className="p-12 text-center">
+                <Calendar className="mx-auto text-text-tertiary mb-4" size={32} />
                 <h3 className="text-lg font-semibold text-text-primary mb-2">No budget items yet</h3>
                 <p className="text-text-secondary">
                   Add items to your budget and set expected dates to see your cash flow timeline.
                 </p>
-              </div>
+              </Card>
             )}
           </div>
         )}

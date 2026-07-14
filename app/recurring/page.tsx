@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  FaPlus,
-  FaEdit,
-  FaTrash,
-  FaCheck,
-  FaExclamationTriangle,
-} from "react-icons/fa";
+  Plus,
+  SquarePen,
+  Trash2,
+  Check,
+  TriangleAlert,
+} from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   RecurringPayment,
@@ -246,7 +246,7 @@ function RecurringPage() {
               onClick={() => setShowAddForm(true)}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
             >
-              <FaPlus size={14} />
+              <Plus size={14} />
               Add Payment
             </button>
           </div>
@@ -255,7 +255,7 @@ function RecurringPage() {
           {upcomingPayments.length > 0 && (
             <div className="bg-warning-light border border-warning rounded-lg p-4 mb-6">
               <div className="flex items-center gap-2 mb-3">
-                <FaExclamationTriangle className="text-warning" />
+                <TriangleAlert size={16} className="text-warning" />
                 <h2 className="font-semibold text-text-primary">
                   Due Within 30 Days
                 </h2>
@@ -472,14 +472,14 @@ function RecurringPage() {
                         className="p-2 text-text-tertiary hover:text-text-secondary transition-colors"
                         title="Edit"
                       >
-                        <FaEdit size={14} />
+                        <SquarePen size={14} />
                       </button>
                       <button
                         onClick={() => handleDelete(payment.id)}
                         className="p-2 text-text-tertiary hover:text-danger transition-colors"
                         title="Delete"
                       >
-                        <FaTrash size={14} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
@@ -518,7 +518,7 @@ function RecurringPage() {
                     ) : payment.isPaid ? (
                       <div className="flex items-center gap-2 py-2">
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-success-light text-success rounded-full">
-                          <FaCheck size={12} />
+                          <Check size={12} />
                           <span className="text-sm font-medium">Paid</span>
                         </div>
                         <span className="text-sm text-text-secondary">
@@ -530,7 +530,7 @@ function RecurringPage() {
                           className="p-1 text-text-tertiary hover:text-text-secondary transition-colors"
                           title="Adjust funding"
                         >
-                          <FaEdit size={12} />
+                          <SquarePen size={12} />
                         </button>
                       </div>
                     ) : (
@@ -546,7 +546,7 @@ function RecurringPage() {
                               className="p-1 text-text-tertiary hover:text-text-secondary transition-colors"
                               title="Adjust funding"
                             >
-                              <FaEdit size={10} />
+                              <SquarePen size={10} />
                             </button>
                           </div>
                           <span className="font-medium text-text-secondary">

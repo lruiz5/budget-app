@@ -2,10 +2,10 @@
 
 ## Project Overview
 
-Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration via Teller API.
+Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank integration was via Teller API — **Teller shut down July 2026**; migrating to SimpleFIN Bridge (see Current State).
 
 **Web App:** v1.14.0 (stable)  |  **iOS App:** v0.20.0 (pre-release) — **iOS app name: Happy Tusk**
-**Last Session:** 2026-03-06
+**Last Session:** 2026-07-14
 
 ## Instructions for Claude
 
@@ -14,7 +14,7 @@ Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) co
 
 ## Tech Stack
 
-**Web:** Next.js 16.x (App Router), TypeScript, Tailwind CSS, Drizzle ORM, Supabase PostgreSQL, Clerk auth, Teller API, D3.js charts, react-icons/fa
+**Web:** Next.js 16.x (App Router), TypeScript, Tailwind CSS, Drizzle ORM, Supabase PostgreSQL, Clerk auth, Teller API, D3.js charts, lucide-react icons (react-icons removed Jul 2026; functional emoji replaced with icons — category emojis are user data and stay)
 
 **iOS:** Swift 5.9+, SwiftUI (iOS 17+), MVVM, Clerk iOS SDK, URLSession async/await
 
@@ -87,7 +87,11 @@ Budget (month/year) → Buffer + Categories (Income, Giving, Household, Transpor
 
 **API Routes:** `budgets/` (GET auto-creates), `budgets/list/` (GET read-only, no auto-create), `budget-categories/`, `transactions/`, `transactions/split/`, `recurring-payments/`, `teller/` (accounts, sync, balances), `onboarding/`, `budgets/copy/`, `budgets/reset/`, `auth/claim-data/`
 
-**Utilities:** `lib/budgetHelpers.ts`, `lib/teller.ts`, `lib/auth.ts`, `lib/formatCurrency.ts`, `lib/chartColors.ts`, `lib/chartHelpers.ts`
+**Utilities:** `lib/budgetHelpers.ts`, `lib/teller.ts`, `lib/auth.ts`, `lib/formatCurrency.ts`, `lib/chartColors.ts`, `lib/chartHelpers.ts`, `lib/cn.ts` (class joiner, no tailwind-merge — don't pass conflicting utilities)
+
+**UI Primitives (`components/ui/`, added Jul 2026):** `Button` (variants: primary/secondary/ghost/danger/dangerGhost; sizes sm/md/lg; defaults `type="button"`), `Modal` (Escape + backdrop-click close, `title` or custom `header`, optional `footer`, sizes sm–xl), `Card` (standard surface: `rounded-xl border shadow-sm`), `Input`, `Select`, `CurrencyInput` ($-prefix, hidden spinners, select-on-focus, `wrapperClassName`), `Skeleton` (pulse placeholder — page loading states are skeleton layouts shaped like the content, not spinners). **Always use these instead of hand-rolling modals/buttons/cards.** Onboarding + deprecated recurring page not yet migrated.
+
+**Month navigation:** `MonthYearPicker` (shared year-stepper + month-grid popover panel; parent owns open state/outside-click) and `MonthNavigator` (compact `< July 2026 ▾ >` control used on Cash Flow + Insights). `BudgetHeader` uses `MonthYearPicker` on its title and hosts an `Ellipsis` overflow menu — Reset Budget lives there (via `onResetBudget` prop), not in the budget column.
 
 ## Important Code Patterns
 
@@ -120,6 +124,13 @@ const { userId } = authResult;
 - **Read:** `parseFloat(String(value))` for arithmetic
 - **Write:** `String(value)` for DB inserts
 
+### Transaction Description = User Notes Only
+
+- `description` = user-entered notes ("what was bought"); `merchant` = who. Never mirror merchant into description (fixed Jul 2026, web + iOS)
+- All lists render `merchant || description`; `"Manual transaction"` filler only when both empty. POST `/api/transactions` accepts empty description
+- Legacy mirrored values are hidden when the edit form opens and cleaned on next save
+- Uncategorized (New tab) transactions are click-to-edit; budget item optional in edit modal (`allowUncategorized`), empty → stays uncategorized
+
 ### iOS Formatter Pattern
 
 All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cached as static singletons in `Formatters` enum (`Utilities/Extensions.swift`). Never create inline formatter instances — always use `Formatters.currency`, `Formatters.yearMonthDay`, `Formatters.dateMediumUTC`, etc.
@@ -131,6 +142,7 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 ## UI Patterns
 
 **Web colors:** `globals.css` tokens — Income=`text-success`, Expense/Over=`text-danger`, Primary=`bg-primary`
+**Web sidebar:** dark rail; wordmark = gradient Wallet mark + "BudgetApp" (no image asset, built in `Sidebar.tsx`); active nav = left `bg-primary` accent bar + `bg-sidebar-hover` tint + `text-primary-border` icon (no filled pill); collapsed rail stacks mark above expand toggle
 **Category emojis:** Income💰 Giving🤲 Household🏠 Transportation🚗 Food🍽️ Personal👤 Insurance🛡️ Saving💵 Custom=📁
 **iOS budget page:** `ScrollView` + `LazyVStack` (not `List`) for custom card corner radii. Summary card (Buffer + `MiniProgressRing`). Bottom banner: gray/orange/green/red by allocation state. Progress bars as 2px Capsule dividers. Collapsible category headers. Custom `SwipeToDeleteRow` (DragGesture) + `BudgetItemDropDelegate` (onDrag/onDrop, handles both reorder and transaction assignment). Floating pill tray (`FloatingTransactionPill`) for drag-to-categorize uncategorized transactions.
 
@@ -156,6 +168,8 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 | seed-demo.ts FK error on linked_accounts | Uncategorized transactions (`budgetItemId=null`) survive budget cascade-delete and still reference `linked_accounts.id`. Fix: delete transactions per account before deleting the account. |
 | iOS stale UI after mutations | Cache-first reload flashes old data. Use `loadBudget(skipCache: true)` / `loadTransactions(skipCache: true)` after mutations. Optimistic local updates for instant feedback. |
 | iOS uncategorize transaction fails | `encodeIfPresent` omits nil `budgetItemId`. Use `clearBudgetItemId` flag + `encodeNil` to send explicit null. |
+| Linked account delete FK error | `transactions.linkedAccountId` FK has no `onDelete` rule. DELETE route detaches transactions (`linkedAccountId=null`) before deleting the account — history preserved as manual. |
+| Uncategorized txns vanish after account delete | GET `/api/teller/sync` only returns txns whose linked account still exists (returns `[]` if no accounts). Detached uncategorized txns are unreachable from the New tab. |
 
 ## Development Commands
 
@@ -172,11 +186,19 @@ See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 ## Current State & Next Steps
 
-**Web:** v1.15.0 — cash flow feature pending Vercel deployment
+**Web:** v1.16.0 — web UI refresh done Jul 2026 (lucide icons, `components/ui` primitives, skeletons, shared month nav, sidebar restyle; dark mode deliberately deferred). Cash flow feature pending Vercel deployment
 
 **iOS:** v0.20.0 — pre-release. Cash flow tab (buffer + tap-to-edit) + WidgetKit widgets (7 total) + deep links + Memoji. See `ios/BudgetApp/CHANGELOG.md`.
 
 **Pending deployment:** Cash flow deployed to Vercel. Budget items PUT route has try/catch error handling (local, not yet deployed).
+
+**Bank sync — Teller is DEAD (priority):** Teller shut down its API ~2026-07-09 (last synced transactions 2026-07-07; gap manually backfilled through 2026-07-13). Replacement chosen: **SimpleFIN Bridge** ($15/yr consumer-paid, MX-backed, read-only, daily refresh ≤24 req/day). Migration plan:
+- Free demo verified end-to-end: developer page mints demo Setup Tokens; flow = base64-decode token → POST claim URL → returns access URL → GET `/accounts?version=2` with Basic auth (accounts + transactions + balances in one call)
+- New `lib/simplefin.ts` (plain `fetch`, no mTLS certs) + `api/simplefin/*` routes; reuse existing sync business logic (pending→posted fuzzy match, categorization preservation, soft deletes)
+- Field mapping: `payee` → merchant; description (notes) left EMPTY (user-only, see pattern above); amounts = signed decimal strings; dates = unix timestamps (keep UTC); history windowed 90 days/request
+- **Dedup guard:** set each account's `syncStartDate` = 2026-07-07 before first sync (SimpleFIN txn IDs differ from Teller's → duplicates otherwise)
+- Web UI: replace Teller Connect script in `settings/page.tsx` with paste-Setup-Token form; iOS: replace `TellerConnectView` with token-entry sheet (`AccountsService` unchanged — talks to our API)
+- Also planned: CSV/QFX import feature as vendor-proof fallback/backfill
 
 **Next iOS work:**
 - Renew Apple Developer membership ($99/yr) — required for TestFlight + App Store upload

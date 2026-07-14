@@ -17,6 +17,7 @@
   --danger-light: #fef2f2;
   --warning: #eab308;
   --warning-light: #fefce8;
+  --warning-strong: #854d0e; /* readable warning text/fills on warning-light (yellow-800) */
   --info: #2563eb;
   --info-light: #eff6ff;
 
@@ -38,7 +39,7 @@
   /* Text */
   --text-primary: #111827;
   --text-secondary: #4b5563;
-  --text-tertiary: #9ca3af;
+  --text-tertiary: #6b7280; /* gray-500: 4.6:1 on white (WCAG AA); gray-400 failed at 2.8:1 */
 
   /* Sidebar */
   --sidebar-bg: #111827;
@@ -65,6 +66,7 @@
   --color-danger-light: var(--danger-light);
   --color-warning: var(--warning);
   --color-warning-light: var(--warning-light);
+  --color-warning-strong: var(--warning-strong);
   --color-info: var(--info);
   --color-info-light: var(--info-light);
 
@@ -101,6 +103,8 @@ body {
   width: 100%;
   background: var(--background);
   color: var(--foreground);
+  /* Fixed-width digits so currency columns don't shift as values change */
+  font-variant-numeric: tabular-nums;
 }
 
 @layer base {

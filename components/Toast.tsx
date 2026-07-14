@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { HiCheckCircle, HiExclamationCircle, HiInformationCircle, HiXCircle, HiXMark } from 'react-icons/hi2';
+import { CircleCheck, CircleAlert, Info, CircleX, X } from "lucide-react";
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -15,28 +15,28 @@ export interface ToastProps {
 
 const toastConfig = {
   success: {
-    icon: HiCheckCircle,
+    icon: CircleCheck,
     borderColor: 'border-success',
     bgColor: 'bg-success-light',
     textColor: 'text-success',
     iconColor: 'text-success',
   },
   error: {
-    icon: HiXCircle,
+    icon: CircleX,
     borderColor: 'border-danger',
     bgColor: 'bg-danger-light',
     textColor: 'text-danger',
     iconColor: 'text-danger',
   },
   warning: {
-    icon: HiExclamationCircle,
+    icon: CircleAlert,
     borderColor: 'border-warning',
     bgColor: 'bg-warning-light',
     textColor: 'text-warning',
     iconColor: 'text-warning',
   },
   info: {
-    icon: HiInformationCircle,
+    icon: Info,
     borderColor: 'border-info',
     bgColor: 'bg-info-light',
     textColor: 'text-info',
@@ -94,7 +94,7 @@ export default function Toast({ id, type, message, duration = 4000, onDismiss }:
         `}
         aria-label="Close"
       >
-        <HiXMark className="w-5 h-5" />
+        <X className="w-5 h-5" />
       </button>
     </div>
   );

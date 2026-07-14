@@ -1,6 +1,6 @@
 'use client';
 
-import { FaPiggyBank, FaBalanceScale, FaBullseye } from 'react-icons/fa';
+import { PiggyBank, Scale, Target } from "lucide-react";
 
 interface ConceptsStepProps {
   onNext: () => void;
@@ -9,17 +9,17 @@ interface ConceptsStepProps {
 
 const concepts = [
   {
-    icon: <FaPiggyBank size={32} className="text-primary" />,
+    icon: <PiggyBank size={32} className="text-primary" />,
     title: 'Start with your buffer',
     description: 'Your buffer is money carried over from last month — your starting balance for the new month.',
   },
   {
-    icon: <FaBalanceScale size={32} className="text-primary" />,
+    icon: <Scale size={32} className="text-primary" />,
     title: 'Assign every dollar',
     description: 'Zero-based means every dollar is assigned a purpose — whether that\'s bills, savings, or fun money. It doesn\'t mean spend everything; it means plan for everything, including what you set aside.',
   },
   {
-    icon: <FaBullseye size={32} className="text-primary" />,
+    icon: <Target size={32} className="text-primary" />,
     title: 'Stay balanced',
     description: 'When your budget shows $0 left to assign, you\'re balanced! Track spending against your plan throughout the month.',
   },
@@ -52,7 +52,7 @@ export default function ConceptsStep({ onNext, onBack }: ConceptsStepProps) {
       <div className="bg-surface rounded-xl shadow-md p-6 mb-10">
         <p className="text-sm text-text-tertiary font-medium uppercase tracking-wide mb-3">Example</p>
         <div className="font-mono text-sm space-y-1 text-text-secondary">
-          <div className="flex justify-between"><span>💼 Buffer</span><span>$500</span></div>
+          <div className="flex justify-between"><span>Buffer</span><span>$500</span></div>
           <div className="flex justify-between"><span>💰 Income</span><span>+ $3,000</span></div>
           <div className="border-t border-border my-2" />
           <div className="flex justify-between font-semibold text-text-primary"><span>Total Available</span><span>$3,500</span></div>
@@ -62,7 +62,7 @@ export default function ConceptsStep({ onNext, onBack }: ConceptsStepProps) {
           <div className="flex justify-between"><span>👤 Personal</span><span>$300</span></div>
           <div className="flex justify-between"><span>💵 Saving</span><span>$1,000</span></div>
           <div className="border-t border-border my-2" />
-          <div className="flex justify-between font-semibold text-success"><span>Left to budget</span><span>$0.00 ✅</span></div>
+          <div className="flex justify-between font-semibold text-success"><span>Left to budget</span><span>$0.00</span></div>
         </div>
       </div>
 

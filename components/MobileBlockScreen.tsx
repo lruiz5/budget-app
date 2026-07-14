@@ -1,13 +1,13 @@
 'use client';
 
-import { FaDesktop } from 'react-icons/fa';
+import { Monitor } from "lucide-react";
 
 export default function MobileBlockScreen() {
   return (
     <div className="md:hidden fixed inset-0 z-50 bg-surface-primary flex items-center justify-center p-8">
       <div className="text-center max-w-sm">
         <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-6">
-          <FaDesktop className="text-primary text-2xl" />
+          <Monitor size={24} className="text-primary" />
         </div>
         <h1 className="text-xl font-semibold text-text-primary mb-3">
           Not Optimized for Mobile

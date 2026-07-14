@@ -8,7 +8,7 @@ import { transformBudgetToFlowData, hasIncomeAndExpenses } from '@/lib/chartHelp
 import { formatCurrency } from '@/lib/formatCurrency';
 import ChartTooltip from './ChartTooltip';
 import ChartEmptyState from './ChartEmptyState';
-import { FaChartPie } from 'react-icons/fa';
+import { ChartPie } from "lucide-react";
 
 interface FlowDiagramProps {
   budget: Budget | null;
@@ -316,7 +316,7 @@ export default function FlowDiagram({ budget }: FlowDiagramProps) {
   if (!hasData) {
     return (
       <ChartEmptyState
-        icon={<FaChartPie />}
+        icon={<ChartPie />}
         title="No cash flow data"
         message="Record both income and expenses to visualize how your money flows through your budget"
       />

@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import { BudgetItem } from "@/types/budget";
 import { getCategoryEmoji } from "@/lib/chartColors";
+import Modal from "@/components/ui/Modal";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import CurrencyInput from "@/components/ui/CurrencyInput";
 
 interface LinkedAccount {
   id: number;
@@ -182,13 +187,13 @@ export default function AddTransactionModal({
     : null;
 
   return (
-    <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50">
-      <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-        <h2 className="text-2xl font-bold text-text-primary mb-6">
-          {isEditMode ? "Edit Transaction" : "Add Transaction"}
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditMode ? "Edit Transaction" : "Add Transaction"}
+      size="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
           {/* Type - Radio buttons */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
@@ -223,22 +228,13 @@ export default function AddTransactionModal({
             <label className="block text-sm font-medium text-text-secondary mb-1">
               Amount
             </label>
-            <div className="relative">
-              <span className="absolute left-3 top-2 text-text-secondary">
-                $
-              </span>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                onFocus={(e) => e.target.select()}
-                placeholder="0.00"
-                step="0.01"
-                className="w-full pl-7 pr-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                required
-                autoFocus
-              />
-            </div>
+            <CurrencyInput
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              required
+              autoFocus
+            />
           </div>
 
           {/* Date */}
@@ -246,11 +242,10 @@ export default function AddTransactionModal({
             <label className="block text-sm font-medium text-text-secondary mb-1">
               Date
             </label>
-            <input
+            <Input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
           </div>
@@ -260,13 +255,12 @@ export default function AddTransactionModal({
             <label className="block text-sm font-medium text-text-secondary mb-1">
               Where did you spend this money?
             </label>
-            <input
+            <Input
               type="text"
               value={merchant}
               onChange={(e) => setMerchant(e.target.value)}
               onFocus={(e) => e.target.select()}
               placeholder="e.g., Costco, Amazon, Target"
-              className="w-full px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -276,13 +270,12 @@ export default function AddTransactionModal({
               Notes{" "}
               <span className="text-text-tertiary text-xs">(optional)</span>
             </label>
-            <input
+            <Input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onFocus={(e) => e.target.select()}
               placeholder="e.g., Secret Santa Gift"
-              className="w-full px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -293,16 +286,15 @@ export default function AddTransactionModal({
               <span className="text-text-tertiary text-xs">(optional)</span>
             </label>
             {hasLinkedAccount && linkedAccountDisplay ? (
-              <div className="w-full px-3 py-2 border border-border rounded bg-surface-secondary text-text-secondary">
+              <div className="w-full px-3 py-2 border border-border rounded-lg bg-surface-secondary text-text-secondary">
                 {linkedAccountDisplay.institutionName} -{" "}
                 {linkedAccountDisplay.accountName} *
                 {linkedAccountDisplay.lastFour}
               </div>
             ) : (
-              <select
+              <Select
                 value={linkedAccountId}
                 onChange={(e) => setLinkedAccountId(e.target.value)}
-                className="w-full px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
               >
                 <option value="">Select an account...</option>
                 {linkedAccounts.map((acct) => (
@@ -310,7 +302,7 @@ export default function AddTransactionModal({
                     {acct.institutionName} - {acct.accountName} *{acct.lastFour}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </div>
 
@@ -319,10 +311,9 @@ export default function AddTransactionModal({
             <label className="block text-sm font-medium text-text-secondary mb-1">
               Budget Item
             </label>
-            <select
+            <Select
               value={budgetItemId}
               onChange={(e) => setBudgetItemId(e.target.value)}
-              className="w-full px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
               required={!allowUncategorized}
             >
               <option value="">
@@ -339,7 +330,7 @@ export default function AddTransactionModal({
                   ))}
                 </optgroup>
               ))}
-            </select>
+            </Select>
           </div>
 
           {/* Report As Tag (optional) */}
@@ -349,10 +340,9 @@ export default function AddTransactionModal({
                 Report as{" "}
                 <span className="text-text-tertiary text-xs">(optional)</span>
               </label>
-              <select
+              <Select
                 value={tagCategoryType}
                 onChange={(e) => setTagCategoryType(e.target.value)}
-                className="w-full px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
               >
                 <option value="">None — use budget item category</option>
                 {categories.map((cat) => (
@@ -360,7 +350,7 @@ export default function AddTransactionModal({
                     {getCategoryEmoji(cat.key, cat.emoji)} {cat.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
 
@@ -387,33 +377,21 @@ export default function AddTransactionModal({
           )}
 
           <div className="flex gap-3 mt-6">
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover font-medium"
-            >
+            <Button type="submit" className="flex-1">
               {isEditMode ? "Save Changes" : "Add Transaction"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-border-strong text-text-secondary rounded hover:bg-border-strong font-medium"
-            >
+            </Button>
+            <Button variant="secondary" onClick={onClose} className="flex-1">
               Cancel
-            </button>
+            </Button>
           </div>
 
           {/* Delete button - only in edit mode */}
           {isEditMode && onDeleteTransaction && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="w-full px-4 py-2 bg-danger-light text-danger rounded hover:bg-danger-light font-medium mt-2"
-            >
+            <Button variant="dangerGhost" onClick={handleDelete} className="w-full mt-2">
               Delete Transaction
-            </button>
+            </Button>
           )}
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
