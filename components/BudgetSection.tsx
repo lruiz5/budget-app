@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BudgetCategory, BudgetItem, Transaction } from "@/types/budget";
-import { FaTrash, FaChevronDown, FaChevronRight } from "react-icons/fa";
+import { Trash2, ChevronDown, ChevronRight, GripVertical, RefreshCw, Calendar } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -21,6 +21,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatCurrency } from "@/lib/formatCurrency";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 
 interface BudgetSectionProps {
   category: BudgetCategory;
@@ -146,7 +149,7 @@ function SortableItem({
               title="Delete item"
               type="button"
             >
-              <FaTrash className="text-sm" />
+              <Trash2 size={14} />
             </button>
           )}
           <button
@@ -155,14 +158,14 @@ function SortableItem({
             className="cursor-grab active:cursor-grabbing text-text-tertiary hover:text-text-secondary px-1"
             title="Drag to reorder"
           >
-            ⋮⋮
+            <GripVertical size={14} />
           </button>
           {(item.transactions.length > 0 || (item.splitTransactions?.length || 0) > 0) && (
             <button
               onClick={() => onToggleExpanded(item.id)}
               className="text-text-secondary hover:text-text-primary"
             >
-              {isExpanded ? <FaChevronDown size={10} /> : <FaChevronRight size={10} />}
+              {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
             </button>
           )}
           <input
@@ -195,8 +198,8 @@ function SortableItem({
             className="flex-1 font-medium text-text-primary px-2 py-1 border border-transparent hover:bg-surface-secondary focus:border-primary rounded focus:outline-none focus:ring-2 focus:ring-primary"
           />
           {item.recurringPaymentId && (
-            <span className="text-xs text-primary" title="Recurring payment">
-              🔄
+            <span className="text-primary" title="Recurring payment">
+              <RefreshCw size={12} />
             </span>
           )}
           {editingDay ? (
@@ -228,19 +231,19 @@ function SortableItem({
             <button
               onClick={(e) => { e.stopPropagation(); setEditingDay(true); }}
               onPointerDown={(e) => e.stopPropagation()}
-              className="text-xs text-info bg-info-light px-1.5 py-0.5 rounded-full hover:bg-info/10 transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-info bg-info-light px-1.5 py-0.5 rounded-full hover:bg-info/10 transition-colors"
               title={`Expected on the ${item.expectedDay}${item.expectedDay >= 11 && item.expectedDay <= 13 ? 'th' : ['st','nd','rd'][(item.expectedDay % 10) - 1] || 'th'}`}
             >
-              📅 {item.expectedDay}{item.expectedDay >= 11 && item.expectedDay <= 13 ? 'th' : ['st','nd','rd'][(item.expectedDay % 10) - 1] || 'th'}
+              <Calendar size={11} /> {item.expectedDay}{item.expectedDay >= 11 && item.expectedDay <= 13 ? 'th' : ['st','nd','rd'][(item.expectedDay % 10) - 1] || 'th'}
             </button>
           ) : (
             <button
               onClick={(e) => { e.stopPropagation(); setEditingDay(true); }}
               onPointerDown={(e) => e.stopPropagation()}
-              className="text-xs text-text-tertiary hover:text-info opacity-0 group-hover:opacity-100 transition-opacity"
+              className="text-text-tertiary hover:text-info opacity-0 group-hover:opacity-100 transition-opacity"
               title="Set expected day"
             >
-              📅
+              <Calendar size={12} />
             </button>
           )}
           {(item.transactions.length > 0 || (item.splitTransactions?.length || 0) > 0) && (
@@ -582,7 +585,7 @@ export default function BudgetSection({
 
   return (
     <>
-      <div className="bg-surface rounded-lg shadow-sm overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="bg-surface border-b border-border px-6 py-4">
           <div className="grid grid-cols-10 gap-4 items-center">
             <h2 className="col-span-6 text-xl font-semibold text-text-primary flex items-center gap-2">
@@ -665,31 +668,27 @@ export default function BudgetSection({
 
           {isAddingItem && (
             <div className="mt-4 flex gap-2">
-              <input
+              <Input
                 type="text"
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addItem()}
                 onFocus={(e) => e.target.select()}
                 placeholder="Item name"
-                className="flex-1 px-3 py-2 border border-border-strong rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1"
                 autoFocus
               />
-              <button
-                onClick={addItem}
-                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover"
-              >
-                Add
-              </button>
-              <button
+              <Button onClick={addItem}>Add</Button>
+              <Button
+                variant="ghost"
                 onClick={() => {
                   setIsAddingItem(false);
                   setNewItemName("");
                 }}
-                className="px-4 py-2 bg-surface-secondary text-text-secondary rounded hover:bg-surface-secondary"
+                className="bg-surface-secondary"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           )}
 
@@ -702,7 +701,7 @@ export default function BudgetSection({
             </button>
           )}
         </div>
-      </div>
+      </Card>
     </>
   );
 }

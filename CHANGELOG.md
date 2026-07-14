@@ -12,6 +12,32 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.16.0] - 2026-07-14 - Web UI Refresh
+
+### Added
+
+- **UI primitives** (`components/ui/`) — `Button`, `Modal`, `Card`, `Input`, `Select`, `CurrencyInput`, `Skeleton` + `lib/cn.ts`; all modals, form fields, and cards migrated
+  - Modals gain Escape/backdrop-click dismissal, `role="dialog"`, close buttons, and a consistent 50% scrim
+- **Skeleton loading states** — page-shaped skeletons replace spinners on Budget, Insights, Cash Flow, and Settings
+- **Shared month navigation** — `MonthYearPicker` (extracted from BudgetHeader) + compact `MonthNavigator` on Cash Flow and Insights; Insights gets a month switcher for the first time; Cash Flow's month label now opens the picker
+- **Sidebar wordmark** — gradient Wallet mark + "BudgetApp"; visible in collapsed rail
+
+### Changed
+
+- **Icons** — react-icons (Font Awesome) fully replaced with lucide-react; functional emoji (💼 📅 🔄 ⋮⋮) replaced with icons (category emojis stay — they're user data)
+- **Typography** — global `tabular-nums` so currency columns don't shift as digits change
+- **Contrast** — `--text-tertiary` #9ca3af → #6b7280 (WCAG AA); new `--warning-strong` token
+- **MonthBanner** — rebuilt on warning tokens (was hardcoded yellows + clip-path blobs)
+- **Reset Budget** — moved from a full-width button in the budget column to a `⋯` overflow menu in the header
+- **Sidebar active state** — left accent bar + tint instead of filled pill
+- **Card treatment** — standardized on `rounded-xl border shadow-sm` across all surfaces
+
+### Removed
+
+- Dead `TransactionModal.tsx` (188 lines, unreferenced); `react-icons` dependency
+
+---
+
 ## [1.14.0] - 2026-03-05 - Unsplit Transactions & Insights Improvements
 
 ### Added

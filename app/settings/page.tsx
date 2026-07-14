@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Script from 'next/script';
-import { FaUniversity, FaTrash, FaSync } from 'react-icons/fa';
+import { Landmark, Trash2, RefreshCw } from "lucide-react";
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Skeleton from '@/components/ui/Skeleton';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -191,30 +194,22 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-bold text-text-primary mb-8">Accounts</h1>
 
           {/* Bank Connections Section */}
-          <div className="bg-surface rounded-lg shadow p-6 mb-6">
+          <Card className="p-6 mb-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-text-primary">
                 Linked Bank Accounts
               </h2>
               <div className="flex gap-3">
                 {accounts.length > 0 && (
-                  <button
-                    onClick={handleSyncAll}
-                    disabled={isSyncing}
-                    className="flex items-center gap-2 px-4 py-2 bg-text-secondary text-white rounded-lg hover:bg-text-secondary disabled:opacity-50"
-                  >
-                    <FaSync className={isSyncing ? 'animate-spin' : ''} />
+                  <Button variant="secondary" onClick={handleSyncAll} disabled={isSyncing}>
+                    <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
                     {isSyncing ? 'Syncing...' : 'Sync All'}
-                  </button>
+                  </Button>
                 )}
-                <button
-                  onClick={handleConnectBank}
-                  disabled={!tellerReady}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50"
-                >
-                  <FaUniversity />
+                <Button onClick={handleConnectBank} disabled={!tellerReady}>
+                  <Landmark size={16} />
                   Connect Bank
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -225,10 +220,21 @@ export default function SettingsPage() {
             )}
 
             {isLoading ? (
-              <p className="text-text-secondary">Loading accounts...</p>
+              <div className="space-y-4">
+                {[0, 1].map((i) => (
+                  <div key={i} className="flex items-center gap-3 py-3">
+                    <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                ))}
+              </div>
             ) : accounts.length === 0 ? (
               <div className="text-center py-8 text-text-secondary">
-                <FaUniversity className="mx-auto text-4xl mb-3 text-text-tertiary" />
+                <Landmark size={36} className="mx-auto mb-3 text-text-tertiary" />
                 <p>No bank accounts connected yet.</p>
                 <p className="text-sm mt-1">
                   Click &quot;Connect Bank&quot; to link your bank account and import transactions.
@@ -248,7 +254,7 @@ export default function SettingsPage() {
                     {/* Institution header */}
                     <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
                       <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center">
-                        <FaUniversity className="text-primary" />
+                        <Landmark size={16} className="text-primary" />
                       </div>
                       <h3 className="font-semibold text-text-primary">{institution}</h3>
                     </div>
@@ -296,7 +302,7 @@ export default function SettingsPage() {
                               className="p-2 text-danger hover:bg-danger-light rounded"
                               title="Disconnect account"
                             >
-                              <FaTrash />
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </div>
@@ -306,7 +312,7 @@ export default function SettingsPage() {
                 ))}
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Instructions */}
           <div className="bg-primary-light border border-primary-border rounded-lg p-4 text-sm text-primary">

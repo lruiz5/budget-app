@@ -55,7 +55,7 @@ export default function CompleteStep({ buffer, createdItems, addedTransaction }:
           <div className="flex justify-between items-center py-2">
             <span className="text-text-secondary">📝 First Transaction</span>
             <span className={`font-semibold ${addedTransaction ? 'text-success' : 'text-text-tertiary'}`}>
-              {addedTransaction ? '✅ Added' : 'Skipped'}
+              {addedTransaction ? 'Added' : 'Skipped'}
             </span>
           </div>
         </div>

@@ -11,7 +11,12 @@ import MonthlyReportModal from "@/components/MonthlyReportModal";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Budget, Transaction, BudgetItem, DEFAULT_CATEGORIES } from "@/types/budget";
 import { transformDbBudgetToAppBudget } from "@/lib/budgetHelpers";
-import { FaColumns, FaTimes, FaSearch } from "react-icons/fa";
+import { PanelRight, Search, X } from "lucide-react";
+import Modal from "@/components/ui/Modal";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Card from "@/components/ui/Card";
+import Skeleton from "@/components/ui/Skeleton";
 
 const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
   { label: 'Finance', emojis: ['💰', '💵', '💳', '🏦', '💎', '🪙', '📈', '📉', '💸', '🧾', '🏧'] },
@@ -303,8 +308,65 @@ function Home() {
   if (checkingOnboarding || loading || !budget) {
     return (
       <DashboardLayout>
-        <div className="h-full flex items-center justify-center">
-          <div className="text-xl text-text-secondary">Loading budget...</div>
+        <div className="h-full flex overflow-hidden">
+          <div className="flex-1 overflow-y-auto hide-scrollbar">
+            {/* Header skeleton */}
+            <div className="px-4 sm:px-6 lg:px-8 pt-8">
+              <div className="border-b border-border p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-9 w-56" />
+                    <Skeleton className="h-5 w-40" />
+                  </div>
+                  <Skeleton className="h-10 w-24 rounded-lg" />
+                </div>
+              </div>
+            </div>
+            {/* Budget cards skeleton */}
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+              <Card className="px-6 py-4 flex items-center justify-between">
+                <Skeleton className="h-6 w-64" />
+                <Skeleton className="h-8 w-36 rounded-lg" />
+              </Card>
+              {[0, 1, 2].map((i) => (
+                <Card key={i} className="overflow-hidden">
+                  <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+                    <Skeleton className="h-6 w-40" />
+                    <div className="flex gap-6">
+                      <Skeleton className="h-6 w-20" />
+                      <Skeleton className="h-6 w-20" />
+                    </div>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    {[0, 1, 2].map((j) => (
+                      <div key={j} className="flex items-center gap-4">
+                        <Skeleton className="h-5 flex-1" />
+                        <Skeleton className="h-5 w-20" />
+                        <Skeleton className="h-5 w-20" />
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+          {/* Summary sidebar skeleton */}
+          <div className="hidden lg:block w-xl bg-surface-secondary p-8">
+            <Card className="h-full p-8 space-y-8">
+              <div className="flex justify-center gap-12">
+                <Skeleton className="h-14 w-14 rounded-full" />
+                <Skeleton className="h-14 w-14 rounded-full" />
+              </div>
+              <div className="space-y-4">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex justify-between">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -435,6 +497,7 @@ function Home() {
               year={budget.year}
               remainingToBudget={remainingToBudget}
               onMonthChange={handleMonthChange}
+              onResetBudget={() => setIsResetBudgetOpen(true)}
             />
           </div>
 
@@ -478,7 +541,7 @@ function Home() {
                         className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 text-danger hover:bg-danger-light rounded transition-opacity"
                         title="Delete category"
                       >
-                        <FaTimes size={12} />
+                        <X size={12} />
                       </button>
                     )}
                   </div>
@@ -493,28 +556,13 @@ function Home() {
                 + Add Group
               </button>
 
-              {/* Reset Budget Button */}
-              <button
-                onClick={() => setIsResetBudgetOpen(true)}
-                className="w-full py-3 border-2 border-dotted border-danger/40 rounded-lg text-danger/60 hover:border-danger hover:text-danger transition-colors cursor-pointer"
-              >
-                Reset Budget
-              </button>
-
               {/* Reset Budget Modal */}
-              {isResetBudgetOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                  <div className="bg-surface rounded-xl shadow-2xl w-full max-w-md p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-text-primary">How would you like to reset your budget?</h3>
-                      <button
-                        onClick={() => { setIsResetBudgetOpen(false); setResetMode(null); }}
-                        className="text-text-tertiary hover:text-text-secondary p-1"
-                      >
-                        <FaTimes size={16} />
-                      </button>
-                    </div>
-
+              <Modal
+                isOpen={isResetBudgetOpen}
+                onClose={() => { setIsResetBudgetOpen(false); setResetMode(null); }}
+                title="How would you like to reset your budget?"
+                size="md"
+              >
                     {!resetMode ? (
                       <div className="space-y-3">
                         <button
@@ -541,14 +589,16 @@ function Home() {
                             : `This will delete all current items and replace them with ${getPreviousMonthName(budget.month)}'s budget. Transactions will be kept.`}
                         </p>
                         <div className="flex gap-3">
-                          <button
+                          <Button
+                            variant="secondary"
                             onClick={() => setResetMode(null)}
                             disabled={isResetting}
-                            className="flex-1 py-2 border border-border-strong rounded-lg text-text-secondary hover:bg-surface-secondary transition-colors"
+                            className="flex-1"
                           >
                             Back
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="danger"
                             disabled={isResetting}
                             onClick={async () => {
                               setIsResetting(true);
@@ -562,40 +612,31 @@ function Home() {
                               } catch (e) { console.error('Reset error:', e); }
                               setIsResetting(false);
                             }}
-                            className="flex-1 py-2 bg-danger text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                            className="flex-1"
                           >
                             {isResetting ? 'Resetting...' : 'Confirm Reset'}
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     )}
-                  </div>
-                </div>
-              )}
+              </Modal>
 
               {/* Add Group Modal */}
-              {isAddGroupOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                  <div className="bg-surface rounded-xl shadow-2xl w-full max-w-md p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-text-primary">New Category</h3>
-                      <button
-                        onClick={() => { setIsAddGroupOpen(false); setNewGroupName(''); setNewGroupEmoji('📋'); }}
-                        className="text-text-tertiary hover:text-text-secondary p-1"
-                      >
-                        <FaTimes size={16} />
-                      </button>
-                    </div>
-
+              <Modal
+                isOpen={isAddGroupOpen}
+                onClose={() => { setIsAddGroupOpen(false); setNewGroupName(''); setNewGroupEmoji('📋'); }}
+                title="New Category"
+                size="md"
+              >
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">Name</label>
-                        <input
+                        <Input
                           type="text"
                           value={newGroupName}
                           onChange={(e) => setNewGroupName(e.target.value)}
                           placeholder="e.g. Pet Care"
-                          className="w-full border border-border-strong rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                          className="text-sm"
                           autoFocus
                           onKeyDown={(e) => { if (e.key === 'Enter') handleAddGroup(); }}
                         />
@@ -604,7 +645,7 @@ function Home() {
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-2">Emoji</label>
                         <div className="relative mb-2">
-                          <FaSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" size={12} />
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" size={12} />
                           <input
                             type="text"
                             value={emojiSearch}
@@ -637,17 +678,15 @@ function Home() {
                         </div>
                       </div>
 
-                      <button
+                      <Button
                         onClick={handleAddGroup}
                         disabled={!newGroupName.trim()}
-                        className="w-full py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 transition-colors"
+                        className="w-full"
                       >
                         Create Category
-                      </button>
+                      </Button>
                     </div>
-                  </div>
-                </div>
-              )}
+              </Modal>
             </div>
           </div>
         </div>
@@ -657,7 +696,7 @@ function Home() {
           onClick={() => setIsSummaryOpen(!isSummaryOpen)}
           className="lg:hidden fixed bottom-6 right-6 z-40 w-12 h-12 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-hover transition-colors"
         >
-          <FaColumns size={18} />
+          <PanelRight size={18} />
         </button>
 
         {/* Summary sidebar overlay on tablet */}

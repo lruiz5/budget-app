@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { Briefcase } from 'lucide-react';
+import Card from '@/components/ui/Card';
 
 interface BufferSectionProps {
   budgetId?: number;
@@ -33,10 +35,10 @@ export default function BufferSection({ budgetId, buffer, onRefresh }: BufferSec
   };
 
   return (
-    <div className="bg-surface rounded-lg shadow-sm overflow-hidden">
+    <Card className="overflow-hidden">
       <div className="bg-surface border-b border-border px-6 py-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-text-primary flex items-center gap-2">
-          <span>💼</span>
+          <Briefcase size={20} className="text-primary" />
           <span>Starting Balance (Buffer)</span>
         </h2>
         <div className="flex items-center gap-2">
@@ -71,6 +73,6 @@ export default function BufferSection({ budgetId, buffer, onRefresh }: BufferSec
       <div className="px-6 py-3 text-sm text-text-secondary">
         This is the amount carried over from the previous month
       </div>
-    </div>
+    </Card>
   );
 }

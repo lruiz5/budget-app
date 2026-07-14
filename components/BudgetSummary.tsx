@@ -3,17 +3,18 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Budget, Transaction, BudgetItem } from "@/types/budget";
 import {
-  FaChartPie,
-  FaReceipt,
-  FaSync,
-  FaCheck,
-  FaTimes,
-  FaUndo,
-  FaPlus,
-  FaSearch,
-} from "react-icons/fa";
-import { HiOutlineScissors } from "react-icons/hi2";
+  ChartPie,
+  Receipt,
+  RefreshCw,
+  Check,
+  X,
+  Undo2,
+  Plus,
+  Search,
+  Scissors,
+} from "lucide-react";
 import AddTransactionModal, { TransactionToEdit, CategoryOption } from "./AddTransactionModal";
+import Card from "@/components/ui/Card";
 import SplitTransactionModal, { ExistingSplit } from "./SplitTransactionModal";
 import { useToast } from "@/contexts/ToastContext";
 import { useUncategorizedCount } from "@/contexts/UncategorizedCountContext";
@@ -690,7 +691,7 @@ export default function BudgetSummary({
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return (
-      <div className="bg-surface rounded-xl shadow-lg h-full flex flex-col">
+      <Card className="h-full flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-6 border-b border-border">
           <div className="flex items-center justify-between mb-4">
@@ -762,7 +763,7 @@ export default function BudgetSummary({
           {/* Recurring indicator or option */}
           {item.recurringPaymentId ? (
             <div className="mt-4 flex items-center gap-2 text-sm text-primary">
-              <span>🔄</span>
+              <RefreshCw size={14} />
               <span>Recurring payment</span>
             </div>
           ) : (
@@ -779,7 +780,7 @@ export default function BudgetSummary({
               }}
               className="mt-4 flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors"
             >
-              <span>🔄</span>
+              <RefreshCw size={14} />
               <span>Make this recurring</span>
             </button>
           )}
@@ -863,12 +864,12 @@ export default function BudgetSummary({
           budgetItems={getAllBudgetItems()}
           existingSplits={existingSplits}
         />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-surface rounded-xl shadow-lg h-full flex flex-col">
+    <Card className="h-full flex flex-col overflow-hidden">
       {/* Tabs */}
       <div className="flex border-b border-border">
         <button
@@ -886,7 +887,7 @@ export default function BudgetSummary({
                 : "bg-surface-secondary"
             }`}
           >
-            <FaChartPie className="text-2xl" />
+            <ChartPie size={24} />
           </span>
           <span className="text-xl font-semibold">Summary</span>
         </button>
@@ -905,7 +906,7 @@ export default function BudgetSummary({
                 : "bg-surface-secondary"
             }`}
           >
-            <FaReceipt className="text-2xl" />
+            <Receipt size={24} />
             {filteredUncategorizedTxns.length > 0 && (
               <span className="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center bg-accent-orange text-white text-xs font-bold rounded-full px-1">
                 {filteredUncategorizedTxns.length > 99
@@ -1075,7 +1076,7 @@ export default function BudgetSummary({
                   disabled={isSyncing}
                   className="flex items-center gap-2 px-3 py-1.5 text-sm bg-surface-secondary hover:bg-surface-secondary rounded text-text-secondary disabled:opacity-50"
                 >
-                  <FaSync
+                  <RefreshCw
                     className={isSyncing ? "animate-spin" : ""}
                     size={12}
                   />
@@ -1087,7 +1088,7 @@ export default function BudgetSummary({
             {/* Search & Filters */}
             <div className="px-4 pt-3 pb-2 space-y-2 border-b border-border">
               <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={12} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={12} />
                 <input
                   type="text"
                   value={searchQuery}
@@ -1212,7 +1213,7 @@ export default function BudgetSummary({
                                       disabled={!selectedBudgetItemId}
                                       className="p-2 text-success hover:bg-success-light rounded disabled:opacity-50"
                                     >
-                                      <FaCheck size={14} />
+                                      <Check size={14} />
                                     </button>
                                     <button
                                       onClick={() => {
@@ -1221,7 +1222,7 @@ export default function BudgetSummary({
                                       }}
                                       className="p-2 text-text-secondary hover:bg-surface-secondary rounded"
                                     >
-                                      <FaTimes size={14} />
+                                      <X size={14} />
                                     </button>
                                   </div>
                                 </div>
@@ -1272,13 +1273,13 @@ export default function BudgetSummary({
                                       className="p-1 text-accent-purple hover:bg-accent-purple-light rounded"
                                       title="Split transaction"
                                     >
-                                      <HiOutlineScissors size={14} />
+                                      <Scissors size={14} />
                                     </button>
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleDeleteUncategorized(txn.id); }}
                                       className="p-1 text-danger hover:bg-danger-light rounded"
                                     >
-                                      <FaTimes size={12} />
+                                      <X size={12} />
                                     </button>
                                   </div>
                                 </div>
@@ -1389,7 +1390,7 @@ export default function BudgetSummary({
                             className="p-1.5 text-success hover:bg-success-light rounded"
                             title="Restore"
                           >
-                            <FaUndo size={14} />
+                            <Undo2 size={14} />
                           </button>
                         </div>
                       </div>
@@ -1408,7 +1409,7 @@ export default function BudgetSummary({
               className="fixed bottom-10 right-14 w-16 h-16 bg-primary hover:bg-primary-hover text-white rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.25)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.3)] flex items-center justify-center transition-all"
               title="Add Transaction"
             >
-              <FaPlus size={24} />
+              <Plus size={24} />
             </button>
           </div>
         )}
@@ -1441,6 +1442,6 @@ export default function BudgetSummary({
         budgetItems={getAllBudgetItems()}
         existingSplits={existingSplits}
       />
-    </div>
+    </Card>
   );
 }

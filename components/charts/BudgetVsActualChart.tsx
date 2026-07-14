@@ -10,7 +10,7 @@ import {
 import { formatCurrency } from "@/lib/formatCurrency";
 import ChartTooltip from "./ChartTooltip";
 import ChartEmptyState from "./ChartEmptyState";
-import { FaChartBar } from "react-icons/fa";
+import { ChartColumn } from "lucide-react";
 
 interface BudgetVsActualChartProps {
   budget: Budget | null;
@@ -272,7 +272,7 @@ export default function BudgetVsActualChart({
   if (!hasData) {
     return (
       <ChartEmptyState
-        icon={<FaChartBar />}
+        icon={<ChartColumn />}
         title="No spending data yet"
         message="Add transactions to your budget to see the comparison between planned and actual spending"
       />

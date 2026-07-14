@@ -5,6 +5,11 @@
 **Primary:** Outfit (Google Fonts)
 - Loaded via `next/font/google` with CSS variable `--font-outfit`
 - Applied globally through Tailwind's `--font-sans` theme token
+- `font-variant-numeric: tabular-nums` set globally on `body` so currency columns stay aligned
+
+## Icons
+
+**lucide-react only** (react-icons removed Jul 2026). Icons inherit `currentColor`; size via the `size` prop (Lucide defaults to 24px — it does not scale with font-size classes). Never use emoji as functional UI icons; category emojis (💰🏠🍽️…) are user data and stay.
 
 ## Color Tokens
 
@@ -29,6 +34,7 @@ All colors are defined as CSS custom properties in `globals.css` and mapped to T
 | `--danger-light` | `#fef2f2` | `bg-danger-light` | Error backgrounds |
 | `--warning` | `#eab308` | `text-warning` | Pending badges, upcoming due dates |
 | `--warning-light` | `#fefce8` | `bg-warning-light` | Warning backgrounds |
+| `--warning-strong` | `#854d0e` | `text-warning-strong`, `bg-warning-strong` | Readable warning text/fills on warning-light (MonthBanner) |
 | `--info` | `#2563eb` | `text-info` | Info toasts |
 | `--info-light` | `#eff6ff` | `bg-info-light` | Info backgrounds |
 
@@ -57,7 +63,7 @@ All colors are defined as CSS custom properties in `globals.css` and mapped to T
 |---|---|---|---|
 | `--text-primary` | `#111827` | `text-text-primary` | Headings, primary content |
 | `--text-secondary` | `#4b5563` | `text-text-secondary` | Body text, labels |
-| `--text-tertiary` | `#9ca3af` | `text-text-tertiary` | Muted text, placeholders |
+| `--text-tertiary` | `#6b7280` | `text-text-tertiary` | Muted text, placeholders (gray-500 for WCAG AA 4.5:1 on white) |
 
 ### Sidebar
 
@@ -68,6 +74,8 @@ All colors are defined as CSS custom properties in `globals.css` and mapped to T
 | `--sidebar-hover` | `#1f2937` | Nav item hover |
 | `--sidebar-text-muted` | `#9ca3af` | Inactive nav text |
 
+Active nav item = left `bg-primary` accent bar + `bg-sidebar-hover` tint + `text-primary-border` icon (no filled pill). Wordmark = gradient Wallet mark + "BudgetApp", built in `Sidebar.tsx` (no image asset).
+
 ## Semantic Color Rules
 
 - **Green** (`success`): Income amounts, under-budget, positive trends
@@ -77,29 +85,26 @@ All colors are defined as CSS custom properties in `globals.css` and mapped to T
 - **Purple** (`accent-purple`): Split transactions, analytics features
 - **Emerald** (`primary`): All primary actions, active states, CTA buttons
 
-## Button Styles
+## UI Primitives (`components/ui/`)
 
-| Type | Classes |
+Use these instead of hand-rolled markup (see `lib/cn.ts` for the class joiner — no tailwind-merge, so don't pass conflicting utilities):
+
+| Component | Notes |
 |---|---|
-| Primary | `bg-primary text-white hover:bg-primary-hover` |
-| Secondary | `border border-border-strong text-text-secondary hover:bg-surface-secondary` |
-| Danger | `text-danger hover:bg-danger-light` |
-| Ghost | `text-text-tertiary hover:text-text-secondary` |
+| `Button` | Variants `primary` / `secondary` / `ghost` / `danger` / `dangerGhost`; sizes `sm` / `md` / `lg`; defaults `type="button"`; shared focus-visible ring + disabled styling |
+| `Modal` | `bg-black/50` scrim, Escape + backdrop-click close, `role="dialog"`; `title` or custom `header`, optional pinned `footer`; sizes `sm`–`xl` |
+| `Card` | Standard surface: `bg-surface rounded-xl border border-border shadow-sm` |
+| `Input` / `Select` | `border-border-strong rounded-lg` + primary focus ring |
+| `CurrencyInput` | $-prefixed number input, hidden spinners, select-on-focus, `wrapperClassName` for flex composition |
+| `Skeleton` | `animate-pulse` placeholder — loading states are skeleton layouts shaped like the content, not spinners |
+
+**Month navigation:** `MonthYearPicker` (shared year-stepper + month-grid popover) and `MonthNavigator` (compact `< July 2026 ▾ >`, used on Cash Flow + Insights). `BudgetHeader` uses the picker on its title and hosts the `⋯` overflow menu (Reset Budget).
 
 ## Component Patterns
-
-### Cards
-`bg-surface rounded-lg shadow p-6`
-
-### Inputs
-`border border-border-strong rounded-lg focus:ring-2 focus:ring-primary focus:border-primary`
 
 ### Badges
 - Status: `px-2 py-0.5 text-xs font-medium rounded-full` with semantic color bg/text
 - Count: `bg-accent-orange text-white text-xs rounded-full`
-
-### Modals
-`fixed inset-0 bg-black/50` overlay with `bg-surface rounded-xl shadow-2xl` content
 
 ### Toast Notifications
 - Border-top accent style (`border-t-4`) with semantic color borders
@@ -140,4 +145,4 @@ All colors are defined as CSS custom properties in `globals.css` and mapped to T
 | Insurance | 🛡️ |
 | Saving | 💵 |
 
-- 🔄 indicates a budget item linked to a recurring payment
+- A `RefreshCw` icon (not emoji) indicates a budget item linked to a recurring payment; `Calendar` icon marks expected-day pills

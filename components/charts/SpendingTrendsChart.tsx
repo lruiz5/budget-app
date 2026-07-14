@@ -8,7 +8,7 @@ import { formatCurrency } from "@/lib/formatCurrency";
 import { getCategoryColor, getCategoryEmoji } from "@/lib/chartColors";
 import ChartTooltip from "./ChartTooltip";
 import ChartEmptyState from "./ChartEmptyState";
-import { FaChartLine } from "react-icons/fa";
+import { ChartLine } from "lucide-react";
 
 interface SpendingTrendsChartProps {
   budgets: Budget[];
@@ -232,7 +232,7 @@ export default function SpendingTrendsChart({
   if (trendData.length < 2) {
     return (
       <ChartEmptyState
-        icon={<FaChartLine />}
+        icon={<ChartLine />}
         title="Not enough data yet"
         message="Keep tracking your budget for a few months to see spending trends over time"
       />
