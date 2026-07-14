@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { linkedAccounts } from '@/db/schema';
+import { linkedAccounts, transactions } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { createTellerClient, TellerAccount } from '@/lib/teller';
 import { requireAuth, isAuthError } from '@/lib/auth';
@@ -173,8 +173,14 @@ export async function DELETE(request: NextRequest) {
       console.warn('Failed to disconnect account from Teller API');
     }
 
+    // Detach transactions (keep history as unlinked/manual) so the FK allows the delete
+    await db
+      .update(transactions)
+      .set({ linkedAccountId: null })
+      .where(eq(transactions.linkedAccountId, account.id));
+
     // Delete from database
-    await db.delete(linkedAccounts).where(eq(linkedAccounts.id, parseInt(id)));
+    await db.delete(linkedAccounts).where(eq(linkedAccounts.id, account.id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

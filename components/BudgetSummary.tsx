@@ -38,6 +38,7 @@ interface BudgetSummaryProps {
 
 interface UncategorizedTransaction {
   id: number;
+  linkedAccountId?: number | null;
   date: string;
   description: string;
   amount: number;
@@ -523,6 +524,7 @@ export default function BudgetSummary({
 
       if (response.ok) {
         setTransactionToEdit(null);
+        await fetchUncategorized();
         onRefresh?.();
       }
     } catch (error) {
@@ -538,7 +540,7 @@ export default function BudgetSummary({
 
       if (response.ok) {
         setTransactionToEdit(null);
-        await fetchDeleted();
+        await Promise.all([fetchDeleted(), fetchUncategorized()]);
         onRefresh?.();
       }
     } catch (error) {
@@ -572,6 +574,20 @@ export default function BudgetSummary({
   const closeModal = () => {
     setIsAddModalOpen(false);
     setTransactionToEdit(null);
+  };
+
+  const openEditModalForUncategorized = (txn: UncategorizedTransaction) => {
+    setTransactionToEdit({
+      id: txn.id,
+      budgetItemId: null,
+      linkedAccountId: txn.linkedAccountId,
+      date: txn.date,
+      description: txn.description,
+      amount: txn.amount,
+      type: txn.type,
+      merchant: txn.merchant,
+    });
+    setIsAddModalOpen(true);
   };
 
   const openSplitModal = (txn: UncategorizedTransaction) => {
@@ -1150,8 +1166,11 @@ export default function BudgetSummary({
                                 e.dataTransfer.setData("application/transaction-id", String(txn.id));
                                 e.dataTransfer.effectAllowed = "move";
                               }}
+                              onClick={() => {
+                                if (assigningId !== txn.id) openEditModalForUncategorized(txn);
+                              }}
                               className={`bg-accent-orange-light border border-accent-orange-border rounded-lg p-3 mb-3 last:mb-0 ${
-                                assigningId !== txn.id ? "cursor-grab active:cursor-grabbing" : ""
+                                assigningId !== txn.id ? "cursor-grab active:cursor-grabbing hover:bg-accent-orange-border/30" : ""
                               }`}
                             >
                               {assigningId === txn.id ? (
@@ -1224,7 +1243,8 @@ export default function BudgetSummary({
                                     </p>
                                     {txn.suggestedBudgetItemId && getBudgetItemName(txn.suggestedBudgetItemId) && (
                                       <button
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          e.stopPropagation();
                                           setAssigningId(txn.id);
                                           setSelectedBudgetItemId(String(txn.suggestedBudgetItemId));
                                         }}
@@ -1242,20 +1262,20 @@ export default function BudgetSummary({
                                       {formatCurrency(txn.amount)}
                                     </span>
                                     <button
-                                      onClick={() => setAssigningId(txn.id)}
+                                      onClick={(e) => { e.stopPropagation(); setAssigningId(txn.id); }}
                                       className="px-2 py-1 text-xs text-primary bg-primary-light hover:bg-primary-light rounded"
                                     >
                                       Assign
                                     </button>
                                     <button
-                                      onClick={() => openSplitModal(txn)}
+                                      onClick={(e) => { e.stopPropagation(); openSplitModal(txn); }}
                                       className="p-1 text-accent-purple hover:bg-accent-purple-light rounded"
                                       title="Split transaction"
                                     >
                                       <HiOutlineScissors size={14} />
                                     </button>
                                     <button
-                                      onClick={() => handleDeleteUncategorized(txn.id)}
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteUncategorized(txn.id); }}
                                       className="p-1 text-danger hover:bg-danger-light rounded"
                                     >
                                       <FaTimes size={12} />

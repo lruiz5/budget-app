@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { budgetItemId, linkedAccountId, date, description, amount, type, merchant, checkNumber, isNonEarned, tagCategoryType } = body;
 
-  if (!budgetItemId || !date || !description || amount === undefined || !type) {
+  if (!budgetItemId || !date || description == null || amount === undefined || !type) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 

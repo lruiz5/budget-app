@@ -29,7 +29,11 @@ struct EditTransactionSheet: View {
         self.onTransactionUpdated = onTransactionUpdated
         self.onTransactionDeleted = onTransactionDeleted
         self.onSplit = onSplit
-        self._editedDescription = State(initialValue: transaction.description)
+        // Hide legacy auto-filled descriptions (merchant mirror / filler) — Notes is user context only
+        let isAutoFilledDescription =
+            transaction.description == "Manual transaction"
+            || transaction.merchant?.lowercased() == transaction.description.lowercased()
+        self._editedDescription = State(initialValue: isAutoFilledDescription ? "" : transaction.description)
         self._editedAmount = State(initialValue: "\(transaction.amount)")
         self._selectedDate = State(initialValue: transaction.date)
         self._transactionType = State(initialValue: transaction.type)
