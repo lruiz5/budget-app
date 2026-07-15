@@ -67,7 +67,8 @@ export const splitTransactions = pgTable('split_transactions', {
 export const linkedAccounts = pgTable('linked_accounts', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().default(''), // Clerk user ID
-  tellerAccountId: text('teller_account_id').notNull().unique(),
+  provider: text('provider').notNull().default('teller').$type<'teller' | 'simplefin'>(),
+  tellerAccountId: text('teller_account_id').notNull().unique(), // provider account ID (Teller or SimpleFIN)
   tellerEnrollmentId: text('teller_enrollment_id').notNull(),
   accessToken: text('access_token').notNull(),
   institutionName: text('institution_name').notNull(),

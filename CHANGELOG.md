@@ -4,11 +4,37 @@ All notable changes to this project will be documented in this file.
 
 ## Versioning Strategy
 
-- **Web App**: Versioned independently (currently v1.14.0)
-- **iOS App**: Versioned independently in `ios/BudgetApp/CHANGELOG.md` (currently v0.17.0, pre-release)
-- **Project**: Overall version tracks major milestones (currently v1.14.0)
+- **Web App**: Versioned independently (currently v1.17.0)
+- **iOS App**: Versioned independently in `ios/BudgetApp/CHANGELOG.md` (currently v0.20.0, pre-release)
+- **Project**: Overall version tracks major milestones (currently v1.17.0)
 
 **Note:** iOS app uses 0.x.x versioning until first App Store release (v1.0.0).
+
+---
+
+## [1.17.0] - 2026-07-15 - SimpleFIN Bank Sync (Teller Replacement)
+
+Teller shut down its API ~2026-07-09. Bank sync now runs on SimpleFIN Bridge
+($15/yr, consumer-paid, read-only). Bank connections live on the SimpleFIN
+portal; the app consumes them via a pasted Setup Token.
+
+### Added
+
+- **SimpleFIN client** (`lib/simplefin.ts`) — plain `fetch`, no mTLS certs: setup-token decode/claim, account fetch, 45-day-windowed transaction history (server recommends ≤45 days/request)
+- **`POST /api/simplefin/claim`** — accepts a Setup Token (or a raw access URL) plus an "import transactions from" date; registers all of the connection's accounts
+- **Settings: Connect Bank modal** — paste Setup Token + pick sync start date (replaces the Teller Connect popup script)
+- **`linked_accounts.provider`** column (`'teller' | 'simplefin'`)
+
+### Changed
+
+- **Sync, balances, and account-delete routes are provider-aware** — Teller and SimpleFIN transactions normalize into one shape, so the pending→posted fuzzy match and categorization preservation are shared; iOS keeps calling the same endpoints unchanged
+- **SimpleFIN transaction IDs stored namespaced** (`accountId:txnId`) — SimpleFIN IDs are only unique per account, unlike Teller's global IDs
+- **SimpleFIN field mapping** — `payee` → merchant; `description` stays empty and is never overwritten on updates (description = user notes only)
+- **Balances/sync efficiency** — one API call per access URL covers all its accounts (SimpleFIN quota is ≤24 requests/day)
+
+### Removed
+
+- Teller Connect script tag and `NEXT_PUBLIC_TELLER_APP_ID` usage from the settings page (Teller accounts remain readable; their sync toggles were disabled)
 
 ---
 

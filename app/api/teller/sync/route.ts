@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { budgets, budgetCategories, budgetItems, linkedAccounts, transactions, splitTransactions } from '@/db/schema';
 import { eq, and, isNull, isNotNull, notInArray, inArray } from 'drizzle-orm';
-import { createTellerClient, TellerTransaction } from '@/lib/teller';
+import { createTellerClient } from '@/lib/teller';
+import { getAccountsWithHistory, unixToDateString, SimpleFINAccountSet } from '@/lib/simplefin';
 import { requireAuth, isAuthError } from '@/lib/auth';
+
+// Provider-agnostic transaction shape fed into the shared sync logic
+interface NormalizedTxn {
+  id: string;
+  date: string; // YYYY-MM-DD
+  amount: string; // signed decimal string, positive = income
+  description: string; // SimpleFIN: always '' (description = user notes only)
+  merchant: string | null;
+  status: 'posted' | 'pending';
+}
 
 // POST - Sync transactions from linked accounts
 export async function POST(request: NextRequest) {
@@ -41,27 +52,64 @@ export async function POST(request: NextRequest) {
       errors: [] as string[],
     };
 
+    // SimpleFIN: one fetch per access URL covers all of its accounts — cache across the loop
+    const simplefinCache = new Map<string, SimpleFINAccountSet>();
+
     for (const account of accountsToSync) {
       try {
-        const tellerClient = createTellerClient(account.accessToken);
-
-        // Fetch transactions from Teller with automatic pagination
         const effectiveStartDate = startDate || account.syncStartDate || undefined;
-        const tellerTransactions: TellerTransaction[] = await tellerClient.listAllTransactions(
-          account.tellerAccountId,
-          {
+        const isSimplefin = account.provider === 'simplefin';
+
+        let providerTxns: NormalizedTxn[];
+
+        if (isSimplefin) {
+          const startUnix = effectiveStartDate
+            ? Math.floor(Date.parse(`${effectiveStartDate}T00:00:00Z`) / 1000)
+            : Math.floor(Date.now() / 1000) - 90 * 86400;
+          const cacheKey = `${account.accessToken}|${startUnix}`;
+          let accountSet = simplefinCache.get(cacheKey);
+          if (!accountSet) {
+            accountSet = await getAccountsWithHistory(account.accessToken, { startDate: startUnix });
+            simplefinCache.set(cacheKey, accountSet);
+          }
+          const sfAccount = accountSet.accounts.find(a => a.id === account.tellerAccountId);
+          if (!sfAccount) {
+            throw new Error('Account not present in SimpleFIN response');
+          }
+          providerTxns = (sfAccount.transactions || []).map(t => ({
+            // SimpleFIN txn IDs are only unique per account — namespace with the
+            // account ID so the global unique constraint + dedup lookups hold
+            id: `${account.tellerAccountId}:${t.id}`,
+            date: unixToDateString(t.posted || t.transacted_at || Math.floor(Date.now() / 1000)),
+            amount: t.amount,
+            description: '', // description = user notes only; SimpleFIN payee → merchant
+            merchant: t.payee?.trim() || t.description?.trim() || null,
+            status: t.pending ? 'pending' : 'posted',
+          }));
+        } else {
+          const tellerClient = createTellerClient(account.accessToken);
+          const tellerTransactions = await tellerClient.listAllTransactions(account.tellerAccountId, {
             startDate: effectiveStartDate,
             endDate,
-          }
-        );
+          });
+          providerTxns = tellerTransactions.map(txn => ({
+            id: txn.id,
+            date: txn.date,
+            amount: txn.amount,
+            // Strip "POS DEBIT" prefix from descriptions
+            description: txn.description?.replace(/^POS DEBIT\s+/i, '').trim() || txn.description,
+            merchant: txn.details?.counterparty?.name || null,
+            status: txn.status,
+          }));
+        }
 
-        // Fetch all existing transactions for this account's Teller IDs in one query
-        const tellerIds = tellerTransactions.map(t => t.id);
-        const existingTxns = tellerIds.length > 0
+        // Fetch all existing transactions for this account's provider IDs in one query
+        const providerIds = providerTxns.map(t => t.id);
+        const existingTxns = providerIds.length > 0
           ? await db
               .select()
               .from(transactions)
-              .where(inArray(transactions.tellerTransactionId, tellerIds))
+              .where(inArray(transactions.tellerTransactionId, providerIds))
           : [];
         const existingMap = new Map(existingTxns.map(t => [t.tellerTransactionId, t]));
 
@@ -69,13 +117,10 @@ export async function POST(request: NextRequest) {
         let toInsert: typeof transactions.$inferInsert[] = [];
         const toUpdate: { id: number; data: Partial<typeof transactions.$inferInsert> }[] = [];
 
-        for (const txn of tellerTransactions) {
+        for (const txn of providerTxns) {
           const amountNum = Math.abs(parseFloat(txn.amount));
           const amount = String(amountNum);
           const type: 'income' | 'expense' = parseFloat(txn.amount) > 0 ? 'income' : 'expense';
-
-          // Strip "POS DEBIT" prefix from descriptions
-          const cleanDescription = txn.description?.replace(/^POS DEBIT\s+/i, '').trim() || txn.description;
 
           const existingTxn = existingMap.get(txn.id);
 
@@ -84,15 +129,14 @@ export async function POST(request: NextRequest) {
             const amountChanged = Math.abs(parseFloat(String(existingTxn.amount)) - amountNum) > 0.001;
 
             if (statusChanged || amountChanged) {
-              toUpdate.push({
-                id: existingTxn.id,
-                data: {
-                  status: txn.status,
-                  amount,
-                  description: cleanDescription,
-                  merchant: txn.details?.counterparty?.name || existingTxn.merchant,
-                },
-              });
+              const data: Partial<typeof transactions.$inferInsert> = {
+                status: txn.status,
+                amount,
+                merchant: txn.merchant || existingTxn.merchant,
+              };
+              // SimpleFIN descriptions are user notes — never overwrite them
+              if (!isSimplefin) data.description = txn.description;
+              toUpdate.push({ id: existingTxn.id, data });
               results.updated++;
             } else {
               results.skipped++;
@@ -102,10 +146,10 @@ export async function POST(request: NextRequest) {
               budgetItemId: null,
               linkedAccountId: account.id,
               date: txn.date,
-              description: cleanDescription,
+              description: txn.description,
               amount,
               type,
-              merchant: txn.details?.counterparty?.name || null,
+              merchant: txn.merchant,
               tellerTransactionId: txn.id,
               tellerAccountId: account.tellerAccountId,
               status: txn.status,
@@ -125,8 +169,8 @@ export async function POST(request: NextRequest) {
                 eq(transactions.linkedAccountId, account.id),
                 eq(transactions.status, 'pending'),
                 isNull(transactions.deletedAt),
-                tellerIds.length > 0
-                  ? notInArray(transactions.tellerTransactionId!, tellerIds)
+                providerIds.length > 0
+                  ? notInArray(transactions.tellerTransactionId!, providerIds)
                   : undefined
               )
             );
@@ -170,17 +214,16 @@ export async function POST(request: NextRequest) {
 
               if (match) {
                 matched.add(match.id);
-                toUpdate.push({
-                  id: match.id,
-                  data: {
-                    tellerTransactionId: newTxn.tellerTransactionId,
-                    status: 'posted',
-                    amount: newTxn.amount,
-                    description: newTxn.description,
-                    merchant: newTxn.merchant || match.merchant,
-                    date: newTxn.date,
-                  },
-                });
+                const data: Partial<typeof transactions.$inferInsert> = {
+                  tellerTransactionId: newTxn.tellerTransactionId,
+                  status: 'posted',
+                  amount: newTxn.amount,
+                  merchant: newTxn.merchant || match.merchant,
+                  date: newTxn.date,
+                };
+                // SimpleFIN descriptions are user notes — never overwrite them
+                if (!isSimplefin) data.description = newTxn.description;
+                toUpdate.push({ id: match.id, data });
                 results.updated++;
                 results.synced--;
               } else {
