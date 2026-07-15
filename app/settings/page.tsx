@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Script from 'next/script';
-import { Landmark, Trash2, RefreshCw } from "lucide-react";
+import { Landmark, Trash2, RefreshCw, ExternalLink } from "lucide-react";
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Modal from '@/components/ui/Modal';
 import Skeleton from '@/components/ui/Skeleton';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/contexts/ToastContext';
@@ -22,21 +23,6 @@ interface LinkedAccount {
   syncEnabled: boolean;
 }
 
-declare global {
-  interface Window {
-    TellerConnect: {
-      setup: (config: {
-        applicationId: string;
-        onSuccess: (enrollment: { accessToken: string; enrollment: { id: string } }) => void;
-        onExit: () => void;
-        onFailure?: (error: { type: string; code: string; message: string }) => void;
-      }) => {
-        open: () => void;
-      };
-    };
-  }
-}
-
 export default function SettingsPage() {
   const toast = useToast();
   const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
@@ -44,7 +30,10 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ synced: number; skipped: number } | null>(null);
-  const [tellerReady, setTellerReady] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [setupToken, setSetupToken] = useState('');
+  const [syncStartDate, setSyncStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const fetchBalances = useCallback(async () => {
     try {
@@ -76,48 +65,36 @@ export default function SettingsPage() {
     fetchAccounts().then(() => fetchBalances());
   }, [fetchAccounts, fetchBalances]);
 
-  const handleConnectBank = () => {
-    if (!tellerReady || !window.TellerConnect) {
-      toast.warning('Teller Connect is not ready yet. Please try again.');
+  const handleConnectSubmit = async () => {
+    if (!setupToken.trim()) {
+      toast.warning('Paste your SimpleFIN Setup Token first.');
       return;
     }
 
-    const tellerConnect = window.TellerConnect.setup({
-      applicationId: process.env.NEXT_PUBLIC_TELLER_APP_ID || '',
-      onSuccess: async (enrollment) => {
-        try {
-          const response = await fetch('/api/teller/accounts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              accessToken: enrollment.accessToken,
-              enrollment: enrollment.enrollment,
-            }),
-          });
+    setIsConnecting(true);
+    try {
+      const response = await fetch('/api/simplefin/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupToken: setupToken.trim(), syncStartDate }),
+      });
 
-          if (response.ok) {
-            fetchAccounts();
-            toast.success('Bank account connected successfully');
-          } else {
-            const errorData = await response.json();
-            console.error('Failed to save account:', errorData);
-            toast.error(`Failed to save account: ${errorData.error || 'Unknown error'}`);
-          }
-        } catch (error) {
-          console.error('Error saving account:', error);
-          toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-      },
-      onExit: () => {
-        console.log('User exited Teller Connect');
-      },
-      onFailure: (error) => {
-        console.error('Teller Connect failed:', error);
-        toast.error(`Failed to connect: ${error.message}`);
-      },
-    });
-
-    tellerConnect.open();
+      const data = await response.json();
+      if (response.ok) {
+        setShowConnectModal(false);
+        setSetupToken('');
+        fetchAccounts().then(() => fetchBalances());
+        toast.success(`Connected ${data.accounts.length} account${data.accounts.length === 1 ? '' : 's'}`);
+      } else {
+        console.error('Failed to connect SimpleFIN:', data);
+        toast.error(data.error || 'Failed to connect');
+      }
+    } catch (error) {
+      console.error('Error connecting SimpleFIN:', error);
+      toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleDeleteAccount = async (id: number) => {
@@ -184,11 +161,6 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <Script
-        src="https://cdn.teller.io/connect/connect.js"
-        onLoad={() => setTellerReady(true)}
-      />
-
       <div className="h-full overflow-y-auto bg-surface-secondary p-4 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-text-primary mb-8">Accounts</h1>
@@ -206,7 +178,7 @@ export default function SettingsPage() {
                     {isSyncing ? 'Syncing...' : 'Sync All'}
                   </Button>
                 )}
-                <Button onClick={handleConnectBank} disabled={!tellerReady}>
+                <Button onClick={() => setShowConnectModal(true)}>
                   <Landmark size={16} />
                   Connect Bank
                 </Button>
@@ -265,7 +237,10 @@ export default function SettingsPage() {
                         <div key={account.id} className={`flex items-center justify-between px-4 py-3 transition-opacity ${!account.syncEnabled ? 'opacity-60' : ''}`}>
                           <div className="pl-13">
                             <p className="font-medium text-text-primary">
-                              {account.accountName} •••• {account.lastFour}
+                              {account.accountName}
+                              {account.lastFour && !account.accountName.endsWith(account.lastFour)
+                                ? ` •••• ${account.lastFour}`
+                                : ''}
                             </p>
                             <p className="text-xs text-text-tertiary">
                               Last synced: {formatDate(account.lastSyncedAt)}
@@ -318,7 +293,18 @@ export default function SettingsPage() {
           <div className="bg-primary-light border border-primary-border rounded-lg p-4 text-sm text-primary">
             <p className="font-medium mb-2">How it works:</p>
             <ol className="list-decimal list-inside space-y-1">
-              <li>Click &quot;Connect Bank&quot; to securely link your bank account via Teller</li>
+              <li>
+                Create a SimpleFIN Bridge account and connect your banks at{' '}
+                <a
+                  href="https://bridge.simplefin.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline font-medium"
+                >
+                  bridge.simplefin.org
+                </a>
+              </li>
+              <li>Generate a Setup Token there, then click &quot;Connect Bank&quot; and paste it</li>
               <li>Click &quot;Sync All&quot; to import your latest transactions</li>
               <li>Imported transactions appear as &quot;Uncategorized&quot; on the main budget page</li>
               <li>Assign transactions to budget categories to track your spending</li>
@@ -326,6 +312,64 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* SimpleFIN Setup Token modal */}
+      <Modal
+        isOpen={showConnectModal}
+        onClose={() => setShowConnectModal(false)}
+        title="Connect Bank via SimpleFIN"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setShowConnectModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConnectSubmit} disabled={isConnecting || !setupToken.trim()}>
+              {isConnecting ? 'Connecting...' : 'Connect'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-text-secondary">
+            Get a Setup Token from{' '}
+            <a
+              href="https://bridge.simplefin.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline inline-flex items-center gap-1"
+            >
+              SimpleFIN Bridge <ExternalLink size={12} />
+            </a>{' '}
+            (Settings → New App Connection) and paste it below. Tokens are single-use.
+          </p>
+
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">Setup Token</label>
+            <textarea
+              value={setupToken}
+              onChange={(e) => setSetupToken(e.target.value)}
+              rows={4}
+              placeholder="aHR0cHM6Ly9icmlkZ2Uuc2ltcGxlZmluLm9yZy9zaW1wbGVmaW4vY2xhaW0v..."
+              className="w-full px-3 py-2 border border-border-strong rounded-lg bg-surface text-text-primary placeholder:text-text-tertiary font-mono text-xs break-all focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">
+              Import transactions from
+            </label>
+            <Input
+              type="date"
+              value={syncStartDate}
+              onChange={(e) => setSyncStartDate(e.target.value)}
+            />
+            <p className="text-xs text-text-tertiary mt-1">
+              Transactions before this date won&apos;t be imported — set it to the day after your
+              existing history ends to avoid duplicates.
+            </p>
+          </div>
+        </div>
+      </Modal>
     </DashboardLayout>
   );
 }

@@ -164,13 +164,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Account not found' }, { status: 404 });
     }
 
-    // Optionally disconnect from Teller (revoke access)
-    try {
-      const tellerClient = createTellerClient(account.accessToken);
-      await tellerClient.deleteAccount(account.tellerAccountId);
-    } catch {
-      // Continue even if Teller API fails - we still want to remove from our DB
-      console.warn('Failed to disconnect account from Teller API');
+    // Optionally disconnect from Teller (revoke access).
+    // SimpleFIN has no revoke API — connections are managed on the Bridge site.
+    if (account.provider !== 'simplefin') {
+      try {
+        const tellerClient = createTellerClient(account.accessToken);
+        await tellerClient.deleteAccount(account.tellerAccountId);
+      } catch {
+        // Continue even if Teller API fails - we still want to remove from our DB
+        console.warn('Failed to disconnect account from Teller API');
+      }
     }
 
     // Detach transactions (keep history as unlinked/manual) so the FK allows the delete
