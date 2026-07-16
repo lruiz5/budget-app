@@ -76,7 +76,7 @@ struct AddTransactionSheet: View {
                                                     .foregroundStyle(.secondary)
                                                 if selectedBudgetItemId == item.id {
                                                     Image(systemName: "checkmark")
-                                                        .foregroundStyle(.green)
+                                                        .foregroundStyle(Color.appPrimary)
                                                 }
                                             }
                                         }

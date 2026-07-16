@@ -50,9 +50,9 @@ struct OnboardingFlowView: View {
             HStack(spacing: 4) {
                 ForEach(1...viewModel.totalSteps, id: \.self) { step in
                     Capsule()
-                        .fill(step < viewModel.currentStep ? Color.green
+                        .fill(step < viewModel.currentStep ? Color.appPrimary
                               : step == viewModel.currentStep ? Color.accentColor
-                              : Color(.systemGray4))
+                              : Color.appBorderStrong)
                         .frame(height: 4)
                 }
             }

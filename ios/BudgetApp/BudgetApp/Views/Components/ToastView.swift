@@ -5,7 +5,7 @@ struct ToastView: View {
     let isError: Bool
 
     private var tintColor: Color {
-        isError ? .red : .green
+        isError ? .appDanger : .appSuccess
     }
 
     var body: some View {

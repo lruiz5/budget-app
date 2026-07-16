@@ -14,7 +14,7 @@ struct OnboardingBufferStep: View {
                 VStack(spacing: 24) {
                     Image(systemName: "banknote.fill")
                         .font(.outfit(48))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.appPrimary)
                         .padding(.top, 32)
 
                     Text("Set Your Starting Balance")
@@ -45,7 +45,7 @@ struct OnboardingBufferStep: View {
                     if bufferDecimal > 0 {
                         Text("Your starting balance: \(bufferDecimal.formatted())")
                             .font(.outfitSubheadline)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.appSuccess)
                             .fontWeight(.medium)
                     }
 
@@ -56,7 +56,7 @@ struct OnboardingBufferStep: View {
                     if let error = viewModel.error {
                         Text(error)
                             .font(.outfitCaption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.appDanger)
                             .padding(.horizontal, 24)
                     }
                 }
@@ -71,7 +71,7 @@ struct OnboardingBufferStep: View {
                     Text("Back")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemGray5))
+                        .background(Color.appBorder)
                         .foregroundStyle(.primary)
                         .fontWeight(.medium)
                         .cornerRadius(12)
@@ -88,13 +88,13 @@ struct OnboardingBufferStep: View {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.green)
+                            .background(Color.appPrimary)
                             .cornerRadius(12)
                     } else {
                         Text("Next")
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.green)
+                            .background(Color.appPrimary)
                             .foregroundStyle(.white)
                             .fontWeight(.semibold)
                             .cornerRadius(12)

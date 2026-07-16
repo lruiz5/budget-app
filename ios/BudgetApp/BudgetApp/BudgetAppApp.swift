@@ -91,65 +91,107 @@ struct BudgetAppApp: App {
     }
 }
 
+// MARK: - Tusk Mark Badge
+
+/// Circular crop of the app icon artwork — the shared brand mark for entry screens.
+struct TuskMarkBadge: View {
+    var size: CGFloat
+
+    var body: some View {
+        Image("TuskMark")
+            .resizable()
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 3))
+            .shadow(color: .black.opacity(0.18), radius: 16, y: 8)
+    }
+}
+
 // MARK: - Sign In Landing View
 
 struct SignInLandingView: View {
     @Binding var showAuth: Bool
 
     var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
+        ZStack {
+            LinearGradient(
+                colors: [.appPrimary, .appPrimaryDark],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
-            // Logo/Header
-            VStack(spacing: 12) {
-                Image(systemName: "dollarsign.circle.fill")
-                    .font(.outfit(80))
-                    .foregroundStyle(.green)
+            VStack(spacing: 0) {
+                Spacer()
 
-                Text("Budget App")
-                    .font(.outfitLargeTitle)
+                TuskMarkBadge(size: 150)
+
+                Text("Happy Tusk")
+                    .font(.outfit(38))
                     .fontWeight(.bold)
-
-                Text("Zero-based budgeting made simple")
-                    .font(.outfitBody)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            // Sign In Button
-            Button {
-                showAuth = true
-            } label: {
-                Text("Sign In")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.green)
                     .foregroundStyle(.white)
-                    .fontWeight(.semibold)
-                    .cornerRadius(10)
+                    .padding(.top, 28)
+
+                Text("Put every dollar to work.")
+                    .font(.outfitBody)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .padding(.top, 6)
+
+                Spacer()
+
+                Button {
+                    showAuth = true
+                } label: {
+                    Text("Get started")
+                        .font(.outfitHeadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.appPrimaryDark)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(.white, in: Capsule())
+                }
+                .padding(.horizontal, 32)
+
+                Text("Sign in or create an account")
+                    .font(.outfitCaption)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.top, 12)
+                    .padding(.bottom, 40)
             }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 60)
         }
     }
 }
 
 // MARK: - Splash View
 
+/// Shown while Clerk loads. Background matches the launch screen color exactly
+/// so launch → splash reads as one continuous moment; content fades in on top.
 private struct SplashView: View {
+    @State private var showContent = false
+
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "dollarsign.circle.fill")
-                .font(.outfit(80))
-                .foregroundStyle(.green)
+        ZStack {
+            Color.appPrimary.ignoresSafeArea()
 
-            Text("Budget App")
-                .font(.outfitLargeTitle)
-                .fontWeight(.bold)
+            VStack(spacing: 20) {
+                TuskMarkBadge(size: 112)
 
-            ProgressView()
-                .padding(.top, 8)
+                Text("Happy Tusk")
+                    .font(.outfit(30))
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+
+                ProgressView()
+                    .tint(.white)
+                    .padding(.top, 4)
+            }
+            .opacity(showContent ? 1 : 0)
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.35)) {
+                showContent = true
+            }
         }
     }
 }

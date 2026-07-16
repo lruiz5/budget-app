@@ -72,14 +72,14 @@ struct AddCategorySheet: View {
                                 .frame(width: 36, height: 36)
                                 .background(
                                     selectedEmoji == emoji
-                                        ? Color.blue.opacity(0.2)
+                                        ? Color.appPrimaryLight
                                         : Color.clear
                                 )
                                 .clipShape(RoundedRectangle(cornerRadius: 6))
                                 .overlay(
                                     selectedEmoji == emoji
                                         ? RoundedRectangle(cornerRadius: 6)
-                                            .stroke(Color.blue, lineWidth: 2)
+                                            .stroke(Color.appPrimary, lineWidth: 2)
                                         : nil
                                 )
                         }

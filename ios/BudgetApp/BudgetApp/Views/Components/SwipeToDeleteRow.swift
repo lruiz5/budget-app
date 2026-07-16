@@ -37,7 +37,7 @@ struct SwipeToDeleteRow<Content: View>: View {
                 } label: {
                     Image(systemName: "trash.fill")
                         .font(.outfitTitle3)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.appDanger)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(width: deleteButtonWidth)
@@ -45,7 +45,7 @@ struct SwipeToDeleteRow<Content: View>: View {
 
             // Main content
             content()
-                .background(Color(.secondarySystemGroupedBackground))
+                .background(Color.appSurface)
                 .offset(x: currentOffset)
                 .gesture(
                     DragGesture(minimumDistance: 20, coordinateSpace: .local)

@@ -43,6 +43,7 @@ struct MonthlyReportSheet: View {
                 }
                 .padding()
             }
+            .background(Color.appSurfaceSecondary)
             .navigationTitle("\(monthName) \(budget.year) Report")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -54,7 +55,7 @@ struct MonthlyReportSheet: View {
                         Label("Exclude Non-Earned", systemImage: "gift")
                     }
                     .toggleStyle(.button)
-                    .tint(excludeNonEarned ? .purple : .gray)
+                    .tint(excludeNonEarned ? Color.appAccentPurple : Color.gray)
                 }
             }
         }
@@ -72,7 +73,7 @@ struct MonthlyReportSheet: View {
                 summaryCard(
                     label: "Total Income",
                     value: formatCurrency(totalIncome),
-                    tint: .green,
+                    tint: .appSuccess,
                     trend: incomeTrend,
                     trendInverted: false
                 )
@@ -81,7 +82,7 @@ struct MonthlyReportSheet: View {
                 summaryCard(
                     label: "Total Expenses",
                     value: formatCurrency(totalExpenses),
-                    tint: .red,
+                    tint: .appDanger,
                     trend: expenseTrend,
                     trendInverted: true
                 )
@@ -90,7 +91,7 @@ struct MonthlyReportSheet: View {
                 summaryCard(
                     label: "Net Savings",
                     value: formatCurrency(netSavings),
-                    tint: netSavings >= 0 ? .blue : .orange,
+                    tint: netSavings >= 0 ? .appInfo : .appAccentOrange,
                     trend: nil,
                     trendInverted: false
                 )
@@ -99,7 +100,7 @@ struct MonthlyReportSheet: View {
                 summaryCard(
                     label: "Savings Rate",
                     value: "\(savingsRateFormatted)%",
-                    tint: savingsRateDouble >= 10 ? .purple : .gray,
+                    tint: savingsRateDouble >= 10 ? Color.appAccentPurple : Color.gray,
                     trend: nil,
                     trendInverted: false
                 )
@@ -126,7 +127,7 @@ struct MonthlyReportSheet: View {
                     Text("\(String(format: "%.1f", Swift.abs(trend)))% vs last month")
                         .font(.outfitCaption2)
                 }
-                .foregroundStyle(isPositiveTrend ? .green : .red)
+                .foregroundStyle(isPositiveTrend ? Color.appSuccess : Color.appDanger)
             }
         }
         .padding(12)
@@ -152,13 +153,12 @@ struct MonthlyReportSheet: View {
                     Spacer()
                     Text(formatCurrency(totalIncome))
                         .fontWeight(.semibold)
-                        .foregroundStyle(totalIncome >= totalPlannedIncome ? .green : .red)
+                        .foregroundStyle(totalIncome >= totalPlannedIncome ? Color.appSuccess : Color.appDanger)
                 }
             }
             .font(.outfitCaption)
             .padding(12)
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
+            .cardStyle()
 
             // Expenses
             VStack(alignment: .leading, spacing: 8) {
@@ -173,13 +173,12 @@ struct MonthlyReportSheet: View {
                     Spacer()
                     Text(formatCurrency(totalExpenses))
                         .fontWeight(.semibold)
-                        .foregroundStyle(totalExpenses <= totalPlannedExpenses ? .green : .red)
+                        .foregroundStyle(totalExpenses <= totalPlannedExpenses ? Color.appSuccess : Color.appDanger)
                 }
             }
             .font(.outfitCaption)
             .padding(12)
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
+            .cardStyle()
         }
     }
 
@@ -191,11 +190,11 @@ struct MonthlyReportSheet: View {
                 .font(.outfitHeadline)
 
             VStack(spacing: 8) {
-                flowRow(label: "+ Underspent", value: formatCurrency(totalUnderspent), color: .green)
-                flowRow(label: "- Overspent", value: formatCurrency(totalOverspent), color: .red)
+                flowRow(label: "+ Underspent", value: formatCurrency(totalUnderspent), color: .appSuccess)
+                flowRow(label: "- Overspent", value: formatCurrency(totalOverspent), color: .appDanger)
 
                 if leftToBudget > 0 {
-                    flowRow(label: "+ Left to Budget", value: formatCurrency(leftToBudget), color: .green)
+                    flowRow(label: "+ Left to Budget", value: formatCurrency(leftToBudget), color: .appSuccess)
                 }
 
                 Divider()
@@ -206,12 +205,11 @@ struct MonthlyReportSheet: View {
                     Spacer()
                     Text(formatCurrency(projectedBuffer))
                         .fontWeight(.bold)
-                        .foregroundStyle(projectedBuffer >= 0 ? .blue : .red)
+                        .foregroundStyle(projectedBuffer >= 0 ? Color.appInfo : Color.appDanger)
                 }
             }
             .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .cardStyle()
 
             Text(totalExpenses == 0 && totalIncome == 0
                  ? "Start adding transactions to see how next month\u{2019}s buffer changes over time."
@@ -276,14 +274,14 @@ struct MonthlyReportSheet: View {
                     Text(formatCurrency(abs(cat.difference)))
                         .font(.outfitCaption)
                         .fontWeight(.semibold)
-                        .foregroundStyle(cat.difference >= 0 ? .green : .red)
+                        .foregroundStyle(cat.difference >= 0 ? Color.appSuccess : Color.appDanger)
                 }
             }
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color(.systemGray5))
+                        .fill(Color.appBorder)
                     Capsule()
                         .fill(progressColor(cat.percentUsed))
                         .frame(width: geo.size.width * min(1.0, CGFloat(cat.percentUsed / 100)))
@@ -307,18 +305,17 @@ struct MonthlyReportSheet: View {
                          : "\(Int(Swift.abs(trend)))% \(trend > 0 ? "more" : "less") than last month")
                         .font(.outfitCaption2)
                 }
-                .foregroundStyle(Swift.abs(trend) < 1 ? Color.secondary : (trend > 0 ? Color.red : Color.green))
+                .foregroundStyle(Swift.abs(trend) < 1 ? Color.secondary : (trend > 0 ? Color.appDanger : Color.appSuccess))
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     private func progressColor(_ percent: Double) -> Color {
-        if percent > 100 { return .red }
-        if percent > 90 { return .yellow }
-        return .green
+        if percent > 100 { return .appDanger }
+        if percent > 90 { return .appWarning }
+        return .appSuccess
     }
 
     // MARK: - Section 5: Top Spending Items
@@ -338,8 +335,7 @@ struct MonthlyReportSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .cardStyle()
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(topSpendingItems.enumerated()), id: \.element.id) { index, item in
@@ -364,7 +360,7 @@ struct MonthlyReportSheet: View {
                                 Text(formatCurrency(item.actual))
                                     .font(.outfitSubheadline)
                                     .fontWeight(.medium)
-                                    .foregroundStyle(item.actual > item.planned ? .red : .primary)
+                                    .foregroundStyle(item.actual > item.planned ? Color.appDanger : Color.appTextPrimary)
                                 Text("\(String(format: "%.1f", item.percentOfTotal))% of total")
                                     .font(.outfitCaption2)
                                     .foregroundStyle(.secondary)
@@ -379,8 +375,7 @@ struct MonthlyReportSheet: View {
                         }
                     }
                 }
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .cardStyle()
             }
         }
     }
@@ -409,15 +404,15 @@ struct MonthlyReportSheet: View {
                                 .foregroundStyle(.secondary)
                             Text("\(formatCurrency(cat.difference)) unused")
                                 .font(.outfitCaption)
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(Color.appWarningStrong)
                                 .fontWeight(.medium)
                         }
                         .padding(10)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.orange.opacity(0.1))
+                        .background(Color.appWarningLight)
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                                .stroke(Color.appWarning.opacity(0.3), lineWidth: 1)
                         )
                         .cornerRadius(10)
                     }

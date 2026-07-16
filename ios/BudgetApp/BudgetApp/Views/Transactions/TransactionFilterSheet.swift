@@ -49,7 +49,7 @@ struct TransactionFilterSheet: View {
                                     Spacer()
                                     if filterCategoryIds.contains(category.id) {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.green)
+                                            .foregroundStyle(Color.appPrimary)
                                     }
                                 }
                             }
@@ -76,7 +76,7 @@ struct TransactionFilterSheet: View {
                        min > max {
                         Text("Min is greater than max — both still apply independently")
                             .font(.outfitCaption)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.appAccentOrange)
                     }
                 }
 
@@ -97,7 +97,7 @@ struct TransactionFilterSheet: View {
                             Spacer()
                             if filterAccountIds.contains(-1) {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(Color.appPrimary)
                             }
                         }
                     }
@@ -121,7 +121,7 @@ struct TransactionFilterSheet: View {
                                     Spacer()
                                     if filterAccountIds.contains(account.id) {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.green)
+                                            .foregroundStyle(Color.appPrimary)
                                     }
                                 }
                             }

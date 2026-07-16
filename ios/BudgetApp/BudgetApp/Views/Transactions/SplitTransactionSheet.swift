@@ -97,13 +97,13 @@ struct SplitTransactionSheet: View {
                             Text("Add Split")
                         }
                         .font(.outfitSubheadline)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Color.appInfo)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
                                 .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [6]))
-                                .foregroundStyle(.blue.opacity(0.3))
+                                .foregroundStyle(Color.appInfo.opacity(0.3))
                         )
                     }
 
@@ -114,11 +114,12 @@ struct SplitTransactionSheet: View {
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.outfitCaption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.appDanger)
                     }
                 }
                 .padding()
             }
+            .background(Color.appSurfaceSecondary)
             .navigationTitle(isEditMode ? "Edit Split" : "Split Transaction")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -177,8 +178,8 @@ struct SplitTransactionSheet: View {
                     .font(.outfitCaption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(transaction.type == .income ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
-                    .foregroundStyle(transaction.type == .income ? .green : .red)
+                    .background(transaction.type == .income ? Color.appSuccessLight : Color.appDangerLight)
+                    .foregroundStyle(transaction.type == .income ? Color.appSuccess : Color.appDanger)
                     .cornerRadius(6)
 
                 Text(formatDate(transaction.date))
@@ -188,8 +189,7 @@ struct SplitTransactionSheet: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     // MARK: - Split Row
@@ -239,7 +239,7 @@ struct SplitTransactionSheet: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(Color(.systemGray5))
+                    .background(Color.appBorder)
                     .cornerRadius(8)
                 }
             } else if budgetVM.isLoading {
@@ -264,14 +264,14 @@ struct SplitTransactionSheet: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color(.systemGray5))
+                .background(Color.appBorder)
                 .cornerRadius(8)
 
                 Button("Remainder") {
                     applyRemainder(to: index)
                 }
                 .font(.outfitCaption)
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary(size: .sm))
                 .disabled(remaining == 0)
             }
 
@@ -280,7 +280,7 @@ struct SplitTransactionSheet: View {
                 .font(.outfitSubheadline)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color(.systemGray5))
+                .background(Color.appBorder)
                 .cornerRadius(8)
 
             // Non-earned toggle (income transactions only)
@@ -292,8 +292,7 @@ struct SplitTransactionSheet: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     // MARK: - Remaining Indicator
@@ -302,32 +301,32 @@ struct SplitTransactionSheet: View {
         HStack {
             if isBalanced {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.appSuccess)
                 Text("Balanced!")
                     .fontWeight(.medium)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.appSuccess)
             } else if remaining > 0 {
                 Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.appWarningStrong)
                 Text("Remaining: \(formatCurrency(remaining))")
                     .fontWeight(.medium)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.appWarningStrong)
             } else {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.appDanger)
                 Text("Over by: \(formatCurrency(abs(remaining)))")
                     .fontWeight(.medium)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.appDanger)
             }
         }
         .frame(maxWidth: .infinity)
         .padding()
         .background(
             isBalanced
-                ? Color.green.opacity(0.1)
+                ? Color.appSuccessLight
                 : remaining > 0
-                    ? Color.orange.opacity(0.1)
-                    : Color.red.opacity(0.1)
+                    ? Color.appWarningLight
+                    : Color.appDangerLight
         )
         .cornerRadius(12)
     }
@@ -430,7 +429,7 @@ struct BudgetItemPickerView: View {
                                     }
                                     if selectedItemId == item.id {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.green)
+                                            .foregroundStyle(Color.appPrimary)
                                     }
                                 }
                             }

@@ -26,14 +26,14 @@ struct OnboardingItemsStep: View {
                     if !viewModel.createdItems.isEmpty {
                         HStack {
                             Label("\(viewModel.createdItems.count) items", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Color.appSuccess)
                             Spacer()
                             Text("Total: \(viewModel.totalPlanned.formatted())")
                                 .fontWeight(.semibold)
                         }
                         .font(.outfitSubheadline)
                         .padding(12)
-                        .background(Color.green.opacity(0.1))
+                        .background(Color.appSuccessLight)
                         .cornerRadius(10)
                         .padding(.horizontal, 20)
                     }
@@ -49,7 +49,7 @@ struct OnboardingItemsStep: View {
                     if let error = viewModel.error {
                         Text(error)
                             .font(.outfitCaption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.appDanger)
                             .padding(.horizontal, 24)
                     }
                 }
@@ -65,7 +65,7 @@ struct OnboardingItemsStep: View {
                     Text("Back")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemGray5))
+                        .background(Color.appBorder)
                         .foregroundStyle(.primary)
                         .fontWeight(.medium)
                         .cornerRadius(12)
@@ -81,7 +81,7 @@ struct OnboardingItemsStep: View {
                     Text("Continue")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(viewModel.createdItems.isEmpty ? Color(.systemGray4) : Color.green)
+                        .background(viewModel.createdItems.isEmpty ? Color.appBorderStrong : Color.appPrimary)
                         .foregroundStyle(.white)
                         .fontWeight(.semibold)
                         .cornerRadius(12)
@@ -124,7 +124,7 @@ struct OnboardingItemsStep: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.green)
+                            .background(Color.appPrimary)
                             .cornerRadius(8)
                     }
 
@@ -144,7 +144,7 @@ struct OnboardingItemsStep: View {
                     ForEach(categoryItems) { item in
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Color.appSuccess)
                                 .font(.outfitCaption)
                             Text(item.name)
                                 .font(.outfitCaption)
@@ -169,8 +169,8 @@ struct OnboardingItemsStep: View {
                                             .font(.outfitCaption)
                                             .padding(.horizontal, 10)
                                             .padding(.vertical, 6)
-                                            .background(Color.green.opacity(0.12))
-                                            .foregroundStyle(.green)
+                                            .background(Color.appSuccessLight)
+                                            .foregroundStyle(Color.appSuccess)
                                             .cornerRadius(16)
                                     }
                                 }
@@ -206,7 +206,7 @@ struct OnboardingItemsStep: View {
                             }
                         } label: {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Color.appSuccess)
                         }
                         .disabled(itemName.trimmingCharacters(in: .whitespaces).isEmpty || (Decimal(string: itemPlanned) ?? 0) <= 0)
                     }

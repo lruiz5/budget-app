@@ -55,7 +55,7 @@ struct FloatingTransactionPill: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(Color.orange)
+                    .background(Color.appAccentOrange)
                     .clipShape(Capsule())
                     .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
                 }
@@ -87,7 +87,7 @@ private struct TransactionChip: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color(.systemBackground))
+        .background(Color.appSurface)
         .clipShape(Capsule())
         .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
         .contentShape(Capsule())

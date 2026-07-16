@@ -10,7 +10,7 @@ struct OnboardingWelcomeStep: View {
             VStack(spacing: 20) {
                 Image(systemName: "hand.wave.fill")
                     .font(.outfit(72))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.appPrimary)
 
                 Text("Welcome to Budget App!")
                     .font(.outfitLargeTitle)
@@ -32,7 +32,7 @@ struct OnboardingWelcomeStep: View {
                 Text("Get Started")
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.green)
+                    .background(Color.appPrimary)
                     .foregroundStyle(.white)
                     .fontWeight(.semibold)
                     .cornerRadius(12)

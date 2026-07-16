@@ -15,7 +15,7 @@ struct SettingsView: View {
                     HStack {
                         Image(systemName: "person.circle.fill")
                             .font(.outfitLargeTitle)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.appPrimary)
 
                         VStack(alignment: .leading) {
                             Text(userDisplayName)
@@ -59,6 +59,8 @@ struct SettingsView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.appSurfaceSecondary)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

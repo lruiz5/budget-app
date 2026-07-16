@@ -92,9 +92,13 @@ struct MonthYearPicker: View {
                                         .font(.outfitBody)
                                         .frame(width: 90)
                                         .padding(.vertical, 12)
-                                        .background(tempMonth == m ? Color.green : Color(.systemGray5))
-                                        .foregroundStyle(tempMonth == m ? .white : .primary)
+                                        .background(tempMonth == m ? Color.appPrimary : Color.appSurfaceSecondary)
+                                        .foregroundStyle(tempMonth == m ? Color.white : Color.appTextPrimary)
                                         .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .strokeBorder(tempMonth == m ? Color.clear : Color.appBorder)
+                                        )
                                 }
                                 .buttonStyle(.plain)
                                 .id(m)
@@ -144,9 +148,8 @@ struct MonthYearPicker: View {
                     tempYear = calendar.component(.year, from: now)
                 } label: {
                     Text("Go to Today")
-                        .font(.outfitBody)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
 
                 Spacer()
             }

@@ -25,7 +25,7 @@ struct CategoryDrillDownSheet: View {
                                     // Progress bar divider
                                     GeometryReader { geo in
                                         Capsule()
-                                            .fill(item.isOverBudget ? Color.red : Color.green)
+                                            .fill(item.isOverBudget ? Color.overBudget : Color.underBudget)
                                             .frame(width: geo.size.width * min(1.0, item.progress), height: 2)
                                     }
                                     .frame(height: 2)
@@ -34,12 +34,12 @@ struct CategoryDrillDownSheet: View {
                             }
                         }
                         .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
+                        .cardStyle()
                     }
                 }
                 .padding()
             }
+            .background(Color.appSurfaceSecondary)
             .navigationTitle(category.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -73,7 +73,7 @@ struct CategoryDrillDownSheet: View {
                     Text(formatCurrency(category.actual))
                         .font(.outfitTitle3)
                         .fontWeight(.semibold)
-                        .foregroundStyle(category.actual > category.planned ? .red : .primary)
+                        .foregroundStyle(category.actual > category.planned ? Color.appDanger : Color.appTextPrimary)
                 }
             }
 
@@ -83,13 +83,12 @@ struct CategoryDrillDownSheet: View {
                 Text(diff >= 0 ? "\(formatCurrency(diff)) under budget" : "\(formatCurrency(abs(diff))) over budget")
                     .font(.outfitSubheadline)
                     .fontWeight(.medium)
-                    .foregroundStyle(diff >= 0 ? .green : .red)
+                    .foregroundStyle(diff >= 0 ? Color.appSuccess : Color.appDanger)
                 Spacer()
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     private func itemRow(_ item: BudgetItem) -> some View {
@@ -108,13 +107,13 @@ struct CategoryDrillDownSheet: View {
                     Text(formatCurrency(item.actual))
                         .font(.outfitSubheadline)
                         .fontWeight(.medium)
-                        .foregroundStyle(item.isOverBudget ? .red : .primary)
+                        .foregroundStyle(item.isOverBudget ? Color.appDanger : Color.appTextPrimary)
                 }
 
                 let diff = item.planned - item.actual
                 Text(diff >= 0 ? "\(formatCurrency(diff)) left" : "\(formatCurrency(abs(diff))) over")
                     .font(.outfitCaption2)
-                    .foregroundStyle(diff >= 0 ? .green : .red)
+                    .foregroundStyle(diff >= 0 ? Color.appSuccess : Color.appDanger)
             }
         }
         .padding(.vertical, 6)

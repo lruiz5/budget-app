@@ -113,7 +113,7 @@ struct EditTransactionSheet: View {
                                 onSplit()
                             } label: {
                                 Label("Split Transaction", systemImage: "arrow.triangle.branch")
-                                    .foregroundStyle(.purple)
+                                    .foregroundStyle(Color.appAccentPurple)
                             }
                         }
                         if budgetVM.isLoading {
@@ -126,7 +126,7 @@ struct EditTransactionSheet: View {
                             VStack(spacing: 8) {
                                 Text(error)
                                     .font(.outfitCaption)
-                                    .foregroundStyle(.red)
+                                    .foregroundStyle(Color.appDanger)
                                 Button("Retry") {
                                     Task { await budgetVM.loadBudget() }
                                 }
@@ -142,7 +142,7 @@ struct EditTransactionSheet: View {
                                     Spacer()
                                     if selectedBudgetItemId == nil {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.green)
+                                            .foregroundStyle(Color.appPrimary)
                                     }
                                 }
                             }
@@ -160,7 +160,7 @@ struct EditTransactionSheet: View {
                                                 Spacer()
                                                 if selectedBudgetItemId == item.id {
                                                     Image(systemName: "checkmark")
-                                                        .foregroundStyle(.green)
+                                                        .foregroundStyle(Color.appPrimary)
                                                 }
                                             }
                                         }

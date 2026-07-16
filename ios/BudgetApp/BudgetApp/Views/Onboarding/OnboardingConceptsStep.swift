@@ -55,7 +55,7 @@ struct OnboardingConceptsStep: View {
                     Text("Back")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemGray5))
+                        .background(Color.appBorder)
                         .foregroundStyle(.primary)
                         .fontWeight(.medium)
                         .cornerRadius(12)
@@ -67,7 +67,7 @@ struct OnboardingConceptsStep: View {
                     Text("Got it!")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.green)
+                        .background(Color.appPrimary)
                         .foregroundStyle(.white)
                         .fontWeight(.semibold)
                         .cornerRadius(12)
@@ -84,9 +84,9 @@ struct OnboardingConceptsStep: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.outfitTitle2)
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.appPrimary)
                 .frame(width: 44, height: 44)
-                .background(Color.green.opacity(0.12))
+                .background(Color.appPrimaryLight)
                 .cornerRadius(10)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -125,7 +125,7 @@ struct OnboardingConceptsStep: View {
                 exampleRow(label: "Insurance", value: "-$250")
                 exampleRow(label: "Savings", value: "-$1,000")
                 Divider()
-                exampleRow(label: "Left to budget", value: "$0", color: .green, bold: true)
+                exampleRow(label: "Left to budget", value: "$0", color: .appSuccess, bold: true)
             }
         }
         .padding(16)

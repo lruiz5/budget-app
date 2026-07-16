@@ -159,13 +159,16 @@ extension Date {
 // MARK: - Color Extensions
 
 extension Color {
-    static let appGreen = Color(red: 5/255, green: 150/255, blue: 105/255) // Emerald 600
-    static let appGreenLight = Color(red: 16/255, green: 185/255, blue: 129/255) // Emerald 500
+    // Brand tokens (Color.appPrimary, .appDanger, .appSurface, …) are auto-generated
+    // by Xcode from the colorsets in Assets.xcassets/Colors, which mirror the web
+    // design tokens in app/globals.css. Add/edit colors there, not here.
 
-    static let income = Color.green
-    static let expense = Color.primary
-    static let overBudget = Color.red
-    static let underBudget = Color.green
+    // MARK: Semantic aliases (web: income = success, expense/over = danger)
+
+    static let income = Color.appSuccess
+    static let expense = Color.appTextPrimary
+    static let overBudget = Color.appDanger
+    static let underBudget = Color.appSuccess
 }
 
 // MARK: - Custom Font

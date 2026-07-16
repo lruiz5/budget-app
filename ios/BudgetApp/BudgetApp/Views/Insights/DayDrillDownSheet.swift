@@ -23,8 +23,7 @@ struct DayDrillDownSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
+                    .cardStyle()
 
                     // Transactions list
                     VStack(spacing: 0) {
@@ -56,11 +55,11 @@ struct DayDrillDownSheet: View {
                         }
                     }
                     .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
+                    .cardStyle()
                 }
                 .padding()
             }
+            .background(Color.appSurfaceSecondary)
             .navigationTitle(formattedDate)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

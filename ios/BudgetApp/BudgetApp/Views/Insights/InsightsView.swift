@@ -53,6 +53,7 @@ struct InsightsView: View {
                 }
                 .padding()
             }
+            .background(Color.appSurfaceSecondary)
             .onReceive(NotificationCenter.default.publisher(for: .insightsSectionDeepLink)) { notification in
                 if let section = notification.object as? String, section == "spendingPace" {
                     withAnimation {
@@ -106,8 +107,7 @@ struct InsightsView: View {
                     .foregroundStyle(.secondary)
             }
             .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .cardStyle()
         }
         .buttonStyle(.plain)
     }
@@ -143,7 +143,7 @@ struct InsightsView: View {
                                     Text(formatCurrency(item.actual))
                                         .font(.outfitSubheadline)
                                         .fontWeight(.semibold)
-                                        .foregroundStyle(item.actual > item.planned ? .red : .primary)
+                                        .foregroundStyle(item.actual > item.planned ? Color.appDanger : Color.appTextPrimary)
                                     Image(systemName: "chevron.right")
                                         .font(.outfitCaption2)
                                         .foregroundStyle(.tertiary)
@@ -154,12 +154,12 @@ struct InsightsView: View {
                                 ZStack(alignment: .leading) {
                                     // Planned (gray background)
                                     RoundedRectangle(cornerRadius: 3)
-                                        .fill(Color(.systemGray4))
+                                        .fill(Color.appBorder)
                                         .frame(width: barWidth(geo: geo, amount: item.planned, max: maxAmount))
 
                                     // Actual (colored overlay)
                                     RoundedRectangle(cornerRadius: 3)
-                                        .fill(item.actual > item.planned ? Color.red : Color.green)
+                                        .fill(item.actual > item.planned ? Color.overBudget : Color.underBudget)
                                         .frame(width: barWidth(geo: geo, amount: item.actual, max: maxAmount))
                                 }
                             }
@@ -183,8 +183,7 @@ struct InsightsView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     private func barWidth(geo: GeometryProxy, amount: Decimal, max: Decimal) -> CGFloat {
@@ -245,14 +244,14 @@ struct InsightsView: View {
                             x: .value("Day", day.id),
                             y: .value("Amount", day.cumulative)
                         )
-                        .foregroundStyle(.teal.opacity(0.15))
+                        .foregroundStyle(Color.appPrimary.opacity(0.15))
 
                         LineMark(
                             x: .value("Day", day.id),
                             y: .value("Amount", day.cumulative),
                             series: .value("Series", "Actual")
                         )
-                        .foregroundStyle(.teal)
+                        .foregroundStyle(Color.appPrimary)
                         .lineStyle(StrokeStyle(lineWidth: 2))
                     }
 
@@ -261,12 +260,12 @@ struct InsightsView: View {
                         let today = todayDay()
                         if today > 0 && today <= daysInMonth {
                             RuleMark(x: .value("Day", today))
-                                .foregroundStyle(.orange.opacity(0.5))
+                                .foregroundStyle(Color.appAccentOrange.opacity(0.5))
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                                 .annotation(position: .top, alignment: .center) {
                                     Text("Today")
                                         .font(.outfitCaption2)
-                                        .foregroundStyle(.orange)
+                                        .foregroundStyle(Color.appAccentOrange)
                                 }
                         }
                     }
@@ -285,8 +284,7 @@ struct InsightsView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
         .contentShape(Rectangle())
         .onTapGesture {
             guard !dailyData.allSatisfy({ $0.amount == 0 }) else { return }
@@ -367,8 +365,7 @@ struct InsightsView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     @ViewBuilder
@@ -377,7 +374,7 @@ struct InsightsView: View {
 
         ZStack {
             RoundedRectangle(cornerRadius: 4)
-                .fill(isFuture ? Color(.systemGray5) : heatmapColor(amount: day.amount, max: maxAmount))
+                .fill(isFuture ? Color.appBorder : heatmapColor(amount: day.amount, max: maxAmount))
 
             Text("\(day.id)")
                 .font(.outfit(10))
@@ -392,21 +389,21 @@ struct InsightsView: View {
     }
 
     private func heatmapColor(amount: Decimal, max: Decimal) -> Color {
-        guard amount > 0, max > 0 else { return Color(.systemGray6) }
+        guard amount > 0, max > 0 else { return Color.appSurfaceSecondary }
         let ratio = Double(truncating: (amount / max) as NSNumber)
-        if ratio < 0.25 { return Color.green.opacity(0.35) }
-        if ratio < 0.50 { return Color.green.opacity(0.6) }
-        if ratio < 0.75 { return Color.orange.opacity(0.7) }
-        return Color.red.opacity(0.8)
+        if ratio < 0.25 { return Color.appSuccess.opacity(0.35) }
+        if ratio < 0.50 { return Color.appSuccess.opacity(0.6) }
+        if ratio < 0.75 { return Color.appAccentOrange.opacity(0.7) }
+        return Color.appDanger.opacity(0.8)
     }
 
     private func heatmapColorForLevel(_ level: Int) -> Color {
         switch level {
-        case 0: return Color(.systemGray6)
-        case 1: return Color.green.opacity(0.35)
-        case 2: return Color.green.opacity(0.6)
-        case 3: return Color.orange.opacity(0.7)
-        default: return Color.red.opacity(0.8)
+        case 0: return Color.appSurfaceSecondary
+        case 1: return Color.appSuccess.opacity(0.35)
+        case 2: return Color.appSuccess.opacity(0.6)
+        case 3: return Color.appAccentOrange.opacity(0.7)
+        default: return Color.appDanger.opacity(0.8)
         }
     }
 
@@ -443,8 +440,7 @@ struct InsightsView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     private func formatCurrency(_ value: Decimal) -> String {
