@@ -38,6 +38,7 @@ struct SpendingPaceDrillDownSheet: View {
                 }
                 .padding()
             }
+            .background(Color.appSurfaceSecondary)
             .navigationTitle("Spending Pace")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -79,16 +80,16 @@ struct SpendingPaceDrillDownSheet: View {
                             Text("\(pacePercent)%")
                                 .font(.outfitCaption)
                                 .fontWeight(.semibold)
-                                .foregroundStyle(risk.paceRatio > 1.0 ? .red : .green)
+                                .foregroundStyle(risk.paceRatio > 1.0 ? Color.appDanger : Color.appSuccess)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(isSelected ? Color.teal.opacity(0.15) : Color(.systemGray5))
-                        .foregroundStyle(isSelected ? .teal : .primary)
+                        .background(isSelected ? Color.appPrimaryLight : Color.appBorder)
+                        .foregroundStyle(isSelected ? Color.appPrimary : Color.appTextPrimary)
                         .clipShape(Capsule())
                         .overlay(
                             Capsule()
-                                .stroke(isSelected ? Color.teal : Color.clear, lineWidth: 1.5)
+                                .stroke(isSelected ? Color.appPrimary : Color.clear, lineWidth: 1.5)
                         )
                     }
                     .buttonStyle(.plain)
@@ -119,7 +120,7 @@ struct SpendingPaceDrillDownSheet: View {
                     Text(formatCurrency(category.actual))
                         .font(.outfitTitle3)
                         .fontWeight(.semibold)
-                        .foregroundStyle(category.actual > category.planned ? .red : .primary)
+                        .foregroundStyle(category.actual > category.planned ? Color.appDanger : Color.appTextPrimary)
                 }
             }
 
@@ -133,13 +134,12 @@ struct SpendingPaceDrillDownSheet: View {
                         .font(.outfitSubheadline)
                         .fontWeight(.medium)
                 }
-                .foregroundStyle(paceRatio > 1.0 ? .red : .green)
+                .foregroundStyle(paceRatio > 1.0 ? Color.appDanger : Color.appSuccess)
                 Spacer()
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     // MARK: - Per-Category Chart
@@ -186,14 +186,14 @@ struct SpendingPaceDrillDownSheet: View {
                             x: .value("Day", day.id),
                             y: .value("Amount", day.cumulative)
                         )
-                        .foregroundStyle(.teal.opacity(0.15))
+                        .foregroundStyle(Color.appPrimary.opacity(0.15))
 
                         LineMark(
                             x: .value("Day", day.id),
                             y: .value("Amount", day.cumulative),
                             series: .value("Series", "Actual")
                         )
-                        .foregroundStyle(.teal)
+                        .foregroundStyle(Color.appPrimary)
                         .lineStyle(StrokeStyle(lineWidth: 2))
                     }
 
@@ -202,12 +202,12 @@ struct SpendingPaceDrillDownSheet: View {
                         let today = todayDay
                         if today > 0 && today <= daysInMonth {
                             RuleMark(x: .value("Day", today))
-                                .foregroundStyle(.orange.opacity(0.5))
+                                .foregroundStyle(Color.appAccentOrange.opacity(0.5))
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                                 .annotation(position: .top, alignment: .center) {
                                     Text("Today")
                                         .font(.outfitCaption2)
-                                        .foregroundStyle(.orange)
+                                        .foregroundStyle(Color.appAccentOrange)
                                 }
                         }
                     }
@@ -226,8 +226,7 @@ struct SpendingPaceDrillDownSheet: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     // MARK: - Helpers

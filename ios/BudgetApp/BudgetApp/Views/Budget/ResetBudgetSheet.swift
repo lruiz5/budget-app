@@ -100,7 +100,7 @@ struct ResetBudgetSheet: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
-                    .background(Color.red)
+                    .background(Color.appDanger)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .disabled(isResetting)
                 }

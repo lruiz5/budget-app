@@ -9,7 +9,7 @@ struct OnboardingTransactionStep: View {
                 VStack(spacing: 20) {
                     Image(systemName: "creditcard.fill")
                         .font(.outfit(40))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.appPrimary)
                         .padding(.top, 24)
 
                     Text("Add Your First Transaction")
@@ -104,7 +104,7 @@ struct OnboardingTransactionStep: View {
                                                 .foregroundStyle(.secondary)
                                         }
                                         .padding(10)
-                                        .background(Color.green.opacity(0.08))
+                                        .background(Color.appPrimaryLight)
                                         .cornerRadius(8)
                                     }
                                     .foregroundStyle(.primary)
@@ -117,7 +117,7 @@ struct OnboardingTransactionStep: View {
                     if let error = viewModel.error {
                         Text(error)
                             .font(.outfitCaption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.appDanger)
                             .padding(.horizontal, 24)
                     }
                 }
@@ -134,7 +134,7 @@ struct OnboardingTransactionStep: View {
                         Text("Back")
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color(.systemGray5))
+                            .background(Color.appBorder)
                             .foregroundStyle(.primary)
                             .fontWeight(.medium)
                             .cornerRadius(12)
@@ -151,13 +151,13 @@ struct OnboardingTransactionStep: View {
                             ProgressView()
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.green)
+                                .background(Color.appPrimary)
                                 .cornerRadius(12)
                         } else {
                             Text("Add Transaction")
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.green)
+                                .background(Color.appPrimary)
                                 .foregroundStyle(.white)
                                 .fontWeight(.semibold)
                                 .cornerRadius(12)

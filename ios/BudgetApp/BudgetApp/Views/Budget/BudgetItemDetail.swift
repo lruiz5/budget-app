@@ -77,6 +77,7 @@ struct BudgetItemDetail: View {
                 }
                 .padding()
             }
+            .background(Color.appSurfaceSecondary)
             .navigationTitle(item.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -138,12 +139,12 @@ struct BudgetItemDetail: View {
         VStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .stroke(Color(.systemGray5), lineWidth: 12)
+                    .stroke(Color.appBorder, lineWidth: 12)
 
                 Circle()
                     .trim(from: 0, to: min(1.0, item.progress))
                     .stroke(
-                        item.isOverBudget ? Color.red : Color.green,
+                        item.isOverBudget ? Color.overBudget : Color.underBudget,
                         style: StrokeStyle(lineWidth: 12, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
@@ -174,7 +175,7 @@ struct BudgetItemDetail: View {
                         .foregroundStyle(.secondary)
                     Text(formatCurrency(item.remaining))
                         .font(.outfitHeadline)
-                        .foregroundStyle(item.isOverBudget ? .red : .green)
+                        .foregroundStyle(item.isOverBudget ? Color.appDanger : Color.appSuccess)
                 }
             }
 
@@ -185,8 +186,7 @@ struct BudgetItemDetail: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     // MARK: - Avatar Section
@@ -200,7 +200,7 @@ struct BudgetItemDetail: View {
                 // Preview circle
                 ZStack {
                     Circle()
-                        .fill(Color(.systemGray5))
+                        .fill(Color.appBorder.opacity(0.7))
                         .frame(width: 60, height: 60)
 
                     if let avatarImage {
@@ -227,7 +227,7 @@ struct BudgetItemDetail: View {
                             Label("Memoji", systemImage: "face.smiling")
                                 .font(.outfitSubheadline)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary(size: .sm))
 
                         if avatarImage != nil {
                             Button(role: .destructive) {
@@ -236,15 +236,14 @@ struct BudgetItemDetail: View {
                                 Image(systemName: "trash")
                                     .font(.outfitSubheadline)
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.appSecondary(size: .sm))
                         }
                     }
                 }
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
         .sheet(isPresented: $showMemojiSheet) {
             MemojiStickerSheet { image in
                 saveAndShowAvatar(image)
@@ -291,14 +290,14 @@ struct BudgetItemDetail: View {
                             onUpdate()
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.appPrimary(size: .sm))
                     .disabled(isSaving || editedName.trimmingCharacters(in: .whitespaces).isEmpty)
 
                     Button("Cancel") {
                         editedName = item.name
                         isEditingName = false
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary(size: .sm))
                 } else {
                     Text(item.name)
                         .font(.outfitTitle3)
@@ -309,13 +308,12 @@ struct BudgetItemDetail: View {
                     Button("Edit") {
                         isEditingName = true
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary(size: .sm))
                 }
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     // MARK: - Planned Section
@@ -341,14 +339,14 @@ struct BudgetItemDetail: View {
                             onUpdate()
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.appPrimary(size: .sm))
                     .disabled(isSaving)
 
                     Button("Cancel") {
                         editedPlanned = String(describing: item.planned)
                         isEditingPlanned = false
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary(size: .sm))
                 } else {
                     Text(formatCurrency(item.planned))
                         .font(.outfitTitle3)
@@ -359,13 +357,12 @@ struct BudgetItemDetail: View {
                     Button("Edit") {
                         isEditingPlanned = true
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary(size: .sm))
                 }
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     // MARK: - Expected Day Section
@@ -388,7 +385,7 @@ struct BudgetItemDetail: View {
                         onUpdateExpectedDay(item.id, value)
                         isEditingExpectedDay = false
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.appPrimary(size: .sm))
 
                     if !editedExpectedDay.isEmpty {
                         Button("Clear") {
@@ -396,19 +393,19 @@ struct BudgetItemDetail: View {
                             onUpdateExpectedDay(item.id, -1)
                             isEditingExpectedDay = false
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary(size: .sm))
                     }
 
                     Button("Cancel") {
                         editedExpectedDay = item.expectedDay.map { String($0) } ?? ""
                         isEditingExpectedDay = false
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary(size: .sm))
                 } else {
                     if let dayStr = Int(editedExpectedDay) {
                         Label("Day \(dayStr)", systemImage: "calendar")
                             .font(.outfitBody)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Color.appInfo)
                     } else {
                         Text("Not set")
                             .font(.outfitBody)
@@ -420,7 +417,7 @@ struct BudgetItemDetail: View {
                     Button(editedExpectedDay.isEmpty ? "Set" : "Edit") {
                         isEditingExpectedDay = true
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary(size: .sm))
                 }
             }
 
@@ -429,8 +426,7 @@ struct BudgetItemDetail: View {
                 .foregroundStyle(.secondary)
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     // MARK: - Transactions Section
@@ -508,7 +504,7 @@ struct BudgetItemDetail: View {
                                 Text(transaction.displayAmount)
                                     .font(.outfitBody)
                                     .fontWeight(.medium)
-                                    .foregroundStyle(transaction.type == .income ? .green : .primary)
+                                    .foregroundStyle(transaction.type == .income ? Color.income : Color.appTextPrimary)
 
                                 Image(systemName: "chevron.right")
                                     .font(.outfitCaption)
@@ -532,7 +528,7 @@ struct BudgetItemDetail: View {
 
                                     HStack(spacing: 4) {
                                         Image(systemName: "arrow.triangle.branch")
-                                            .foregroundStyle(.purple)
+                                            .foregroundStyle(Color.appAccentPurple)
                                         Text(split.description ?? "Split")
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
@@ -568,8 +564,7 @@ struct BudgetItemDetail: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .cardStyle()
     }
 
     // MARK: - Helpers
@@ -607,7 +602,7 @@ struct MemojiStickerSheet: View {
                     captureAction: $captureAction
                 )
                 .frame(height: 100)
-                .background(Color(.systemGray6))
+                .background(Color.appSurfaceSecondary)
                 .cornerRadius(12)
                 .padding(.horizontal)
 
@@ -619,7 +614,7 @@ struct MemojiStickerSheet: View {
                             .font(.outfitHeadline)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.appPrimary(size: .sm))
                     .padding(.horizontal)
                 }
 

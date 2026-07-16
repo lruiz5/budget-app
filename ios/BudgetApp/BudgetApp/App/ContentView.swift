@@ -38,7 +38,7 @@ struct ContentView: View {
                 }
                 .tag(4)
         }
-        .tint(.green) // Emerald-like primary color
+        .tint(.appPrimary)
         .overlay(alignment: .top) {
             if !networkMonitor.isConnected {
                 HStack(spacing: 6) {

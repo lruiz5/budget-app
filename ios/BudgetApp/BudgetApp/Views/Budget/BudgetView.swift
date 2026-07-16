@@ -32,7 +32,7 @@ struct BudgetView: View {
     var body: some View {
         Group {
             if viewModel.isLoading {
-                ProgressView("Loading budget...")
+                BudgetSkeleton()
             } else if let budget = viewModel.budget {
                 budgetContent(budget)
             } else if let error = viewModel.error {
@@ -160,8 +160,7 @@ struct BudgetView: View {
                 )
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .cardStyle()
 
                 // Categories — pre-sorted in ViewModel, not computed here
                 ForEach(viewModel.sortedCategories, id: \.id) { category in
@@ -201,13 +200,12 @@ struct BudgetView: View {
                 } label: {
                     Label("Add Category", systemImage: "plus.circle.fill")
                         .font(.outfitSubheadline)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Color.appPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                 }
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .cardStyle()
 
                 // Reset Budget button
                 Button {
@@ -215,18 +213,17 @@ struct BudgetView: View {
                 } label: {
                     Label("Reset Budget", systemImage: "arrow.counterclockwise")
                         .font(.outfitSubheadline)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.appDanger)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                 }
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .cardStyle()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.appSurfaceSecondary)
         .scrollDismissesKeyboard(.interactively)
         .refreshable {
             await viewModel.loadBudget()
@@ -264,7 +261,7 @@ struct BudgetView: View {
             Button("Start Planning") {
                 Task { await viewModel.createBudget() }
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.appPrimary)
         }
     }
 
@@ -279,7 +276,7 @@ struct BudgetView: View {
             Button("Try Again") {
                 Task { await viewModel.loadBudget() }
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.appSecondary)
         }
     }
 
@@ -350,7 +347,7 @@ struct BudgetSummaryCard: View {
                 label: "Income",
                 actual: incomeActual,
                 planned: incomePlanned,
-                tint: .green
+                tint: .appSuccess
             )
 
             Spacer()
@@ -360,7 +357,7 @@ struct BudgetSummaryCard: View {
                 label: "Expenses",
                 actual: expenseActual,
                 planned: expensePlanned,
-                tint: .orange
+                tint: .appAccentOrange
             )
         }
         .padding(.vertical, 4)
@@ -403,14 +400,14 @@ struct MiniProgressRing: View {
     }
 
     private var ringColor: Color {
-        isOver ? .red : tint
+        isOver ? .appDanger : tint
     }
 
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
                 Circle()
-                    .stroke(Color(.systemGray5), lineWidth: 4)
+                    .stroke(Color.appBorder, lineWidth: 4)
 
                 Circle()
                     .trim(from: 0, to: progress)
@@ -419,7 +416,7 @@ struct MiniProgressRing: View {
 
                 Text(percentText)
                     .font(.outfit(11)).fontWeight(.semibold)
-                    .foregroundStyle(isOver ? .red : .primary)
+                    .foregroundStyle(isOver ? Color.appDanger : Color.appTextPrimary)
             }
             .frame(width: 44, height: 44)
 
@@ -430,7 +427,7 @@ struct MiniProgressRing: View {
             Text(formatCompact(actual))
                 .font(.outfitCaption2)
                 .fontWeight(.medium)
-                .foregroundStyle(isOver ? .red : .primary)
+                .foregroundStyle(isOver ? Color.appDanger : Color.appTextPrimary)
         }
     }
 
@@ -506,25 +503,25 @@ struct LeftToBudgetBanner: View {
 
     private var backgroundColor: Color {
         if !hasAnyPlanning {
-            return Color(.systemGray5)
+            return Color.appBorder.opacity(0.5)
         } else if leftToBudget > 0 {
-            return Color.orange.opacity(0.15)
+            return Color.appWarningLight
         } else if leftToBudget == 0 {
-            return Color.green.opacity(0.15)
+            return Color.appSuccessLight
         } else {
-            return Color.red.opacity(0.15)
+            return Color.appDangerLight
         }
     }
 
     private var foregroundColor: Color {
         if !hasAnyPlanning {
-            return .secondary
+            return .appTextSecondary
         } else if leftToBudget > 0 {
-            return .orange
+            return .appWarningStrong
         } else if leftToBudget == 0 {
-            return .green
+            return .appSuccess
         } else {
-            return .red
+            return .appDanger
         }
     }
 

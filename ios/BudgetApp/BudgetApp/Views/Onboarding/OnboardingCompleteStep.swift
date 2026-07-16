@@ -39,7 +39,7 @@ struct OnboardingCompleteStep: View {
                             icon: viewModel.addedTransaction ? "checkmark.circle.fill" : "minus.circle",
                             label: "First transaction",
                             value: viewModel.addedTransaction ? "Added" : "Skipped",
-                            valueColor: viewModel.addedTransaction ? .green : .secondary
+                            valueColor: viewModel.addedTransaction ? Color.appSuccess : Color.secondary
                         )
                     }
                     .padding(16)
@@ -73,7 +73,7 @@ struct OnboardingCompleteStep: View {
                 Text("Go to Budget")
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.green)
+                    .background(Color.appPrimary)
                     .foregroundStyle(.white)
                     .fontWeight(.semibold)
                     .cornerRadius(12)
@@ -91,7 +91,7 @@ struct OnboardingCompleteStep: View {
     private func summaryRow(icon: String, label: String, value: String, valueColor: Color = .primary) -> some View {
         HStack {
             Image(systemName: icon)
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.appSuccess)
                 .frame(width: 24)
             Text(label)
                 .font(.outfitSubheadline)
@@ -106,7 +106,7 @@ struct OnboardingCompleteStep: View {
     private func nextStepRow(icon: String, text: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.appSuccess)
                 .frame(width: 24)
             Text(text)
                 .font(.outfitCaption)

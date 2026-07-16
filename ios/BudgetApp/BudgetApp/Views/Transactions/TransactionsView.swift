@@ -37,6 +37,9 @@ struct TransactionsView: View {
     @State private var cachedGrouped: [(key: Date, value: [Transaction])] = []
     @State private var cachedTabCount: Int = 0
 
+    // Single-open coordination for custom swipe rows
+    @State private var activeSwipeItemId: Int?
+
     private static let utcCalendar: Calendar = {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
@@ -104,15 +107,14 @@ struct TransactionsView: View {
 
             // Transaction List
             if isCurrentTabLoading {
-                Spacer()
-                ProgressView("Loading transactions...")
-                Spacer()
+                TransactionListSkeleton()
             } else if cachedGrouped.isEmpty {
                 emptyStateView
             } else {
                 transactionList
             }
         }
+        .background(Color.appSurfaceSecondary)
         .searchable(text: $searchText, prompt: "Search transactions")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -292,77 +294,95 @@ struct TransactionsView: View {
     // MARK: - Transaction List
 
     private var transactionList: some View {
-        List {
-            ForEach(cachedGrouped, id: \.key) { date, transactions in
-                Section(header: Text(formatDate(date))) {
-                    ForEach(transactions) { transaction in
-                        TransactionRow(transaction: transaction, budgetItemName: transaction.isSplit
-                            ? transaction.splits?.compactMap { viewModel.budgetItemNameMap[$0.budgetItemId] }.joined(separator: ", ")
-                            : viewModel.budgetItemNameMap[transaction.budgetItemId ?? -1])
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if transaction.isSplit {
-                                    activeSheet = .splitTransaction(transaction)
-                                } else {
-                                    activeSheet = .editTransaction(transaction)
-                                }
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                if selectedFilter == .deleted {
-                                    Button {
-                                        Task {
-                                            await viewModel.restoreTransaction(id: transaction.id)
-                                        }
-                                    } label: {
-                                        Label("Restore", systemImage: "arrow.uturn.backward")
-                                    }
-                                    .tint(.green)
-                                } else {
-                                    Button(role: .destructive) {
-                                        Task {
-                                            await viewModel.deleteTransaction(id: transaction.id)
-                                        }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                            }
-                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                if selectedFilter == .uncategorized {
-                                    if let suggestedId = transaction.suggestedBudgetItemId {
-                                        Button {
-                                            Task {
-                                                await viewModel.categorizeTransaction(
-                                                    transactionId: transaction.id,
-                                                    budgetItemId: suggestedId
-                                                )
-                                            }
-                                        } label: {
-                                            Label("Quick Assign", systemImage: "sparkles")
-                                        }
-                                        .tint(.blue)
-                                    }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 8) {
+                ForEach(cachedGrouped, id: \.key) { date, transactions in
+                    dateHeader(date)
+                    transactionGroupCard(transactions)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+        }
+        .background(Color.appSurfaceSecondary)
+    }
 
-                                    Button {
-                                        activeSheet = .categorizeTransaction(transaction)
-                                    } label: {
-                                        Label("Categorize", systemImage: "folder")
-                                    }
-                                    .tint(.orange)
+    private func dateHeader(_ date: Date) -> some View {
+        Text(formatDate(date))
+            .font(.outfitCaption)
+            .foregroundStyle(.secondary)
+            .padding(.top, 12)
+            .padding(.leading, 4)
+    }
 
-                                    Button {
-                                        activeSheet = .splitTransaction(transaction)
-                                    } label: {
-                                        Label("Split", systemImage: "arrow.triangle.branch")
-                                    }
-                                    .tint(.purple)
-                                }
-                            }
-                    }
+    private func transactionGroupCard(_ transactions: [Transaction]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(transactions.enumerated()), id: \.element.id) { index, transaction in
+                transactionSwipeRow(transaction)
+
+                if index < transactions.count - 1 {
+                    Divider()
+                        .padding(.leading, 16)
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .cardStyle()
+    }
+
+    private func transactionSwipeRow(_ transaction: Transaction) -> some View {
+        SwipeActionsRow(
+            itemId: transaction.id,
+            activeSwipeItemId: $activeSwipeItemId,
+            leadingActions: leadingActions(for: transaction),
+            trailingActions: trailingActions(for: transaction)
+        ) {
+            TransactionRow(transaction: transaction, budgetItemName: transaction.isSplit
+                ? transaction.splits?.compactMap { viewModel.budgetItemNameMap[$0.budgetItemId] }.joined(separator: ", ")
+                : viewModel.budgetItemNameMap[transaction.budgetItemId ?? -1])
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if transaction.isSplit {
+                        activeSheet = .splitTransaction(transaction)
+                    } else {
+                        activeSheet = .editTransaction(transaction)
+                    }
+                }
+        }
+    }
+
+    private func trailingActions(for transaction: Transaction) -> [SwipeRowAction] {
+        if selectedFilter == .deleted {
+            return [SwipeRowAction(icon: "arrow.uturn.backward", tint: .appPrimary) {
+                Task { await viewModel.restoreTransaction(id: transaction.id) }
+            }]
+        }
+        return [SwipeRowAction(icon: "trash.fill", tint: .appDanger) {
+            Task { await viewModel.deleteTransaction(id: transaction.id) }
+        }]
+    }
+
+    private func leadingActions(for transaction: Transaction) -> [SwipeRowAction] {
+        guard selectedFilter == .uncategorized else { return [] }
+        var actions: [SwipeRowAction] = []
+        if let suggestedId = transaction.suggestedBudgetItemId {
+            actions.append(SwipeRowAction(icon: "sparkles", tint: .appInfo) {
+                Task {
+                    await viewModel.categorizeTransaction(
+                        transactionId: transaction.id,
+                        budgetItemId: suggestedId
+                    )
+                }
+            })
+        }
+        actions.append(SwipeRowAction(icon: "folder", tint: .appAccentOrange) {
+            activeSheet = .categorizeTransaction(transaction)
+        })
+        actions.append(SwipeRowAction(icon: "arrow.triangle.branch", tint: .appAccentPurple) {
+            activeSheet = .splitTransaction(transaction)
+        })
+        return actions
     }
 
     // MARK: - Filter Chip Bar
@@ -464,7 +484,7 @@ struct TransactionsView: View {
                     Button("Clear Filters") {
                         clearAllFilters()
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                 }
             } else {
                 ContentUnavailableView {
@@ -540,7 +560,7 @@ struct TransactionRow: View {
                             .font(.outfitCaption2)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
-                            .background(Color(.systemGray6))
+                            .background(Color.appSurfaceSecondary)
                             .cornerRadius(4)
                     }
                 }
@@ -548,11 +568,11 @@ struct TransactionRow: View {
                 if transaction.isDeleted {
                     Label("Deleted", systemImage: "trash")
                         .font(.outfitCaption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.appDanger)
                 } else if transaction.isSplit {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.triangle.branch")
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(Color.appAccentPurple)
                         Text(budgetItemName ?? "Split")
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -565,7 +585,7 @@ struct TransactionRow: View {
                 } else if transaction.budgetItemId == nil, transaction.suggestedBudgetItemId != nil {
                     Text("Swipe right to categorize")
                         .font(.outfitCaption)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Color.appInfo)
                 }
             }
 
@@ -574,7 +594,7 @@ struct TransactionRow: View {
             Text(transaction.displayAmount)
                 .font(.outfitBody)
                 .fontWeight(.medium)
-                .foregroundStyle(transaction.type == .income ? .green : .primary)
+                .foregroundStyle(transaction.type == .income ? Color.income : Color.appTextPrimary)
         }
         .padding(.vertical, 4)
     }
@@ -595,7 +615,8 @@ struct CategorizeTransactionSheet: View {
         NavigationStack {
             Group {
                 if budgetVM.isLoading {
-                    ProgressView("Loading categories...")
+                    SheetListSkeleton()
+                        .background(Color(.systemGroupedBackground))
                 } else if let budget = budgetVM.budget {
                     List {
                         if let onSplit {
@@ -605,7 +626,7 @@ struct CategorizeTransactionSheet: View {
                                     onSplit()
                                 } label: {
                                     Label("Split Transaction", systemImage: "arrow.triangle.branch")
-                                        .foregroundStyle(.purple)
+                                        .foregroundStyle(Color.appAccentPurple)
                                 }
                             }
                         }
@@ -641,6 +662,8 @@ struct CategorizeTransactionSheet: View {
                         }
                     }
                     .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.appSurfaceSecondary)
                 } else if let error = budgetVM.error {
                     ContentUnavailableView {
                         Label("Failed to Load", systemImage: "exclamationmark.triangle")
@@ -693,8 +716,8 @@ struct FilterChip: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color.green.opacity(0.15))
-        .foregroundStyle(.green)
+        .background(Color.appPrimaryLight)
+        .foregroundStyle(Color.appPrimary)
         .clipShape(Capsule())
     }
 }

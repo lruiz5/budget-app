@@ -49,8 +49,8 @@ struct CategorySection: View {
                                 }
                         }
                         .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(Color.green, lineWidth: 2)
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.appPrimary, lineWidth: 2)
                                 .opacity(highlightedDropTargetId == item.id ? 1 : 0)
                                 .animation(.easeInOut(duration: 0.15), value: highlightedDropTargetId)
                         )
@@ -88,8 +88,7 @@ struct CategorySection: View {
                 .padding(.vertical, 8)
             }
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .cardStyle()
         .onAppear {
             orderedItems = category.items.sorted { $0.order < $1.order }
         }
@@ -117,7 +116,7 @@ struct CategorySection: View {
                     Text(formatCurrency(category.actual))
                         .font(.outfitSubheadline)
                         .fontWeight(.medium)
-                        .foregroundStyle(isOverBudget ? .red : .primary)
+                        .foregroundStyle(isOverBudget ? Color.appDanger : Color.appTextPrimary)
 
                     Text("of \(formatCurrency(category.planned))")
                         .font(.outfitCaption)
@@ -199,10 +198,10 @@ struct BudgetItemRow: View {
                             if let day = item.expectedDay {
                                 Text("\(day)\(day >= 11 && day <= 13 ? "th" : [1: "st", 2: "nd", 3: "rd"][day % 10] ?? "th")")
                                     .font(.outfitCaption2)
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(Color.appInfo)
                                     .padding(.horizontal, 4)
                                     .padding(.vertical, 1)
-                                    .background(Color.blue.opacity(0.1))
+                                    .background(Color.appInfoLight)
                                     .clipShape(Capsule())
                             }
                         }
@@ -230,7 +229,7 @@ struct BudgetItemRow: View {
                             commitPlannedEdit()
                         } label: {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Color.appPrimary)
                         }
                         .buttonStyle(.plain)
                     }
@@ -249,11 +248,11 @@ struct BudgetItemRow: View {
                             Text(formatCurrency(item.actual))
                                 .font(.outfitSubheadline)
                                 .fontWeight(.medium)
-                                .foregroundStyle(item.isOverBudget ? .red : .primary)
+                                .foregroundStyle(item.isOverBudget ? Color.appDanger : Color.appTextPrimary)
 
                             Text(formatCurrency(item.remaining))
                                 .font(.outfitCaption)
-                                .foregroundStyle(item.isOverBudget ? .red : .secondary)
+                                .foregroundStyle(item.isOverBudget ? Color.appDanger : Color.appTextSecondary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -263,9 +262,9 @@ struct BudgetItemRow: View {
             // Full-width progress bar — scaleEffect avoids GeometryReader layout overhead
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color(.systemGray5))
+                    .fill(Color.appBorder)
                 Capsule()
-                    .fill(item.isOverBudget ? Color.red : Color.green)
+                    .fill(item.isOverBudget ? Color.overBudget : Color.underBudget)
                     .scaleEffect(x: CGFloat(progress), anchor: .leading)
             }
             .frame(height: 2)

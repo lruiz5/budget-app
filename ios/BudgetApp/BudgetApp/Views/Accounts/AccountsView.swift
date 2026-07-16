@@ -21,7 +21,8 @@ struct AccountsView: View {
     var body: some View {
         Group {
             if viewModel.isLoading {
-                ProgressView("Loading accounts...")
+                AccountsListSkeleton()
+                    .background(Color.appSurfaceSecondary)
             } else if viewModel.accounts.isEmpty {
                 emptyStateView
             } else {
@@ -84,42 +85,61 @@ struct AccountsView: View {
     // MARK: - Accounts List
 
     private var accountsList: some View {
-        List {
-            ForEach(viewModel.groupedAccounts, id: \.key) { institution, accounts in
-                Section {
-                    ForEach(accounts) { account in
-                        AccountCard(
-                            account: account,
-                            balance: viewModel.balances[String(account.id)],
-                            isLoadingBalance: viewModel.isLoadingBalances && viewModel.balances.isEmpty
-                        )
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 8) {
+                ForEach(viewModel.groupedAccounts, id: \.key) { institution, accounts in
+                    institutionHeader(institution)
+
+                    VStack(spacing: 0) {
+                        ForEach(Array(accounts.enumerated()), id: \.element.id) { index, account in
+                            AccountCard(
+                                account: account,
+                                balance: viewModel.balances[String(account.id)],
+                                isLoadingBalance: viewModel.isLoadingBalances && viewModel.balances.isEmpty
+                            )
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 activeSheet = .accountDetail(account)
                             }
-                    }
-                } header: {
-                    HStack(spacing: 8) {
-                        InstitutionIcon(name: institution)
 
-                        Text(institution)
-                        Spacer()
-                        Menu {
-                            Button(role: .destructive) {
-                                viewModel.institutionToUnlink = institution
-                            } label: {
-                                Label("Remove Institution", systemImage: "trash")
+                            if index < accounts.count - 1 {
+                                Divider()
+                                    .padding(.leading, 16)
                             }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .font(.outfitBody)
-                                .foregroundStyle(.secondary)
                         }
                     }
+                    .cardStyle()
                 }
             }
+            .padding(16)
         }
-        .listStyle(.insetGrouped)
+        .background(Color.appSurfaceSecondary)
+    }
+
+    private func institutionHeader(_ institution: String) -> some View {
+        HStack(spacing: 8) {
+            InstitutionIcon(name: institution)
+
+            Text(institution)
+                .font(.outfitSubheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Menu {
+                Button(role: .destructive) {
+                    viewModel.institutionToUnlink = institution
+                } label: {
+                    Label("Remove Institution", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.outfitBody)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.top, 8)
+        .padding(.leading, 4)
     }
 
     // MARK: - Empty State
@@ -133,7 +153,7 @@ struct AccountsView: View {
             Button("Link Account") {
                 activeSheet = .addAccount
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.appPrimary)
         }
     }
 }
@@ -243,7 +263,7 @@ struct AccountDetailSheet: View {
                             if isSyncEnabled, let dateStr = viewModel.selectedAccount?.syncStartDateDisplay ?? account.syncStartDateDisplay {
                                 Text("Streaming since \(dateStr)")
                                     .font(.outfitCaption)
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(Color.appPrimary)
                             } else {
                                 Text("Turn on to begin syncing transactions automatically")
                                     .font(.outfitCaption)
@@ -306,7 +326,7 @@ struct AddAccountSheet: View {
             VStack(spacing: 20) {
                 Image(systemName: "building.columns.fill")
                     .font(.outfit(60))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.appPrimary)
 
                 Text("Connect Your Bank")
                     .font(.outfitTitle2)
@@ -327,7 +347,7 @@ struct AddAccountSheet: View {
                         Text("Connect Bank")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.appPrimary)
                     .controlSize(.large)
                     .padding(.horizontal)
                 }
@@ -434,7 +454,7 @@ struct InstitutionIcon: View {
             .font(.outfit(size * 0.5))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(Color.green, in: Circle())
+            .background(Color.appPrimary, in: Circle())
     }
 
     /// Maps known institution names to their website domains for favicon lookup.

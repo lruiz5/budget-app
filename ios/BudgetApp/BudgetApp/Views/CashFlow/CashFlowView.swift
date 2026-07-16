@@ -63,6 +63,7 @@ struct CashFlowView: View {
             }
             .padding()
         }
+        .background(Color.appSurfaceSecondary)
         .refreshable {
             await budgetVM.loadBudget(skipCache: true)
         }
@@ -94,19 +95,19 @@ struct CashFlowView: View {
                 title: "Income",
                 amount: totalScheduledIncome,
                 prefix: "+",
-                color: .green
+                color: .appSuccess
             )
             SummaryCard(
                 title: "Expenses",
                 amount: totalScheduledExpenses,
                 prefix: "-",
-                color: .red
+                color: .appDanger
             )
             SummaryCard(
                 title: "Net",
                 amount: abs(netCashFlow),
                 prefix: netCashFlow >= 0 ? "+" : "-",
-                color: netCashFlow >= 0 ? .green : .red
+                color: netCashFlow >= 0 ? .appSuccess : .appDanger
             )
         }
     }
@@ -140,7 +141,7 @@ struct CashFlowView: View {
                     Text("+$\(buffer.formatted())")
                         .font(.outfitBody)
                         .fontWeight(.semibold)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Color.appInfo)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -167,9 +168,7 @@ struct CashFlowView: View {
                 }
             }
         }
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+        .cardStyle()
     }
 
     private func dayHeader(day: Int, isToday: Bool) -> some View {
@@ -177,18 +176,18 @@ struct CashFlowView: View {
             Text("\(monthNames[budgetVM.selectedMonth].prefix(3)) \(day)\(ordinalSuffix(day))")
                 .font(.outfitCaption)
                 .fontWeight(.semibold)
-                .foregroundStyle(isToday ? .green : .secondary)
+                .foregroundStyle(isToday ? Color.appPrimary : Color.secondary)
             if isToday {
                 Text("Today")
                     .font(.outfitCaption2)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.appPrimary)
             }
             Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
-        .background(isToday ? Color.green.opacity(0.08) : Color(.secondarySystemBackground))
+        .background(isToday ? Color.appPrimaryLight : Color.appSurfaceSecondary)
     }
 
     private func cashFlowRow(entry: (item: BudgetItem, categoryName: String, categoryEmoji: String, categoryType: String), day: Int) -> some View {
@@ -214,7 +213,7 @@ struct CashFlowView: View {
                 Text("\(isIncome ? "+" : "-")$\(entry.item.planned.formatted())")
                     .font(.outfitBody)
                     .fontWeight(.semibold)
-                    .foregroundStyle(isIncome ? .green : .primary)
+                    .foregroundStyle(isIncome ? Color.income : Color.appTextPrimary)
 
                 if entry.item.actual > 0 {
                     Text("$\(entry.item.actual.formatted()) actual")
@@ -273,7 +272,7 @@ struct CashFlowView: View {
                         Text("\(isIncome ? "+" : "-")$\(entry.item.planned.formatted())")
                             .font(.outfitBody)
                             .fontWeight(.semibold)
-                            .foregroundStyle(isIncome ? .green : .primary)
+                            .foregroundStyle(isIncome ? Color.income : Color.appTextPrimary)
 
                         if entry.item.actual > 0 {
                             Text("$\(entry.item.actual.formatted()) actual")
@@ -294,9 +293,7 @@ struct CashFlowView: View {
                 }
             }
         }
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+        .cardStyle()
     }
 
     // MARK: - Empty State
@@ -316,9 +313,7 @@ struct CashFlowView: View {
         }
         .padding(40)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+        .cardStyle()
     }
 
     // MARK: - Helpers
@@ -328,13 +323,13 @@ struct CashFlowView: View {
         let isFulfilled = hasTransactions && item.actual >= item.planned && item.planned > 0
 
         if isFulfilled {
-            return (isIncome ? "Received" : "Paid", .green, .green.opacity(0.1))
+            return (isIncome ? "Received" : "Paid", Color.appSuccess, Color.appSuccessLight)
         }
         if hasTransactions {
-            return ("Partial", .orange, .orange.opacity(0.1))
+            return ("Partial", Color.appWarningStrong, Color.appWarningLight)
         }
         if isCurrentMonth && expectedDay < todayDay {
-            return ("Overdue", .red, .red.opacity(0.1))
+            return ("Overdue", Color.appDanger, Color.appDangerLight)
         }
         return ("Upcoming", .secondary, Color(.secondarySystemBackground))
     }
@@ -370,9 +365,7 @@ private struct SummaryCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+        .cardStyle()
     }
 }
 
