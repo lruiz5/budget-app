@@ -2,10 +2,10 @@
 
 ## Project Overview
 
-Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank sync via **SimpleFIN Bridge** (migrated Jul 2026 after Teller shut down; legacy Teller code remains for old rows).
+Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) companion. Bank sync via **SimpleFIN Bridge** (migrated Jul 2026 after Teller shut down; **web** Teller code removed Jul 16 2026 — iOS deliberately untouched per user decision, legacy DB column names remain).
 
 **Web App:** v1.17.0 (stable)  |  **iOS App:** v0.20.0 (pre-release) — **iOS app name: Happy Tusk**
-**Last Session:** 2026-07-15
+**Last Session:** 2026-07-16
 
 ## Instructions for Claude
 
@@ -22,7 +22,7 @@ Zero-based budget app: Next.js + TypeScript web app with native iOS (SwiftUI) co
 
 Web + iOS App → Next.js API Routes (Vercel) → Supabase PostgreSQL
 
-SimpleFIN needs no certs or env vars — per-connection access URLs live in `linked_accounts.accessToken` (see `lib/simplefin.ts`). Legacy Teller certs/env vars only matter for old `provider='teller'` rows (`lib/teller.ts`).
+SimpleFIN needs no certs or env vars — per-connection access URLs live in `linked_accounts.accessToken` (see `lib/simplefin.ts`).
 
 ## iOS App (`ios/BudgetApp/`)
 
@@ -80,9 +80,9 @@ Budget (month/year) → Buffer + Categories (Income, Giving, Household, Transpor
 
 **Components:** `BudgetSection.tsx` (category+items), `BudgetSummary.tsx` (sidebar), `MonthlyReportModal.tsx`, `DashboardLayout.tsx`, `Sidebar.tsx`, `MonthBanner.tsx` (past/future month indicator), `AddTransactionModal.tsx`, `SplitTransactionModal.tsx`, `MobileBlockScreen.tsx`, `onboarding/*.tsx`, `charts/*.tsx`
 
-**API Routes:** `budgets/` (GET auto-creates), `budgets/list/` (GET read-only, no auto-create), `budget-categories/`, `transactions/`, `transactions/split/`, `recurring-payments/`, `teller/` (accounts, sync, balances — provider-aware, serve both Teller + SimpleFIN rows), `simplefin/claim/` (POST Setup Token), `onboarding/`, `budgets/copy/`, `budgets/reset/`, `auth/claim-data/`
+**API Routes:** `budgets/` (GET auto-creates), `budgets/list/` (GET read-only, no auto-create), `budget-categories/`, `transactions/`, `transactions/split/`, `recurring-payments/`, `bank/` (accounts, sync, balances — renamed from `teller/` Jul 16 2026; `teller/*` kept as re-export aliases for iOS), `simplefin/claim/` (POST Setup Token), `onboarding/`, `budgets/copy/`, `budgets/reset/`, `auth/claim-data/`
 
-**Utilities:** `lib/budgetHelpers.ts`, `lib/simplefin.ts`, `lib/teller.ts` (legacy), `lib/auth.ts`, `lib/formatCurrency.ts`, `lib/chartColors.ts`, `lib/chartHelpers.ts`, `lib/cn.ts` (class joiner, no tailwind-merge — don't pass conflicting utilities)
+**Utilities:** `lib/budgetHelpers.ts`, `lib/simplefin.ts`, `lib/bankSync.ts` (shared sync core + lazy hourly sync), `lib/auth.ts`, `lib/formatCurrency.ts`, `lib/chartColors.ts`, `lib/chartHelpers.ts`, `lib/cn.ts` (class joiner, no tailwind-merge — don't pass conflicting utilities)
 
 **UI Primitives (`components/ui/`, added Jul 2026):** `Button` (variants: primary/secondary/ghost/danger/dangerGhost; sizes sm/md/lg; defaults `type="button"`), `Modal` (Escape + backdrop-click close, `title` or custom `header`, optional `footer`, sizes sm–xl), `Card` (standard surface: `rounded-xl border shadow-sm`), `Input`, `Select`, `CurrencyInput` ($-prefix, hidden spinners, select-on-focus, `wrapperClassName`), `Skeleton` (pulse placeholder — page loading states are skeleton layouts shaped like the content, not spinners). **Always use these instead of hand-rolling modals/buttons/cards.** Onboarding + deprecated recurring page not yet migrated.
 
@@ -110,9 +110,11 @@ const { userId } = authResult;
 ### Bank Sync (SimpleFIN)
 
 - Bank connections are made on the SimpleFIN portal (beta-bridge.simplefin.org), not in-app. App claims a **single-use** Setup Token → access URL (Basic creds embedded — `lib/simplefin.ts` splits them out; `fetch` rejects creds-in-URL). History in 45-day windows; quota ≤24 req/day; one call per access URL covers all its accounts (cached per sync request)
-- Sync/balances/delete stay in `api/teller/*` and branch on `provider`; both providers normalize to one txn shape so pending→posted fuzzy match + categorization preservation are shared. iOS calls the same endpoints unchanged
-- **SimpleFIN txn IDs are only unique per account** → stored as `accountId:txnId` in `tellerTransactionId`
-- `payee` → merchant; `description` always `''` and **never overwritten on update** (= user notes); `syncStartDate` gates imports
+- **SimpleFIN itself refreshes bank data only ~once/24h (MX upstream)** — syncing more often just re-reads the same snapshot; new bank transactions can lag a day or more (`balance-date` = last provider refresh)
+- **Lazy hourly auto-sync** (`lib/bankSync.ts` `lazySyncIfStale`, added Jul 16 2026): GET `/api/bank/sync` auto-syncs any account with `lastSyncedAt` >1h old before returning uncategorized txns. The claim is an atomic UPDATE that bumps `lastSyncedAt` up front — concurrent requests can't double-sync, and failures retry hourly (not per-request), keeping usage within SimpleFIN's ~24 req/day. No cron: chosen over Vercel Cron (hourly needs Pro) and GitHub Actions — syncs only while the app is in use. Core sync logic lives in `syncSimplefinAccounts()`, shared with POST. **Web manual sync buttons removed Jul 16 2026** (BudgetSummary Sync + settings Sync All) — lazy sync is the only web trigger; POST `/api/bank/sync` remains for iOS manual sync. Web sync-error toasts went with the buttons; lazy-sync errors are server logs only for now. New-tab empty state shows "Last synced X ago" (BudgetSummary fetches accounts *after* the uncategorized fetch so the timestamp reflects the lazy sync that just ran)
+- Routes live at `api/bank/*` (sync, accounts, balances) — SimpleFIN-only; rows with `provider='teller'` are skipped. `api/teller/*` still exists as thin re-export aliases **only because the iOS app calls those paths** — remove when iOS migrates. Connection-level `errors` from SimpleFIN (e.g. "connection needs attention") are surfaced in the sync response and shown as toasts (web only; iOS decodes `errors` but doesn't display them yet)
+- **SimpleFIN txn IDs are only unique per account** → stored as `accountId:txnId` in `tellerTransactionId` (legacy column name)
+- `payee` → merchant; `description` always `''` and **never overwritten on update** (= user notes); `syncStartDate` gates imports — **provider filters by posted date**, so txns that post with a date before `syncStartDate` are never returned (first-connection edge case; caught manually Jul 2026)
 
 ### Recurring Payment Lifecycle (deprecated — replaced by Cash Flow)
 
@@ -150,7 +152,7 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 
 **Web (v1.17.0):** Full budget CRUD, custom categories, transactions (add/edit/split/unsplit/soft-delete), bank sync (SimpleFIN) with per-account sync toggle, **cash flow timeline** (expectedDay scheduling), budget copy/reset, insights (D3 charts + Sankey, 6-month spending trends), monthly report, tag reclassification, non-earned income marking, transaction search & filters, drag-to-assign uncategorized transactions, onboarding, tablet responsive, month/year picker dropdown, live account balances, past/future month banner.
 
-**iOS (v0.20.0 — Happy Tusk):** All web features plus: **cash flow tab** (scheduled/unscheduled timeline, buffer row, tap-to-edit items), native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment, account balances (live from Teller), WidgetKit widgets. See `ios/BudgetApp/CHANGELOG.md`.
+**iOS (v0.20.0 — Happy Tusk):** All web features plus: **cash flow tab** (scheduled/unscheduled timeline, buffer row, tap-to-edit items), native offline caching, transaction search/filters, per-account sync toggle, non-earned income marking, interactive chart drill-downs, toast error handling, drag-to-categorize from budget page, tag reclassification, manual funding adjustment, account balances (live from SimpleFIN), WidgetKit widgets. See `ios/BudgetApp/CHANGELOG.md`.
 
 ## Common Issues
 
@@ -168,7 +170,8 @@ All `NumberFormatter`/`DateFormatter`/`ISO8601DateFormatter` instances are cache
 | iOS stale UI after mutations | Cache-first reload flashes old data. Use `loadBudget(skipCache: true)` / `loadTransactions(skipCache: true)` after mutations. Optimistic local updates for instant feedback. |
 | iOS uncategorize transaction fails | `encodeIfPresent` omits nil `budgetItemId`. Use `clearBudgetItemId` flag + `encodeNil` to send explicit null. |
 | Linked account delete FK error | `transactions.linkedAccountId` FK has no `onDelete` rule. DELETE route detaches transactions (`linkedAccountId=null`) before deleting the account — history preserved as manual. |
-| Uncategorized txns vanish after account delete | GET `/api/teller/sync` only returns txns whose linked account still exists (returns `[]` if no accounts). Detached uncategorized txns are unreachable from the New tab. |
+| Uncategorized txns vanish after account delete | GET `/api/bank/sync` only returns txns whose linked account still exists (returns `[]` if no accounts). Detached uncategorized txns are unreachable from the New tab. |
+| Bank txns missing from app | Usually SimpleFIN staleness, not a sync bug: compare the account's `balance-date` in the SimpleFIN response with the bank app. SimpleFIN refreshes ~daily and pending txns can lag days. |
 
 ## Development Commands
 
@@ -181,17 +184,18 @@ npm run build        # Production build
 
 ## Environment Variables
 
-See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`. SimpleFIN needs no runtime env vars (access URLs live in DB; `SIMPLEFIN_ACCESS_URL` in `.env.local` is just a backup). `TELLER_*` vars are legacy.
+See `.env.example`. Key vars: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`. SimpleFIN needs no runtime env vars (access URLs live in DB; `SIMPLEFIN_ACCESS_URL` in `.env.local` is just a backup). `TELLER_*` vars removed Jul 16 2026.
 
 ## Current State & Next Steps
 
-**Web:** v1.17.0 — SimpleFIN bank sync migration done Jul 15 2026 (see Bank Sync pattern above). Web UI refresh done Jul 2026 (dark mode deliberately deferred). **Pending Vercel deployment:** SimpleFIN migration + budget items PUT try/catch
+**Web:** v1.17.0 — SimpleFIN bank sync migration done Jul 15 2026; **web Teller code removed Jul 16 2026** (`lib/teller.ts` deleted, routes renamed `api/teller/*` → `api/bank/*` with `teller/*` re-export aliases kept for iOS, Teller branches in sync/accounts/balances removed, TELLER_* env vars gone, privacy page + README updated to SimpleFIN). SimpleFIN connection `errors` now surfaced as toasts. **Lazy hourly auto-sync added Jul 16 2026** (see Bank Sync pattern). Web UI refresh done Jul 2026 (dark mode deliberately deferred). **Pending Vercel deployment:** SimpleFIN migration + Teller removal + lazy sync + budget items PUT try/catch
 
-**iOS:** v0.20.0 — pre-release. Cash flow tab (buffer + tap-to-edit) + WidgetKit widgets (7 total) + deep links + Memoji. See `ios/BudgetApp/CHANGELOG.md`.
+**iOS:** v0.20.0 — pre-release. Cash flow tab (buffer + tap-to-edit) + WidgetKit widgets (7 total) + deep links + Memoji. **iOS deliberately untouched in the Teller removal (user decision Jul 16 2026)** — it still calls `/api/teller/*` (served by the web aliases) and still contains `TellerConnectView`/`Constants.Teller`. Note: `POST /api/teller/accounts` (Teller Connect enrollment) no longer exists server-side, so the iOS "Connect Bank" flow is dead until it gets a SimpleFIN Setup-Token sheet (planned). See `ios/BudgetApp/CHANGELOG.md`.
 
-**Bank sync (SimpleFIN) — LIVE:** Chase TOTAL CHECKING connected, first sync verified 2026-07-15 (`syncStartDate` 2026-07-14). Access URL backed up as `SIMPLEFIN_ACCESS_URL` in `.env.local`; claim route also accepts raw access URLs to re-register accounts (e.g. after adding Freedom Flex on the portal). Old Teller rows kept read-only, sync disabled. Remaining: iOS token-entry sheet to replace `TellerConnectView` (`AccountsService` unchanged), CSV/QFX import as vendor-proof fallback
+**Bank sync (SimpleFIN) — LIVE:** Chase TOTAL CHECKING connected, first sync verified 2026-07-15 (`syncStartDate` 2026-07-14). Access URL backed up as `SIMPLEFIN_ACCESS_URL` in `.env.local`; claim route also accepts raw access URLs to re-register accounts (e.g. after adding Freedom Flex on the portal). Old Teller account row kept read-only, sync disabled (enforced in DB Jul 16). Duplicate $934.29 manual deposit (7/10) soft-deleted — synced copy (7/13) is canonical. Remaining: CSV/QFX import as vendor-proof fallback
 
 **Next iOS work:**
+- Replace `TellerConnectView` with a SimpleFIN Setup-Token entry sheet (POST `/api/simplefin/claim`), move endpoints to `/api/bank/*`, then delete the web `api/teller/*` aliases
 - Renew Apple Developer membership ($99/yr) — required for TestFlight + App Store upload
 - App Store Connect: create app record with bundle ID `com.happytusk.app`
 - TestFlight beta testing

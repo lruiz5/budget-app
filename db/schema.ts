@@ -41,7 +41,8 @@ export const transactions = pgTable('transactions', {
   type: text('type').notNull().$type<'income' | 'expense'>(),
   merchant: text('merchant'),
   checkNumber: text('check_number'),
-  // Teller-specific fields
+  // Provider (SimpleFIN) IDs — column names are legacy from the Teller era.
+  // SimpleFIN txn IDs are stored namespaced as "accountId:txnId"
   tellerTransactionId: text('teller_transaction_id').unique(),
   tellerAccountId: text('teller_account_id'),
   status: text('status').$type<'posted' | 'pending'>(),
@@ -63,13 +64,14 @@ export const splitTransactions = pgTable('split_transactions', {
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
 });
 
-// Linked bank accounts from Teller
+// Linked bank accounts (SimpleFIN Bridge; rows with provider='teller' are
+// pre-shutdown legacy accounts kept read-only for history)
 export const linkedAccounts = pgTable('linked_accounts', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().default(''), // Clerk user ID
   provider: text('provider').notNull().default('teller').$type<'teller' | 'simplefin'>(),
-  tellerAccountId: text('teller_account_id').notNull().unique(), // provider account ID (Teller or SimpleFIN)
-  tellerEnrollmentId: text('teller_enrollment_id').notNull(),
+  tellerAccountId: text('teller_account_id').notNull().unique(), // provider account ID (legacy column name)
+  tellerEnrollmentId: text('teller_enrollment_id').notNull(), // legacy; 'simplefin' for SimpleFIN accounts
   accessToken: text('access_token').notNull(),
   institutionName: text('institution_name').notNull(),
   institutionId: text('institution_id').notNull(),

@@ -180,7 +180,7 @@ export default function AddTransactionModal({
 
   if (!isOpen) return null;
 
-  // Check if account is already linked (from Teller sync)
+  // Check if account is already linked (from bank sync)
   const hasLinkedAccount = isEditMode && transactionToEdit?.linkedAccountId;
   const linkedAccountDisplay = hasLinkedAccount
     ? linkedAccounts.find((a) => a.id === transactionToEdit.linkedAccountId)

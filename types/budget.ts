@@ -8,7 +8,7 @@ export interface Transaction {
   type: 'income' | 'expense';
   merchant?: string | null;
   checkNumber?: string | null;
-  // Teller-specific fields
+  // Bank-provider IDs (legacy Teller-era field names; SimpleFIN IDs stored namespaced)
   tellerTransactionId?: string | null;
   tellerAccountId?: string | null;
   status?: 'posted' | 'pending' | null;

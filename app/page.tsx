@@ -113,7 +113,7 @@ function Home() {
 
   const fetchLinkedAccounts = useCallback(async () => {
     try {
-      const response = await fetch('/api/teller/accounts');
+      const response = await fetch('/api/bank/accounts');
       if (response.ok) {
         const data = await response.json();
         setLinkedAccounts(data);
