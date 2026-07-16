@@ -40,7 +40,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Bank connection data</strong> — if you link a bank account,
-            we store an access token (provided by Teller) that allows us to
+            we store an access URL (provided by SimpleFIN) that allows us to
             retrieve your transaction history. We never store your bank
             credentials.
           </li>
@@ -82,16 +82,17 @@ export default function PrivacyPage() {
             .
           </li>
           <li>
-            <strong>Teller</strong> (teller.io) — provides secure bank account
-            connectivity. Your bank credentials are entered directly into
-            Teller&apos;s interface and are never shared with us. See{" "}
+            <strong>SimpleFIN Bridge</strong> (bridge.simplefin.org) — provides
+            secure, read-only bank account connectivity. Your bank credentials
+            are entered directly on SimpleFIN&apos;s site and are never shared
+            with us. See{" "}
             <a
-              href="https://teller.io/privacy"
+              href="https://bridge.simplefin.org/info/privacy"
               className="text-green-700 underline"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Teller&apos;s Privacy Policy
+              SimpleFIN&apos;s Privacy Policy
             </a>
             .
           </li>

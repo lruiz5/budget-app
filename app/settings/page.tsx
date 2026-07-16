@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Landmark, Trash2, RefreshCw, ExternalLink } from "lucide-react";
+import { Landmark, Trash2, ExternalLink } from "lucide-react";
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -28,8 +28,6 @@ export default function SettingsPage() {
   const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
   const [balances, setBalances] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ synced: number; skipped: number } | null>(null);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [setupToken, setSetupToken] = useState('');
   const [syncStartDate, setSyncStartDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -37,7 +35,7 @@ export default function SettingsPage() {
 
   const fetchBalances = useCallback(async () => {
     try {
-      const response = await fetch('/api/teller/balances');
+      const response = await fetch('/api/bank/balances');
       if (response.ok) {
         const data = await response.json();
         setBalances(data);
@@ -49,7 +47,7 @@ export default function SettingsPage() {
 
   const fetchAccounts = useCallback(async () => {
     try {
-      const response = await fetch('/api/teller/accounts');
+      const response = await fetch('/api/bank/accounts');
       if (response.ok) {
         const data = await response.json();
         setAccounts(data);
@@ -101,7 +99,7 @@ export default function SettingsPage() {
     if (!confirm('Are you sure you want to disconnect this account?')) return;
 
     try {
-      const response = await fetch(`/api/teller/accounts?id=${id}`, {
+      const response = await fetch(`/api/bank/accounts?id=${id}`, {
         method: 'DELETE',
       });
 
@@ -113,33 +111,10 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSyncAll = async () => {
-    setIsSyncing(true);
-    setSyncResult(null);
-
-    try {
-      const response = await fetch('/api/teller/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setSyncResult({ synced: result.synced, skipped: result.skipped });
-        fetchAccounts(); // Refresh to update lastSyncedAt
-      }
-    } catch (error) {
-      console.error('Error syncing:', error);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleToggleSync = async (accountId: number, currentState: boolean) => {
     setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, syncEnabled: !currentState } : a));
     try {
-      const response = await fetch('/api/teller/accounts', {
+      const response = await fetch('/api/bank/accounts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: accountId, syncEnabled: !currentState }),
@@ -171,25 +146,11 @@ export default function SettingsPage() {
               <h2 className="text-xl font-semibold text-text-primary">
                 Linked Bank Accounts
               </h2>
-              <div className="flex gap-3">
-                {accounts.length > 0 && (
-                  <Button variant="secondary" onClick={handleSyncAll} disabled={isSyncing}>
-                    <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                    {isSyncing ? 'Syncing...' : 'Sync All'}
-                  </Button>
-                )}
-                <Button onClick={() => setShowConnectModal(true)}>
-                  <Landmark size={16} />
-                  Connect Bank
-                </Button>
-              </div>
+              <Button onClick={() => setShowConnectModal(true)}>
+                <Landmark size={16} />
+                Connect Bank
+              </Button>
             </div>
-
-            {syncResult && (
-              <div className="mb-4 p-3 bg-success-light border border-success rounded-lg text-success">
-                Sync complete: {syncResult.synced} new transactions imported, {syncResult.skipped} already existed
-              </div>
-            )}
 
             {isLoading ? (
               <div className="space-y-4">
@@ -305,7 +266,7 @@ export default function SettingsPage() {
                 </a>
               </li>
               <li>Generate a Setup Token there, then click &quot;Connect Bank&quot; and paste it</li>
-              <li>Click &quot;Sync All&quot; to import your latest transactions</li>
+              <li>Transactions sync automatically about once an hour while you use the app</li>
               <li>Imported transactions appear as &quot;Uncategorized&quot; on the main budget page</li>
               <li>Assign transactions to budget categories to track your spending</li>
             </ol>

@@ -1,6 +1,6 @@
 # Budget App
 
-A modern zero-based budget tracking application built with Next.js, TypeScript, and Tailwind CSS. Features a dashboard interface with bank account integration via Teller for automatic transaction imports.
+A modern zero-based budget tracking application built with Next.js, TypeScript, and Tailwind CSS. Features a dashboard interface with bank account integration via SimpleFIN Bridge for automatic transaction imports.
 
 ## Project Status
 
@@ -19,8 +19,8 @@ A modern zero-based budget tracking application built with Next.js, TypeScript, 
 - Drizzle ORM
 - Supabase (PostgreSQL) via Drizzle ORM
 - Clerk (authentication)
-- Teller API (bank integration)
-- React Icons (react-icons)
+- SimpleFIN Bridge (bank integration)
+- lucide-react (icons)
 - D3.js + d3-sankey (charts)
 - **iOS:** SwiftUI (iOS 17+) with Clerk iOS SDK
 
@@ -137,10 +137,10 @@ Accessible via sidebar navigation:
 - Editable amount with inline editing
 - Clean white card styling matching other sections
 
-#### Bank Integration (Teller)
+#### Bank Integration (SimpleFIN Bridge)
 
-- Connect bank accounts via Teller Connect
-- Automatic transaction import from linked accounts
+- Connect bank accounts by pasting a SimpleFIN Setup Token (bank login happens on the SimpleFIN Bridge site)
+- Automatic transaction import from linked accounts — syncs lazily about once an hour while the app is in use (SimpleFIN itself refreshes bank data ~daily)
 - Support for multiple bank accounts
 - Pending and posted transaction status tracking
 - Automatic updates when pending transactions post
@@ -234,7 +234,7 @@ Comprehensive end-of-month budget review accessed via Insights > Monthly Summary
 | ------------- | ---------- | ------------------------------------------------------------------------------------- |
 | `/`           | Budget     | Main budget view with categories, transactions, and summary                           |
 | `/recurring`  | Recurring  | Manage recurring payments and subscriptions                                           |
-| `/settings`   | Accounts   | Bank account management and Teller integration                                        |
+| `/settings`   | Accounts   | Bank account management and SimpleFIN integration                                        |
 | `/insights`   | Insights   | Interactive charts (Budget vs Actual, Spending Trends, Cash Flow) and Monthly Summary |
 | `/onboarding` | Onboarding | Interactive 6-step guided setup for new users                                         |
 | `/sign-in`    | Sign In    | Clerk authentication - sign in page                                                   |
@@ -260,7 +260,7 @@ npm run db:migrate   # Run migrations
 - **budget_items** - Individual line items (e.g., "Gas", "Groceries"), with optional link to recurring payments
 - **transactions** - Individual transactions linked to budget items
 - **split_transactions** - Child allocations when a transaction is split across categories
-- **linked_accounts** - Connected bank accounts from Teller (userId, accessToken, institution info)
+- **linked_accounts** - Connected bank accounts from SimpleFIN (userId, access URL, institution info)
 - **recurring_payments** - Recurring bills and subscriptions (userId, frequency, amount, due dates)
 - **user_onboarding** - Onboarding progress tracking (userId, currentStep, completedAt, skippedAt)
 
@@ -269,7 +269,7 @@ npm run db:migrate   # Run migrations
 ### How to Use
 
 1. **Navigate the Dashboard**: Use the collapsible sidebar to access Budget, Accounts, and Insights
-2. **Connect your bank** (optional): Go to Accounts and connect your bank account via Teller
+2. **Connect your bank** (optional): Go to Settings, get a Setup Token from SimpleFIN Bridge, and paste it in Connect Bank
 3. **Set starting balance**: Enter the buffer amount (money carried over from previous month)
 4. **Set up your budget**: Add budget items to each category and set planned amounts
 5. **Import transactions**: Click "Sync All" in the Accounts page to import from your bank
@@ -303,15 +303,7 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 DATABASE_URL=postgresql://postgres.xxx:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres
 ```
 
-**Bank Integration (Teller):**
-
-```env
-TELLER_APP_ID=your_teller_app_id
-NEXT_PUBLIC_TELLER_APP_ID=your_teller_app_id
-TELLER_CERTIFICATE_PATH=./certificates/certificate.pem
-TELLER_PRIVATE_KEY_PATH=./certificates/private_key.pem
-TELLER_ENVIRONMENT=production
-```
+**Bank Integration (SimpleFIN):** no environment variables required — per-connection access URLs are stored in the database.
 
 **Note:** `.env.local` is ignored by git to keep secrets safe. Never commit it to the repository.
 
@@ -329,7 +321,7 @@ TELLER_ENVIRONMENT=production
    cp .env.example .env.local
    ```
 
-   Then edit `.env.local` and fill in your Clerk and Teller credentials.
+   Then edit `.env.local` and fill in your Clerk credentials.
 
 3. **Set up the database:**
 
@@ -394,9 +386,12 @@ budget-app/
 │   │   ├── recurring-payments/   # Recurring payment CRUD
 │   │   ├── transactions/         # Transaction CRUD
 │   │   │   └── split/            # Split transaction operations
-│   │   └── teller/               # Bank integration
-│   │       ├── accounts/         # Account management
-│   │       └── sync/             # Transaction sync
+│   │   ├── bank/                 # Bank integration (SimpleFIN)
+│   │   │   ├── accounts/         # Account management
+│   │   │   ├── balances/         # Live account balances
+│   │   │   └── sync/             # Transaction sync
+│   │   └── simplefin/
+│   │       └── claim/            # Setup Token claim (link accounts)
 │   ├── insights/
 │   │   └── page.tsx              # Insights page
 │   ├── onboarding/
@@ -441,7 +436,7 @@ budget-app/
 │   ├── chartColors.ts            # Category color mapping for charts
 │   ├── chartHelpers.ts           # Chart data transformation utilities
 │   ├── formatCurrency.ts         # Currency formatting utility
-│   └── teller.ts                 # Teller API client
+│   └── simplefin.ts              # SimpleFIN Bridge client
 ├── scripts/
 │   ├── check-schema.ts           # Verify database schema
 │   ├── migrate-add-userid.ts     # Migration for userId columns
@@ -492,12 +487,15 @@ budget-app/
 - `PUT /api/recurring-payments` - Update recurring payment
 - `DELETE /api/recurring-payments?id=X` - Delete recurring payment and unlink budget items
 
-### Teller Integration
+### Bank Integration (SimpleFIN)
 
-- `GET /api/teller/accounts` - Get linked accounts
-- `POST /api/teller/accounts` - Link new account
-- `DELETE /api/teller/accounts?id=X` - Unlink account
-- `POST /api/teller/sync` - Sync transactions from all linked accounts
+- `POST /api/simplefin/claim` - Claim a Setup Token and link its accounts
+- `GET /api/bank/accounts` - Get linked accounts
+- `PATCH /api/bank/accounts` - Update account settings (sync toggle)
+- `DELETE /api/bank/accounts?id=X` - Unlink account (transaction history kept)
+- `GET /api/bank/balances` - Live balances for all linked accounts
+- `POST /api/bank/sync` - Sync transactions from all linked accounts
+- `GET /api/bank/sync` - Get uncategorized transactions
 
 ## Learn More
 
@@ -505,6 +503,6 @@ To learn more about the technologies used:
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Drizzle ORM](https://orm.drizzle.team/)
-- [Teller API](https://teller.io/docs)
+- [SimpleFIN Protocol](https://www.simplefin.org/protocol.html)
 - [Tailwind CSS](https://tailwindcss.com/docs)
 - [React Icons](https://react-icons.github.io/react-icons/)

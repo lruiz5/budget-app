@@ -726,7 +726,7 @@ async function seed() {
     });
   }
 
-  // 5. Create fake linked account (for demo appearance — no actual Teller sync)
+  // 5. Create fake linked account (for demo appearance — no actual bank sync)
   console.log("🏦 Creating fake linked account...");
   const [chaseAccount] = await db
     .insert(linkedAccounts)

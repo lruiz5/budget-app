@@ -55,6 +55,17 @@ interface LinkedAccount {
   institutionName: string;
   lastFour: string;
   accountSubtype: string;
+  syncEnabled: boolean;
+  lastSyncedAt: string | null;
+}
+
+function formatLastSynced(iso: string): string {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  return `on ${new Date(iso).toLocaleDateString()}`;
 }
 
 export default function BudgetSummary({
@@ -82,7 +93,6 @@ export default function BudgetSummary({
     [],
   );
   const [isLoadingUncategorized, setIsLoadingUncategorized] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [assigningId, setAssigningId] = useState<number | null>(null);
   const [selectedBudgetItemId, setSelectedBudgetItemId] = useState<string>("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -95,6 +105,13 @@ export default function BudgetSummary({
   const [existingSplits, setExistingSplits] = useState<ExistingSplit[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
+
+  // Most recent sync across sync-enabled accounts, for the New-tab notice
+  const lastSyncedAt = linkedAccounts
+    .filter((a) => a.syncEnabled && a.lastSyncedAt)
+    .map((a) => a.lastSyncedAt!)
+    .sort()
+    .pop() ?? null;
 
   const buffer = budget.buffer || 0;
 
@@ -221,7 +238,7 @@ export default function BudgetSummary({
   const fetchUncategorized = useCallback(async () => {
     setIsLoadingUncategorized(true);
     try {
-      const response = await fetch(`/api/teller/sync`);
+      const response = await fetch(`/api/bank/sync`);
       if (response.ok) {
         const data = await response.json();
         setUncategorizedTxns(data);
@@ -313,7 +330,7 @@ export default function BudgetSummary({
   // Fetch linked accounts
   const fetchLinkedAccounts = useCallback(async () => {
     try {
-      const response = await fetch("/api/teller/accounts");
+      const response = await fetch("/api/bank/accounts");
       if (response.ok) {
         const data = await response.json();
         setLinkedAccounts(data);
@@ -324,9 +341,10 @@ export default function BudgetSummary({
   }, []);
 
   useEffect(() => {
-    fetchUncategorized();
+    // The uncategorized fetch triggers the server's lazy hourly sync — load
+    // accounts after it so lastSyncedAt reflects the sync that just ran
+    fetchUncategorized().then(() => fetchLinkedAccounts());
     fetchDeleted();
-    fetchLinkedAccounts();
   }, [fetchUncategorized, fetchDeleted, fetchLinkedAccounts]);
 
   // Handle external split edit request (from BudgetSection dropdown)
@@ -336,34 +354,6 @@ export default function BudgetSummary({
       onClearSplitToEdit?.();
     }
   }, [splitToEdit, onClearSplitToEdit]);
-
-  const handleSync = async () => {
-    setIsSyncing(true);
-    try {
-      const response = await fetch("/api/teller/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      if (response.ok) {
-        const result = await response.json();
-        const messages = [];
-        if (result.synced > 0) messages.push(`${result.synced} new`);
-        if (result.updated > 0) messages.push(`${result.updated} updated`);
-        if (messages.length > 0) {
-          toast.success(`Synced: ${messages.join(", ")}`);
-        } else {
-          toast.info("No new transactions to sync");
-        }
-        await fetchUncategorized();
-        onRefresh?.();
-      }
-    } catch (error) {
-      console.error("Error syncing:", error);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const handleAssign = async (transactionId: number) => {
     if (!selectedBudgetItemId) return;
@@ -1069,20 +1059,6 @@ export default function BudgetSummary({
               >
                 Deleted
               </button>
-              {/* Sync button */}
-              <div className="ml-auto flex items-center">
-                <button
-                  onClick={handleSync}
-                  disabled={isSyncing}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-surface-secondary hover:bg-surface-secondary rounded text-text-secondary disabled:opacity-50"
-                >
-                  <RefreshCw
-                    className={isSyncing ? "animate-spin" : ""}
-                    size={12}
-                  />
-                  Sync
-                </button>
-              </div>
             </div>
 
             {/* Search & Filters */}
@@ -1122,9 +1098,18 @@ export default function BudgetSummary({
                   {searchedNewTxns.length === 0 &&
                     !isLoadingUncategorized && (
                       <p className="text-text-secondary text-center py-12 text-base">
-                        {searchQuery || typeFilter !== "all"
-                          ? "No transactions match your search."
-                          : <>No new transactions. Click &quot;Sync&quot; to import from your bank.</>}
+                        {searchQuery || typeFilter !== "all" ? (
+                          "No transactions match your search."
+                        ) : (
+                          <>
+                            No new transactions.
+                            {lastSyncedAt && (
+                              <span className="block mt-1 text-sm text-text-tertiary">
+                                Last synced {formatLastSynced(lastSyncedAt)} — syncs automatically every hour
+                              </span>
+                            )}
+                          </>
+                        )}
                       </p>
                     )}
                   {isLoadingUncategorized && searchedNewTxns.length === 0 && (
