@@ -192,10 +192,11 @@ export async function syncSimplefinAccounts(
         await db.update(transactions).set(data).where(eq(transactions.id, id));
       }
 
-      // Update last synced timestamp
+      // Update sync timestamps — lastSuccessfulSyncAt only ever moves here,
+      // so it stays truthful even though the lazy-sync claim bumps lastSyncedAt
       await db
         .update(linkedAccounts)
-        .set({ lastSyncedAt: new Date() })
+        .set({ lastSyncedAt: new Date(), lastSuccessfulSyncAt: new Date() })
         .where(eq(linkedAccounts.id, account.id));
 
     } catch (error) {

@@ -740,7 +740,7 @@
 				GENERATE_APPINTENT_METADATA = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SpendingPaceWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SpendingPaceWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = "Happy Tusk";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -773,7 +773,7 @@
 				GENERATE_APPINTENT_METADATA = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SpendingPaceWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SpendingPaceWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = "Happy Tusk";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (

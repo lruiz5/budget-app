@@ -47,7 +47,7 @@ struct LatestTransactionsWidgetEntryView: View {
             VStack(spacing: 8) {
                 Image(systemName: "checkmark.circle")
                     .font(.title2)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.appSuccess)
                 Text("All caught up!")
                     .font(.custom("Outfit", size: 14))
                     .fontWeight(.medium)
@@ -105,7 +105,7 @@ struct TransactionRowView: View {
             Text(formattedAmount)
                 .font(.custom("Outfit", size: 13))
                 .fontWeight(.semibold)
-                .foregroundStyle(transaction.type == "income" ? Color.green : .primary)
+                .foregroundStyle(transaction.type == "income" ? Color.appSuccess : .primary)
         }
     }
 

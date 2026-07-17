@@ -7,7 +7,6 @@ class TransactionsViewModel: ObservableObject {
     @Published var deletedTransactions: [Transaction] = []
     @Published var isLoading = false
     @Published var isLoadingDeleted = false
-    @Published var isSyncing = false
     @Published var error: String?
 
     // Toast state for non-blocking feedback (replaces showSyncAlert/syncMessage)
@@ -64,29 +63,6 @@ class TransactionsViewModel: ObservableObject {
             return false
         }
         return true
-    }
-
-    // MARK: - Sync Transactions
-
-    func syncAllAccounts() async {
-        guard requireOnline() else { return }
-        isSyncing = true
-        error = nil
-
-        do {
-            let response = try await accountsService.syncTransactions()
-            let updated = response.updated ?? 0
-            var parts: [String] = []
-            if response.synced > 0 { parts.append("\(response.synced) new") }
-            if updated > 0 { parts.append("\(updated) updated") }
-            let summary = parts.isEmpty ? "No new transactions" : "Synced " + parts.joined(separator: ", ")
-            showToast(summary, isError: false)
-            await loadTransactions(skipCache: true)
-        } catch {
-            showToast("Sync failed: \(error.localizedDescription)", isError: true)
-        }
-
-        isSyncing = false
     }
 
     // MARK: - Load Transactions

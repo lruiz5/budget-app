@@ -126,14 +126,6 @@ struct TransactionsView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    Task { await viewModel.syncAllAccounts() }
-                } label: {
-                    syncButtonLabel
-                }
-                .disabled(viewModel.isSyncing)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
                     activeSheet = .addTransaction
                 } label: {
                     Image(systemName: "plus")
@@ -154,15 +146,6 @@ struct TransactionsView: View {
     }
 
     // MARK: - Toolbar / Sheet Helpers (extracted to aid Swift type-checker)
-
-    @ViewBuilder
-    private var syncButtonLabel: some View {
-        if viewModel.isSyncing {
-            ProgressView()
-        } else {
-            Image(systemName: "arrow.triangle.2.circlepath")
-        }
-    }
 
     @ViewBuilder
     private func sheetContent(for sheet: TransactionActiveSheet) -> some View {
@@ -514,10 +497,28 @@ struct TransactionsView: View {
 
     private var emptyStateMessage: String {
         switch selectedFilter {
-        case .uncategorized: return "All your transactions have been categorized"
+        case .uncategorized:
+            var message = "All your transactions have been categorized"
+            if let lastSync = lastSyncDescription {
+                message += "\n\(lastSync)"
+            }
+            return message
         case .tracked: return "No transactions assigned to budget items yet"
         case .deleted: return "No deleted transactions this month"
         }
+    }
+
+    /// Most recent successful bank sync across linked accounts, e.g.
+    /// "Last synced today at 8:55 PM". Nil when no account has ever synced.
+    private var lastSyncDescription: String? {
+        guard let latest = viewModel.linkedAccounts
+            .compactMap({ $0.lastSuccessfulSyncAt })
+            .max() else { return nil }
+        let time = Formatters.timeShort.string(from: latest)
+        if Calendar.current.isDateInToday(latest) {
+            return "Last synced today at \(time)"
+        }
+        return "Last synced \(Formatters.dateShort.string(from: latest)) at \(time)"
     }
 
     private func formatDate(_ date: Date) -> String {

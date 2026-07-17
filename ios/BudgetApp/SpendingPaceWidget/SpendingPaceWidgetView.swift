@@ -27,7 +27,7 @@ struct SpendingPaceWidgetEntryView: View {
                     Text(Self.currencyWhole.string(from: data.remaining as NSNumber) ?? "$0")
                         .font(.custom("Outfit", size: 17))
                         .fontWeight(.bold)
-                        .foregroundStyle(data.spendingRatio > 1.0 ? Color.red : .primary)
+                        .foregroundStyle(data.spendingRatio > 1.0 ? Color.appDanger : .primary)
 
                     Text(" remaining")
                         .font(.custom("Outfit", size: 13))
@@ -125,10 +125,10 @@ struct SpendingPaceChartView: View {
 
     private var dotColor: Color {
         let ratio = data.spendingRatio
-        if ratio < 0.5 { return .green }
-        if ratio < 0.8 { return .yellow }
-        if ratio < 1.0 { return .orange }
-        return .red
+        if ratio < 0.5 { return .appSuccess }
+        if ratio < 0.8 { return .appWarning }
+        if ratio < 1.0 { return .appAccentOrange }
+        return .appDanger
     }
 
     /// Dynamic gradient that stays green when under budget, shifts to red as spending approaches/exceeds budget
@@ -138,7 +138,7 @@ struct SpendingPaceChartView: View {
         if ratio < 0.5 {
             // Well under budget — all green
             return LinearGradient(
-                colors: [.green, .green],
+                colors: [.appSuccess, .appSuccess],
                 startPoint: .leading,
                 endPoint: .trailing
             )
@@ -146,9 +146,9 @@ struct SpendingPaceChartView: View {
             // Approaching — green to yellow
             return LinearGradient(
                 stops: [
-                    .init(color: .green, location: 0),
-                    .init(color: .green, location: 0.6),
-                    .init(color: .yellow, location: 1.0)
+                    .init(color: .appSuccess, location: 0),
+                    .init(color: .appSuccess, location: 0.6),
+                    .init(color: .appWarning, location: 1.0)
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
@@ -157,10 +157,10 @@ struct SpendingPaceChartView: View {
             // Close to budget — green through yellow to orange
             return LinearGradient(
                 stops: [
-                    .init(color: .green, location: 0),
-                    .init(color: .green, location: 0.3),
-                    .init(color: .yellow, location: 0.6),
-                    .init(color: .orange, location: 1.0)
+                    .init(color: .appSuccess, location: 0),
+                    .init(color: .appSuccess, location: 0.3),
+                    .init(color: .appWarning, location: 0.6),
+                    .init(color: .appAccentOrange, location: 1.0)
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
@@ -169,10 +169,10 @@ struct SpendingPaceChartView: View {
             // Over budget — green through orange to red
             return LinearGradient(
                 stops: [
-                    .init(color: .green, location: 0),
-                    .init(color: .yellow, location: 0.4),
-                    .init(color: .orange, location: 0.7),
-                    .init(color: .red, location: 1.0)
+                    .init(color: .appSuccess, location: 0),
+                    .init(color: .appWarning, location: 0.4),
+                    .init(color: .appAccentOrange, location: 0.7),
+                    .init(color: .appDanger, location: 1.0)
                 ],
                 startPoint: .leading,
                 endPoint: .trailing

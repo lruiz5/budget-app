@@ -159,21 +159,30 @@ class AccountsViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Link Account (called after Teller Connect)
+    // MARK: - Connect SimpleFIN (claim a Setup Token)
 
-    func linkAccount(accessToken: String, enrollmentId: String) async {
-        guard requireOnline() else { return }
+    /// Claims a SimpleFIN Setup Token and merges the returned accounts
+    /// (reconnects update existing rows, so merge by id instead of appending).
+    /// Returns an error message for inline display in the sheet, or nil on success.
+    func connectSimpleFIN(setupToken: String, syncStartDate: String) async -> String? {
+        guard NetworkMonitor.shared.isConnected else {
+            return "You're offline. Connect to make changes."
+        }
         do {
-            let newAccounts = try await accountsService.linkAccount(
-                accessToken: accessToken,
-                enrollmentId: enrollmentId
-            )
-            accounts.append(contentsOf: newAccounts)
+            let saved = try await accountsService.claimSimpleFINToken(setupToken, syncStartDate: syncStartDate)
+            for account in saved {
+                if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+                    accounts[index] = account
+                } else {
+                    accounts.append(account)
+                }
+            }
             updateGroupedAccounts()
             await CacheManager.shared.save(accounts, forKey: "linked_accounts")
-            showToast("Account linked", isError: false)
+            showToast("Connected \(saved.count) account\(saved.count == 1 ? "" : "s")", isError: false)
+            return nil
         } catch {
-            showToast(error.localizedDescription, isError: true)
+            return error.localizedDescription
         }
     }
 }

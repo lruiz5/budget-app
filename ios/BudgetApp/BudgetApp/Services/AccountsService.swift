@@ -1,7 +1,9 @@
 import Foundation
 
 // MARK: - Accounts Service
-// API methods for linked bank accounts (Teller integration)
+// API methods for linked bank accounts (SimpleFIN Bridge).
+// Sync/balance/delete endpoints remain under /api/teller/* — they are provider-aware
+// and serve both legacy Teller rows and SimpleFIN rows.
 
 actor AccountsService {
     static let shared = AccountsService()
@@ -15,10 +17,12 @@ actor AccountsService {
         try await api.get("/api/teller/accounts")
     }
 
-    func linkAccount(accessToken: String, enrollmentId: String) async throws -> [LinkedAccount] {
-        let response: LinkedAccountsResponse = try await api.post("/api/teller/accounts", body: LinkAccountRequest(
-            accessToken: accessToken,
-            enrollment: EnrollmentId(id: enrollmentId)
+    /// Claims a SimpleFIN Setup Token (or re-registers a raw access URL) and saves
+    /// the connection's accounts. Setup Tokens are single-use.
+    func claimSimpleFINToken(_ setupToken: String, syncStartDate: String) async throws -> [LinkedAccount] {
+        let response: LinkedAccountsResponse = try await api.post("/api/simplefin/claim", body: ClaimSimpleFINRequest(
+            setupToken: setupToken,
+            syncStartDate: syncStartDate
         ))
         return response.accounts
     }
@@ -55,13 +59,9 @@ actor AccountsService {
 
 // MARK: - Request Types
 
-struct LinkAccountRequest: Encodable {
-    let accessToken: String
-    let enrollment: EnrollmentId
-}
-
-struct EnrollmentId: Encodable {
-    let id: String
+struct ClaimSimpleFINRequest: Encodable {
+    let setupToken: String
+    let syncStartDate: String
 }
 
 struct UpdateSyncRequest: Encodable {
