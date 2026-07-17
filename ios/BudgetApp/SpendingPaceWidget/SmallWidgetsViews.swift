@@ -114,10 +114,10 @@ private struct SpendingPaceArcView: View {
     private var ratio: Double { data.spendingRatio }
 
     private var arcColor: Color {
-        if ratio < 0.5 { return .green }
-        if ratio < 0.8 { return .yellow }
-        if ratio < 1.0 { return .orange }
-        return .red
+        if ratio < 0.5 { return .appSuccess }
+        if ratio < 0.8 { return .appWarning }
+        if ratio < 1.0 { return .appAccentOrange }
+        return .appDanger
     }
 
     var body: some View {
@@ -134,7 +134,7 @@ private struct SpendingPaceArcView: View {
                 Text(formatCompact(data.remaining))
                     .font(.custom("Outfit", size: 20))
                     .fontWeight(.bold)
-                    .foregroundStyle(ratio > 1.0 ? Color.red : .primary)
+                    .foregroundStyle(ratio > 1.0 ? Color.appDanger : .primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Text("remaining")
@@ -291,7 +291,7 @@ struct SingleCategoryRingSmallEntryView: View {
                     Circle()
                         .trim(from: 0, to: ring.progress)
                         .stroke(
-                            ring.isOver ? Color.red : Color.green,
+                            ring.isOver ? Color.appDanger : Color.appSuccess,
                             style: StrokeStyle(lineWidth: 7, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
@@ -318,7 +318,7 @@ struct SingleCategoryRingSmallEntryView: View {
                             : formatCompact(ring.remaining))
                             .font(.custom("Outfit", size: 14))
                             .fontWeight(.semibold)
-                            .foregroundStyle(ring.isOver ? Color.red : .primary)
+                            .foregroundStyle(ring.isOver ? Color.appDanger : .primary)
 
                         Text(ring.isOver ? "over" : "left")
                             .font(.custom("Outfit", size: 11))
@@ -412,14 +412,14 @@ struct BudgetOverviewSmallEntryView: View {
                 // Legend
                 HStack(spacing: 12) {
                     HStack(spacing: 4) {
-                        Circle().fill(data.isIncomeOver ? Color.red : Color.green)
+                        Circle().fill(data.isIncomeOver ? Color.appDanger : Color.appSuccess)
                             .frame(width: 6, height: 6)
                         Text("Income")
                             .font(.custom("Outfit", size: 10))
                             .foregroundStyle(.secondary)
                     }
                     HStack(spacing: 4) {
-                        Circle().fill(data.isExpenseOver ? Color.red : Color.orange)
+                        Circle().fill(data.isExpenseOver ? Color.appDanger : Color.appAccentOrange)
                             .frame(width: 6, height: 6)
                         Text("Expenses")
                             .font(.custom("Outfit", size: 10))
@@ -454,7 +454,7 @@ private struct NestedBudgetRingsView: View {
             Circle()
                 .trim(from: 0, to: CGFloat(data.incomeProgress))
                 .stroke(
-                    data.isIncomeOver ? Color.red : Color.green,
+                    data.isIncomeOver ? Color.appDanger : Color.appSuccess,
                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -468,7 +468,7 @@ private struct NestedBudgetRingsView: View {
             Circle()
                 .trim(from: 0, to: CGFloat(data.expenseProgress))
                 .stroke(
-                    data.isExpenseOver ? Color.red : Color.orange,
+                    data.isExpenseOver ? Color.appDanger : Color.appAccentOrange,
                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -482,7 +482,7 @@ private struct NestedBudgetRingsView: View {
                 ))
                     .font(.custom("Outfit", size: 14))
                     .fontWeight(.bold)
-                    .foregroundStyle(data.isExpenseOver ? Color.red : .primary)
+                    .foregroundStyle(data.isExpenseOver ? Color.appDanger : .primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Text(data.isExpenseOver ? "over" : "exp left")
@@ -640,7 +640,7 @@ struct BudgetItemRingSmallEntryView: View {
                     Circle()
                         .trim(from: 0, to: CGFloat(item.progress))
                         .stroke(
-                            item.isOver ? Color.red : Color.green,
+                            item.isOver ? Color.appDanger : Color.appSuccess,
                             style: StrokeStyle(lineWidth: 7, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
@@ -675,7 +675,7 @@ struct BudgetItemRingSmallEntryView: View {
                             : formatCompact(item.remaining))
                             .font(.custom("Outfit", size: 14))
                             .fontWeight(.semibold)
-                            .foregroundStyle(item.isOver ? Color.red : .primary)
+                            .foregroundStyle(item.isOver ? Color.appDanger : .primary)
 
                         Text(item.isOver ? "over" : "left")
                             .font(.custom("Outfit", size: 11))

@@ -15,7 +15,8 @@ struct LinkedAccount: Codable, Identifiable {
     let status: String?
     let syncEnabled: Bool
     let syncStartDate: String?
-    let lastSyncedAt: Date?
+    let lastSyncedAt: Date? // last sync attempt (claim bumps this even on failure)
+    let lastSuccessfulSyncAt: Date? // only set when a sync completes
     let createdAt: Date
 
     init(from decoder: Decoder) throws {
@@ -35,6 +36,7 @@ struct LinkedAccount: Codable, Identifiable {
         syncEnabled = try container.decodeIfPresent(Bool.self, forKey: .syncEnabled) ?? true
         syncStartDate = try container.decodeIfPresent(String.self, forKey: .syncStartDate)
         lastSyncedAt = try container.decodeIfPresent(Date.self, forKey: .lastSyncedAt)
+        lastSuccessfulSyncAt = try container.decodeIfPresent(Date.self, forKey: .lastSuccessfulSyncAt)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
     }
 
@@ -59,10 +61,10 @@ struct LinkedAccount: Codable, Identifiable {
     }
 
     var lastSyncedDisplay: String {
-        guard let lastSyncedAt else { return "Never synced" }
+        guard let lastSync = lastSuccessfulSyncAt ?? lastSyncedAt else { return "Never synced" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
-        return "Synced \(formatter.localizedString(for: lastSyncedAt, relativeTo: Date()))"
+        return "Synced \(formatter.localizedString(for: lastSync, relativeTo: Date()))"
     }
 }
 

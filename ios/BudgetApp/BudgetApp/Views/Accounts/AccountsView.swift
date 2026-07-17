@@ -311,107 +311,119 @@ struct AccountDetailSheet: View {
     }
 }
 
-// MARK: - Add Account Sheet
+// MARK: - Add Account Sheet (SimpleFIN Setup Token entry)
 
 struct AddAccountSheet: View {
     @ObservedObject var viewModel: AccountsViewModel
     let onComplete: () -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var showTellerConnect = false
-    @State private var isLinking = false
-    @State private var linkError: String?
+    @State private var setupToken = ""
+    @State private var syncStartDate = Date()
+    @State private var isConnecting = false
+    @State private var connectError: String?
+
+    private var trimmedToken: String {
+        setupToken.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                Image(systemName: "building.columns.fill")
-                    .font(.outfit(60))
-                    .foregroundStyle(Color.appPrimary)
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "building.columns.fill")
+                                .font(.outfit(28))
+                                .foregroundStyle(Color.appPrimary)
 
-                Text("Connect Your Bank")
-                    .font(.outfitTitle2)
-                    .fontWeight(.semibold)
+                            Text("Connect Your Bank")
+                                .font(.outfitTitle3)
+                                .fontWeight(.semibold)
+                        }
 
-                Text("We use Teller to securely connect to your bank. Your credentials are never stored on our servers.")
-                    .font(.outfitBody)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                        Text("Connect your bank on the SimpleFIN Bridge portal (Settings → New App Connection), then paste the Setup Token below. Tokens are single-use.")
+                            .font(.outfitSubheadline)
+                            .foregroundStyle(.secondary)
 
-                if isLinking {
-                    ProgressView("Saving accounts...")
-                } else {
+                        Link(destination: URL(string: Constants.SimpleFIN.bridgeURL)!) {
+                            Label("Open SimpleFIN Bridge", systemImage: "arrow.up.right.square")
+                                .font(.outfitSubheadline)
+                                .foregroundStyle(Color.appPrimary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section("Setup Token") {
+                    TextField("Paste your Setup Token", text: $setupToken, axis: .vertical)
+                        .lineLimit(4...8)
+                        .font(.system(size: 12, design: .monospaced))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+
+                Section {
+                    DatePicker("Import transactions from", selection: $syncStartDate, displayedComponents: .date)
+                        .font(.outfitBody)
+                } footer: {
+                    Text("Transactions before this date won't be imported — set it to the day after your existing history ends to avoid duplicates.")
+                        .font(.outfitCaption)
+                }
+
+                if let connectError {
+                    Section {
+                        Text(connectError)
+                            .font(.outfitSubheadline)
+                            .foregroundStyle(Color.appDanger)
+                    }
+                }
+
+                Section {
                     Button {
-                        showTellerConnect = true
+                        connect()
                     } label: {
-                        Text("Connect Bank")
-                            .frame(maxWidth: .infinity)
+                        HStack(spacing: 8) {
+                            if isConnecting {
+                                ProgressView()
+                                    .tint(.white)
+                            }
+                            Text(isConnecting ? "Connecting..." : "Connect Bank")
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.appPrimary)
                     .controlSize(.large)
-                    .padding(.horizontal)
+                    .disabled(isConnecting || trimmedToken.isEmpty)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 }
-
-                Spacer()
             }
-            .padding(.top, 40)
             .navigationTitle("Add Account")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .disabled(isLinking)
+                        .disabled(isConnecting)
                 }
-            }
-            .fullScreenCover(isPresented: $showTellerConnect) {
-                TellerConnectSheet(
-                    onSuccess: { accessToken, enrollmentId in
-                        showTellerConnect = false
-                        isLinking = true
-                        Task {
-                            await viewModel.linkAccount(accessToken: accessToken, enrollmentId: enrollmentId)
-                            isLinking = false
-                            onComplete()
-                            dismiss()
-                        }
-                    },
-                    onDismiss: {
-                        showTellerConnect = false
-                    }
-                )
-            }
-            .alert("Error", isPresented: .init(
-                get: { linkError != nil },
-                set: { if !$0 { linkError = nil } }
-            )) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(linkError ?? "")
             }
         }
     }
-}
 
-// MARK: - Teller Connect Sheet (wraps TellerConnectView with nav chrome)
-
-struct TellerConnectSheet: View {
-    let onSuccess: (String, String) -> Void
-    let onDismiss: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            TellerConnectView(
-                applicationId: Constants.Teller.applicationId,
-                environment: Constants.Teller.environment,
-                onSuccess: onSuccess,
-                onExit: onDismiss
-            )
-            .navigationTitle("Link Bank")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { onDismiss() }
-                }
+    private func connect() {
+        guard !isConnecting else { return }
+        isConnecting = true
+        connectError = nil
+        // Local calendar, not UTC: the string must match the date the picker displays
+        let comps = Calendar.current.dateComponents([.year, .month, .day], from: syncStartDate)
+        let dateString = String(format: "%04d-%02d-%02d", comps.year ?? 2000, comps.month ?? 1, comps.day ?? 1)
+        Task {
+            let error = await viewModel.connectSimpleFIN(setupToken: trimmedToken, syncStartDate: dateString)
+            isConnecting = false
+            if let error {
+                connectError = error
+            } else {
+                onComplete()
+                dismiss()
             }
         }
     }

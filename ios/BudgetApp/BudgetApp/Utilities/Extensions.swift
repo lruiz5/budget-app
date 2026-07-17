@@ -31,6 +31,12 @@ enum Formatters {
         return f
     }()
 
+    static let timeShort: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        return f
+    }()
+
     static let yearMonthDay: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"

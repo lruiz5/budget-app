@@ -73,7 +73,7 @@ struct CategoryRingView: View {
                 Circle()
                     .trim(from: 0, to: ring.progress)
                     .stroke(
-                        ring.isOver ? Color.red : Color.green,
+                        ring.isOver ? Color.appDanger : Color.appSuccess,
                         style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
@@ -90,7 +90,7 @@ struct CategoryRingView: View {
             Text(formatCompact(ring))
                 .font(.custom("Outfit", size: 14))
                 .fontWeight(.medium)
-                .foregroundStyle(ring.isOver ? Color.red : Color.primary)
+                .foregroundStyle(ring.isOver ? Color.appDanger : Color.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
 

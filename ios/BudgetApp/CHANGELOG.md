@@ -6,6 +6,26 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [Unreleased] - 2026-07-16 - SimpleFIN Connect & Widget Rebrand
+
+### Added
+
+- **SimpleFIN Setup Token entry sheet** — `AddAccountSheet` rebuilt as a Form: paste a Setup Token (or raw access URL), pick an "Import transactions from" date, link out to the SimpleFIN Bridge portal. Inline error display; success toasts "Connected N account(s)". Calls new `AccountsService.claimSimpleFINToken()` → `POST /api/simplefin/claim`
+- **Widget brand tokens** — new `SpendingPaceWidget/WidgetAssets.xcassets` with AppSuccess/AppDanger/AppWarning/AppAccentOrange colorsets (widget target can't see the app's asset catalog)
+- **"Last synced" in New-tab empty state** — when there's nothing to categorize, shows "Last synced today at 8:55 PM" from the new `last_successful_sync_at` column (only set when a sync completes; `last_synced_at` is bumped by the hourly lazy-sync claim even on failure, so it can't be trusted for this). Accounts list "Synced X ago" now prefers the successful timestamp too
+
+### Changed
+
+- **Widget gallery display name** — "SpendingPaceWidget" → "Happy Tusk" (pbxproj `INFOPLIST_KEY_CFBundleDisplayName` + widget Info.plist)
+- **Widget status colors re-tokened** — system `.green`/`.yellow`/`.orange`/`.red` → `.appSuccess`/`.appWarning`/`.appAccentOrange`/`.appDanger` across all 7 widgets (rings, pace gradient, legends, amounts). Neutral chrome (`.primary`/`.secondary`/`systemGray5` tracks) deliberately kept system-adaptive since widgets follow system dark mode, unlike the light-locked app
+
+### Removed
+
+- **`TellerConnectView.swift`** — legacy Teller Connect WKWebView flow deleted; `TellerConnectSheet` wrapper, `linkAccount()` (service + view model), `LinkAccountRequest`/`EnrollmentId`, and `Constants.Teller` removed. `Constants.SimpleFIN.bridgeURL` added
+- **Manual sync button** — removed from the Transactions toolbar (`syncAllAccounts()` + `isSyncing` dropped from `TransactionsViewModel`). Manually triggering a sync can't surface transactions SimpleFIN Bridge doesn't have yet; a scheduled (~hourly) server-side sync will replace it. `AccountsService.syncTransactions()` kept for that future path
+
+---
+
 ## [0.18.1] - 2026-03-03 - Spending Trends Expansion
 
 ### Changed

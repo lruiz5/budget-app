@@ -82,7 +82,8 @@ export const linkedAccounts = pgTable('linked_accounts', {
   status: text('status').notNull().$type<'open' | 'closed'>(),
   syncEnabled: boolean('sync_enabled').notNull().default(true),
   syncStartDate: text('sync_start_date'), // YYYY-MM-DD, set when sync first enabled
-  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }), // last sync attempt (lazy-sync claim bumps this even on failure)
+  lastSuccessfulSyncAt: timestamp('last_successful_sync_at', { withTimezone: true }), // only set when a sync completes
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
 });
 

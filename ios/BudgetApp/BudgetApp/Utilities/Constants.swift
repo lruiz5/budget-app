@@ -30,10 +30,10 @@ enum Constants {
         static let publishableKey = "pk_test_c3dlZXBpbmctc2x1Zy0zMS5jbGVyay5hY2NvdW50cy5kZXYk"
     }
 
-    // MARK: - Teller
-    enum Teller {
-        static let applicationId = "app_pnff4g9cfpm7a902ps000"
-        static let environment = "development" // "sandbox", "development", or "production"
+    // MARK: - SimpleFIN
+    enum SimpleFIN {
+        // Bank connections are made on the SimpleFIN Bridge portal, not in-app
+        static let bridgeURL = "https://bridge.simplefin.org"
     }
 
     // MARK: - App Info
