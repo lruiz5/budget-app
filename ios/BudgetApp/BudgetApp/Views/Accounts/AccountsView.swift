@@ -194,10 +194,15 @@ struct AccountCard: View {
                     ProgressView()
                         .scaleEffect(0.7)
                 } else if let balance {
-                    Text(Formatters.currency.string(from: balance as NSDecimalNumber) ?? "$0.00")
+                    Text(Formatters.currency.string(from: account.displayBalance(balance) as NSDecimalNumber) ?? "$0.00")
                         .font(.outfitBody)
                         .fontWeight(.medium)
                         .monospacedDigit()
+                    if account.isCreditCard {
+                        Text("owed")
+                            .font(.outfitCaption2)
+                            .foregroundStyle(.secondary)
+                    }
                 } else if let lastFour = account.lastFour {
                     Text("••••\(lastFour)")
                         .font(.outfitCaption)
@@ -244,11 +249,16 @@ struct AccountDetailSheet: View {
                     }
 
                     if let balance = viewModel.balances[String(account.id)] {
-                        Text(Formatters.currency.string(from: balance as NSDecimalNumber) ?? "$0.00")
+                        Text(Formatters.currency.string(from: account.displayBalance(balance) as NSDecimalNumber) ?? "$0.00")
                             .font(.outfitTitle2)
                             .fontWeight(.semibold)
                             .monospacedDigit()
                             .padding(.top, 4)
+                        if account.isCreditCard {
+                            Text("owed")
+                                .font(.outfitCaption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .padding(.top, 8)

@@ -118,6 +118,13 @@ enum Formatters {
         return f
     }()
 
+    static let monthDayUTC: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+
     static let dateLongUTC: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .long

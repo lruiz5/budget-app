@@ -16,6 +16,7 @@ import {
 import AddTransactionModal, { TransactionToEdit, CategoryOption } from "./AddTransactionModal";
 import Card from "@/components/ui/Card";
 import SplitTransactionModal, { ExistingSplit } from "./SplitTransactionModal";
+import CreditCardPanel from "./CreditCardPanel";
 import { useToast } from "@/contexts/ToastContext";
 import { useUncategorizedCount } from "@/contexts/UncategorizedCountContext";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -54,6 +55,7 @@ interface LinkedAccount {
   accountName: string;
   institutionName: string;
   lastFour: string;
+  accountType: string;
   accountSubtype: string;
   syncEnabled: boolean;
   lastSyncedAt: string | null;
@@ -105,6 +107,7 @@ export default function BudgetSummary({
   const [existingSplits, setExistingSplits] = useState<ExistingSplit[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
+  const [cardPaymentsMarked, setCardPaymentsMarked] = useState(0);
 
   // Most recent sync across sync-enabled accounts, for the New-tab notice
   const lastSyncedAt = linkedAccounts
@@ -520,6 +523,28 @@ export default function BudgetSummary({
       }
     } catch (error) {
       console.error("Error editing transaction:", error);
+    }
+  };
+
+  const handleMarkAsCardPayment = async (id: number) => {
+    try {
+      const response = await fetch("/api/transactions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, isTransfer: true }),
+      });
+
+      if (response.ok) {
+        setTransactionToEdit(null);
+        setUncategorizedTxns((prev) => prev.filter((t) => t.id !== id));
+        setCardPaymentsMarked((n) => n + 1);
+        onRefresh?.();
+      } else {
+        toast.error("Failed to mark as card payment");
+      }
+    } catch (error) {
+      console.error("Error marking card payment:", error);
+      toast.error("Failed to mark as card payment");
     }
   };
 
@@ -1022,6 +1047,12 @@ export default function BudgetSummary({
                 </div>
               </div>
             </div>
+
+            <CreditCardPanel
+              month={budget.month}
+              year={budget.year}
+              refreshKey={`${lastSyncedAt}|${refreshTrigger}|${cardPaymentsMarked}|${totalActualExpenses}`}
+            />
           </div>
         ) : (
           <div className="flex flex-col h-full -m-8">
@@ -1407,6 +1438,11 @@ export default function BudgetSummary({
         onAddTransaction={handleAddTransaction}
         onEditTransaction={handleEditTransaction}
         onDeleteTransaction={handleDeleteFromModal}
+        onMarkAsCardPayment={
+          linkedAccounts.some((a) => a.accountType === "credit")
+            ? handleMarkAsCardPayment
+            : undefined
+        }
         budgetItems={getAllBudgetItems()}
         categories={getCategoryOptions()}
         linkedAccounts={linkedAccounts}

@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import CurrencyInput from "@/components/ui/CurrencyInput";
+import { CreditCard } from "lucide-react";
 
 interface LinkedAccount {
   id: number;
@@ -63,6 +64,8 @@ interface AddTransactionModalProps {
     isNonEarned?: boolean;
   }) => void;
   onDeleteTransaction?: (id: number) => void;
+  // Credit card payoff (checking debit or card credit) — shown for synced transactions
+  onMarkAsCardPayment?: (id: number) => void;
   budgetItems: { category: string; items: BudgetItem[] }[];
   categories?: CategoryOption[];
   linkedAccounts?: LinkedAccount[];
@@ -75,6 +78,7 @@ export default function AddTransactionModal({
   onAddTransaction,
   onEditTransaction,
   onDeleteTransaction,
+  onMarkAsCardPayment,
   budgetItems,
   categories = [],
   linkedAccounts = [],
@@ -175,6 +179,12 @@ export default function AddTransactionModal({
     if (!confirm("Delete this transaction?")) return;
 
     onDeleteTransaction(transactionToEdit.id);
+    onClose();
+  };
+
+  const handleMarkAsCardPayment = () => {
+    if (!transactionToEdit || !onMarkAsCardPayment) return;
+    onMarkAsCardPayment(transactionToEdit.id);
     onClose();
   };
 
@@ -384,6 +394,13 @@ export default function AddTransactionModal({
               Cancel
             </Button>
           </div>
+
+          {isEditMode && onMarkAsCardPayment && transactionToEdit?.linkedAccountId && (
+            <Button variant="ghost" onClick={handleMarkAsCardPayment} className="w-full mt-2">
+              <CreditCard size={16} />
+              Mark as card payment
+            </Button>
+          )}
 
           {/* Delete button - only in edit mode */}
           {isEditMode && onDeleteTransaction && (

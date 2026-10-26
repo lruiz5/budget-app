@@ -25,6 +25,9 @@ class BudgetViewModel: ObservableObject {
     // Uncategorized transactions for drag-to-assign tray
     @Published var uncategorizedTransactions: [Transaction] = []
 
+    // Credit card payoff for the selected month (empty when no card is linked)
+    @Published var creditCards: [CreditCardSummary] = []
+
     // Cash Flow: items with/without expectedDay
     @Published var scheduledItems: [(item: BudgetItem, categoryName: String, categoryEmoji: String, categoryType: String)] = []
     @Published var unscheduledItems: [(item: BudgetItem, categoryName: String, categoryEmoji: String, categoryType: String)] = []
@@ -96,6 +99,49 @@ class BudgetViewModel: ObservableObject {
 
         // Load uncategorized transactions for the drag-to-assign tray
         await loadUncategorizedTransactions()
+
+        // After the uncategorized fetch — it runs the server's lazy sync, so
+        // the card summary includes anything that sync just imported
+        await loadCreditSummaries()
+    }
+
+    // MARK: - Credit Cards
+
+    private func loadCreditSummaries() async {
+        let month = selectedMonth
+        let year = selectedYear
+        do {
+            let summaries = try await accountsService.getCreditSummaries(month: month, year: year)
+            // Ignore a late response for a month the user already left
+            guard month == selectedMonth, year == selectedYear else { return }
+            creditCards = summaries
+        } catch {
+            #if DEBUG
+            print("Failed to load credit card summary: \(error)")
+            #endif
+        }
+    }
+
+    /// Marks a payoff the auto-pairing missed (checking debit or card credit)
+    /// as a card payment — it leaves the tray and only moves the card balance
+    func markAsCardPayment(transactionId: Int) async {
+        guard requireOnline() else { return }
+
+        let removed = uncategorizedTransactions.first { $0.id == transactionId }
+        withAnimation(.easeOut(duration: 0.3)) {
+            uncategorizedTransactions.removeAll { $0.id == transactionId }
+        }
+
+        do {
+            _ = try await transactionService.updateTransaction(UpdateTransactionRequest(id: transactionId, isTransfer: true))
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            await loadBudget(skipCache: true)
+        } catch {
+            if let removed {
+                uncategorizedTransactions.append(removed)
+            }
+            showToast(error.localizedDescription, isError: true)
+        }
     }
 
     // MARK: - Uncategorized Transactions (for drag-to-assign tray)

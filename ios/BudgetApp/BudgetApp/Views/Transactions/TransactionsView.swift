@@ -170,7 +170,7 @@ struct TransactionsView: View {
                 await viewModel.categorizeTransaction(transactionId: transaction.id, budgetItemId: budgetItemId)
             }, onSplit: {
                 activeSheet = .splitTransaction(transaction)
-            })
+            }, onMarkAsCardPayment: markAsCardPaymentAction(for: transaction))
         case .splitTransaction(let transaction):
             SplitTransactionSheet(
                 transaction: transaction,
@@ -601,12 +601,25 @@ struct TransactionRow: View {
     }
 }
 
+// MARK: - Card Payment Action
+
+extension TransactionsView {
+    /// Only offered once a credit card is linked — split out of the sheet
+    /// switch to keep the type-checker within limits
+    func markAsCardPaymentAction(for transaction: Transaction) -> (() async -> Void)? {
+        guard viewModel.hasCreditCard else { return nil }
+        return { await viewModel.markAsCardPayment(transactionId: transaction.id) }
+    }
+}
+
 // MARK: - Categorize Transaction Sheet
 
 struct CategorizeTransactionSheet: View {
     let transaction: Transaction
     let onCategorize: (Int) async -> Void
     var onSplit: (() -> Void)?
+    /// Credit card payoff the auto-pairing missed — nil hides the option
+    var onMarkAsCardPayment: (() async -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var budgetVM = BudgetViewModel()
@@ -629,6 +642,23 @@ struct CategorizeTransactionSheet: View {
                                     Label("Split Transaction", systemImage: "arrow.triangle.branch")
                                         .foregroundStyle(Color.appAccentPurple)
                                 }
+                            }
+                        }
+                        if let onMarkAsCardPayment, transaction.linkedAccountId != nil {
+                            Section {
+                                Button {
+                                    isSaving = true
+                                    Task {
+                                        await onMarkAsCardPayment()
+                                        dismiss()
+                                    }
+                                } label: {
+                                    Label("Mark as Card Payment", systemImage: "creditcard")
+                                        .foregroundStyle(Color.appPrimary)
+                                }
+                                .disabled(isSaving)
+                            } footer: {
+                                Text("Payments to your credit card aren't budgeted — they only pay down the card.")
                             }
                         }
                         ForEach(budget.sortedCategoryKeys, id: \.self) { key in

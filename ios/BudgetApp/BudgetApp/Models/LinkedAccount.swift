@@ -54,6 +54,14 @@ struct LinkedAccount: Codable, Identifiable {
         return accountType.capitalized
     }
 
+    var isCreditCard: Bool { accountType == "credit" }
+
+    /// Provider balances for credit cards are negative when owed — flip so the
+    /// UI shows the amount owed as a positive number
+    func displayBalance(_ balance: Decimal) -> Decimal {
+        isCreditCard ? -balance : balance
+    }
+
     var syncStartDateDisplay: String? {
         guard let syncStartDate else { return nil }
         guard let date = Formatters.yearMonthDay.date(from: syncStartDate) else { return syncStartDate }
