@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { transactions, budgetItems, linkedAccounts } from '@/db/schema';
 import { eq, isNotNull, and } from 'drizzle-orm';
 import { requireAuth, isAuthError } from '@/lib/auth';
+import { pairCardPayments } from '@/lib/creditCards';
 import { splitTransactions } from '@/db/schema';
 
 // Helper to verify budget item ownership
@@ -122,7 +123,7 @@ export async function PUT(request: NextRequest) {
   const { userId } = authResult;
 
   const body = await request.json();
-  const { id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, isNonEarned, tagCategoryType } = body;
+  const { id, budgetItemId, linkedAccountId, date, description, amount, type, merchant, isNonEarned, tagCategoryType, isTransfer } = body;
 
   if (!id) {
     return NextResponse.json({ error: 'Missing transaction id' }, { status: 400 });
@@ -169,11 +170,38 @@ export async function PUT(request: NextRequest) {
     updateData.tagCategoryType = tagCategoryType || null;
   }
 
+  // Credit card payments are never budgeted: marking one uncategorizes it,
+  // and categorizing (or unmarking) one turns it back into a normal
+  // transaction and unpairs it from the other side of the payment
+  const markingTransfer = isTransfer === true;
+  const unmarkingTransfer = isTransfer === false || (!markingTransfer && !!budgetItemId);
+  if (markingTransfer) {
+    updateData.isTransfer = true;
+    updateData.budgetItemId = null;
+  } else if (unmarkingTransfer) {
+    const [current] = await db
+      .select({ isTransfer: transactions.isTransfer, transferPairId: transactions.transferPairId })
+      .from(transactions)
+      .where(eq(transactions.id, parseInt(id)));
+    if (current?.isTransfer) {
+      updateData.isTransfer = false;
+      updateData.transferPairId = null;
+      if (current.transferPairId) {
+        await db.update(transactions).set({ transferPairId: null }).where(eq(transactions.id, current.transferPairId));
+      }
+    }
+  }
+
   const [updated] = await db
     .update(transactions)
     .set(updateData)
     .where(eq(transactions.id, parseInt(id)))
     .returning();
+
+  // A manually marked payment may match the other side already synced
+  if (markingTransfer) {
+    await pairCardPayments(userId);
+  }
 
   return NextResponse.json(updated);
 }

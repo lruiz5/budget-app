@@ -48,6 +48,10 @@ export const transactions = pgTable('transactions', {
   status: text('status').$type<'posted' | 'pending'>(),
   isNonEarned: boolean('is_non_earned').notNull().default(false),
   tagCategoryType: text('tag_category_type'), // Optional reporting tag — reclassifies in Insights/Reports
+  // Credit card payment (checking debit or card-side credit) — never budgeted,
+  // hidden from the New tab, only moves the card's outstanding balance
+  isTransfer: boolean('is_transfer').notNull().default(false),
+  transferPairId: integer('transfer_pair_id'), // the other side of a paired payment (no FK — soft deletes only)
   // Soft delete
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).$defaultFn(() => new Date()),
@@ -76,7 +80,7 @@ export const linkedAccounts = pgTable('linked_accounts', {
   institutionName: text('institution_name').notNull(),
   institutionId: text('institution_id').notNull(),
   accountName: text('account_name').notNull(),
-  accountType: text('account_type').notNull(), // 'depository' or 'credit'
+  accountType: text('account_type').notNull(), // 'depository' or 'credit' (SimpleFIN has no type — guessed at claim, user-overridable)
   accountSubtype: text('account_subtype').notNull(), // 'checking', 'savings', 'credit_card', etc.
   lastFour: text('last_four').notNull(),
   status: text('status').notNull().$type<'open' | 'closed'>(),

@@ -37,6 +37,16 @@ actor AccountsService {
         try await api.get("/api/teller/balances")
     }
 
+    // MARK: - Credit Cards
+
+    /// Per-card payoff summary for a budget month. `month` is 0-indexed (JS).
+    func getCreditSummaries(month: Int, year: Int) async throws -> [CreditCardSummary] {
+        try await api.get("/api/bank/credit-summary", queryParams: [
+            "month": String(month),
+            "year": String(year)
+        ])
+    }
+
     // MARK: - Account Settings
 
     func updateAccountSync(id: Int, enabled: Bool) async throws -> LinkedAccount {

@@ -100,9 +100,10 @@ struct UpdateTransactionRequest: Encodable {
     let merchant: String?
     let isNonEarned: Bool?
     let tagCategoryType: String?
+    let isTransfer: Bool? // true = credit card payment (server uncategorizes + pairs it)
 
     enum CodingKeys: String, CodingKey {
-        case id, budgetItemId, date, description, amount, type, merchant, isNonEarned, tagCategoryType
+        case id, budgetItemId, date, description, amount, type, merchant, isNonEarned, tagCategoryType, isTransfer
     }
 
     // Custom encoding to OMIT nil fields (not encode as null)
@@ -123,9 +124,10 @@ struct UpdateTransactionRequest: Encodable {
         try container.encodeIfPresent(merchant, forKey: .merchant)
         try container.encodeIfPresent(isNonEarned, forKey: .isNonEarned)
         try container.encodeIfPresent(tagCategoryType, forKey: .tagCategoryType)
+        try container.encodeIfPresent(isTransfer, forKey: .isTransfer)
     }
 
-    init(id: Int, budgetItemId: Int? = nil, clearBudgetItemId: Bool = false, date: Date? = nil, description: String? = nil, amount: Decimal? = nil, type: TransactionType? = nil, merchant: String? = nil, isNonEarned: Bool? = nil, tagCategoryType: String? = nil) {
+    init(id: Int, budgetItemId: Int? = nil, clearBudgetItemId: Bool = false, date: Date? = nil, description: String? = nil, amount: Decimal? = nil, type: TransactionType? = nil, merchant: String? = nil, isNonEarned: Bool? = nil, tagCategoryType: String? = nil, isTransfer: Bool? = nil) {
         self.id = id
         self.budgetItemId = budgetItemId
         self.clearBudgetItemId = clearBudgetItemId
@@ -140,6 +142,7 @@ struct UpdateTransactionRequest: Encodable {
         self.merchant = merchant
         self.isNonEarned = isNonEarned
         self.tagCategoryType = tagCategoryType
+        self.isTransfer = isTransfer
     }
 }
 

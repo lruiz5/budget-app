@@ -129,6 +129,27 @@ export default function SettingsPage() {
     }
   };
 
+  const handleToggleCredit = async (account: LinkedAccount) => {
+    const accountType = account.accountType === 'credit' ? 'depository' : 'credit';
+    const accountSubtype = accountType === 'credit' ? 'credit_card' : 'account';
+    const revert = () => setAccounts(prev => prev.map(a => a.id === account.id ? account : a));
+    setAccounts(prev => prev.map(a => a.id === account.id ? { ...a, accountType, accountSubtype } : a));
+    try {
+      const response = await fetch('/api/bank/accounts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: account.id, accountType }),
+      });
+      if (!response.ok) {
+        revert();
+        toast.error('Failed to update account type');
+      }
+    } catch {
+      revert();
+      toast.error('Failed to update account type');
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never';
     return new Date(dateString).toLocaleString();
@@ -210,18 +231,25 @@ export default function SettingsPage() {
                           <div className="flex items-center gap-3">
                             {balances[String(account.id)] && (
                               <span className="text-sm font-semibold text-text-primary">
-                                ${parseFloat(balances[String(account.id)]).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {/* Credit balances come back negative when owed */}
+                                ${(account.accountType === 'credit'
+                                  ? -parseFloat(balances[String(account.id)])
+                                  : parseFloat(balances[String(account.id)])
+                                ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {account.accountType === 'credit' && <span className="font-normal text-text-tertiary"> owed</span>}
                               </span>
                             )}
-                            <span
+                            <button
+                              onClick={() => handleToggleCredit(account)}
                               className={`px-2 py-1 text-xs rounded-full ${
                                 account.status === 'open'
                                   ? 'bg-success-light text-success'
                                   : 'bg-danger-light text-danger'
                               }`}
+                              title={account.accountType === 'credit' ? 'Credit card — click to mark as a bank account' : 'Bank account — click to mark as a credit card'}
                             >
-                              {account.accountSubtype}
-                            </span>
+                              {account.accountType === 'credit' ? 'credit card' : account.accountSubtype}
+                            </button>
                             <button
                               onClick={() => handleToggleSync(account.id, account.syncEnabled)}
                               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${

@@ -99,7 +99,7 @@ struct BudgetView: View {
                     await viewModel.assignTransaction(transactionId: transaction.id, toBudgetItemId: budgetItemId)
                 }, onSplit: {
                     activeSheet = .splitTransaction(transaction)
-                })
+                }, onMarkAsCardPayment: markAsCardPaymentAction(for: transaction))
             case .splitTransaction(let transaction):
                 SplitTransactionSheet(
                     transaction: transaction,
@@ -161,6 +161,12 @@ struct BudgetView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .cardStyle()
+
+                // Credit card payoff — card purchases are budgeted below like any
+                // spending; this tracks paying the card back to $0
+                ForEach(viewModel.creditCards) { card in
+                    CreditCardPayoffCard(card: card, isCurrentMonth: isViewingCurrentMonth)
+                }
 
                 // Categories — pre-sorted in ViewModel, not computed here
                 ForEach(viewModel.sortedCategories, id: \.id) { category in
@@ -281,6 +287,19 @@ struct BudgetView: View {
     }
 
     // MARK: - Helpers
+
+    /// Only offered once a credit card is linked
+    private func markAsCardPaymentAction(for transaction: Transaction) -> (() async -> Void)? {
+        guard !viewModel.creditCards.isEmpty else { return nil }
+        return { await viewModel.markAsCardPayment(transactionId: transaction.id) }
+    }
+
+    // Local calendar — "this month" is the user's month, not UTC's
+    private var isViewingCurrentMonth: Bool {
+        let now = Date()
+        return Calendar.current.component(.month, from: now) - 1 == viewModel.selectedMonth
+            && Calendar.current.component(.year, from: now) == viewModel.selectedYear
+    }
 
     private func isCustomCategory(_ category: BudgetCategory) -> Bool {
         !Constants.defaultCategories.contains(category.categoryType.lowercased())

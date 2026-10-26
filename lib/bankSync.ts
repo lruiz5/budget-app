@@ -2,6 +2,7 @@ import { db } from '@/db';
 import { linkedAccounts, transactions } from '@/db/schema';
 import { eq, and, isNull, notInArray, inArray, or, lt } from 'drizzle-orm';
 import { getAccountsWithHistory, unixToDateString, SimpleFINAccountSet } from '@/lib/simplefin';
+import { pairCardPayments } from '@/lib/creditCards';
 
 export interface SyncResults {
   synced: number;
@@ -26,7 +27,22 @@ export async function syncSimplefinAccounts(
     errors: [],
   };
 
-  // SimpleFIN: one fetch per access URL covers all of its accounts — cache across the loop
+  const startUnixFor = (account: LinkedAccountRow) => {
+    const effectiveStartDate = startDate || account.syncStartDate || undefined;
+    return effectiveStartDate
+      ? Math.floor(Date.parse(`${effectiveStartDate}T00:00:00Z`) / 1000)
+      : Math.floor(Date.now() / 1000) - 90 * 86400;
+  };
+
+  // SimpleFIN: one fetch per access URL covers all of its accounts — fetch once
+  // from the earliest start date among them (accounts can have different
+  // syncStartDates) and filter per account below, so adding an account to a
+  // connection doesn't add requests against the daily quota
+  const earliestStartByUrl = new Map<string, number>();
+  for (const account of accountsToSync) {
+    const start = startUnixFor(account);
+    earliestStartByUrl.set(account.accessToken, Math.min(earliestStartByUrl.get(account.accessToken) ?? start, start));
+  }
   const simplefinCache = new Map<string, SimpleFINAccountSet>();
 
   for (const account of accountsToSync) {
@@ -35,15 +51,13 @@ export async function syncSimplefinAccounts(
         throw new Error('Account is not connected via SimpleFIN — sync is unavailable');
       }
 
-      const effectiveStartDate = startDate || account.syncStartDate || undefined;
-      const startUnix = effectiveStartDate
-        ? Math.floor(Date.parse(`${effectiveStartDate}T00:00:00Z`) / 1000)
-        : Math.floor(Date.now() / 1000) - 90 * 86400;
-      const cacheKey = `${account.accessToken}|${startUnix}`;
-      let accountSet = simplefinCache.get(cacheKey);
+      const startUnix = startUnixFor(account);
+      let accountSet = simplefinCache.get(account.accessToken);
       if (!accountSet) {
-        accountSet = await getAccountsWithHistory(account.accessToken, { startDate: startUnix });
-        simplefinCache.set(cacheKey, accountSet);
+        accountSet = await getAccountsWithHistory(account.accessToken, {
+          startDate: earliestStartByUrl.get(account.accessToken)!,
+        });
+        simplefinCache.set(account.accessToken, accountSet);
         // Surface connection-level warnings (e.g. "Connection may need attention")
         // once per access URL — SimpleFIN reports them alongside a 200 response
         results.errors.push(...accountSet.errors);
@@ -52,16 +66,19 @@ export async function syncSimplefinAccounts(
       if (!sfAccount) {
         throw new Error('Account not present in SimpleFIN response');
       }
-      const providerTxns = (sfAccount.transactions || []).map(t => ({
-        // SimpleFIN txn IDs are only unique per account — namespace with the
-        // account ID so the global unique constraint + dedup lookups hold
-        id: `${account.tellerAccountId}:${t.id}`,
-        date: unixToDateString(t.posted || t.transacted_at || Math.floor(Date.now() / 1000)),
-        amount: t.amount,
-        description: '', // description = user notes only; SimpleFIN payee → merchant
-        merchant: t.payee?.trim() || t.description?.trim() || null,
-        status: (t.pending ? 'pending' : 'posted') as 'pending' | 'posted',
-      }));
+      const providerTxns = (sfAccount.transactions || [])
+        // The shared fetch may start earlier than this account's own start date
+        .filter(t => (t.posted || t.transacted_at || startUnix) >= startUnix)
+        .map(t => ({
+          // SimpleFIN txn IDs are only unique per account — namespace with the
+          // account ID so the global unique constraint + dedup lookups hold
+          id: `${account.tellerAccountId}:${t.id}`,
+          date: unixToDateString(t.posted || t.transacted_at || Math.floor(Date.now() / 1000)),
+          amount: t.amount,
+          description: '', // description = user notes only; SimpleFIN payee → merchant
+          merchant: t.payee?.trim() || t.description?.trim() || null,
+          status: (t.pending ? 'pending' : 'posted') as 'pending' | 'posted',
+        }));
 
       // Fetch all existing transactions for this account's provider IDs in one query
       const providerIds = providerTxns.map(t => t.id);
@@ -202,6 +219,15 @@ export async function syncSimplefinAccounts(
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       results.errors.push(`Account ${account.accountName}: ${errorMsg}`);
+    }
+  }
+
+  // Pair credit card payoffs (checking debit ↔ card credit) as transfers
+  for (const userId of new Set(accountsToSync.map(a => a.userId))) {
+    try {
+      await pairCardPayments(userId);
+    } catch (error) {
+      results.errors.push(`Card payment pairing: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

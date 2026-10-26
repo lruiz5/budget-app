@@ -85,10 +85,12 @@ export async function GET(request: NextRequest) {
     // - Have no budgetItemId (uncategorized)
     // - Are not deleted
     // - Are not split
+    // - Are not credit card payments (transfers never get budgeted)
     const uncategorizedTransactions = await db.query.transactions.findMany({
       where: and(
         isNull(transactions.budgetItemId),
         isNull(transactions.deletedAt),
+        eq(transactions.isTransfer, false),
         splitParentIdList.length > 0
           ? notInArray(transactions.id, splitParentIdList)
           : undefined

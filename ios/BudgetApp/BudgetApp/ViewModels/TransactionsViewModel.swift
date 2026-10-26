@@ -351,6 +351,24 @@ class TransactionsViewModel: ObservableObject {
         await updateTransaction(id: transactionId, budgetItemId: budgetItemId, date: nil, description: nil, amount: nil, type: nil)
     }
 
+    // MARK: - Credit Card Payments
+
+    var hasCreditCard: Bool {
+        linkedAccounts.contains { $0.accountType == "credit" }
+    }
+
+    /// Marks a payoff the auto-pairing missed as a card payment — the server
+    /// uncategorizes it and pairs it with the other side if already synced
+    func markAsCardPayment(transactionId: Int) async {
+        guard requireOnline() else { return }
+        do {
+            _ = try await transactionService.updateTransaction(UpdateTransactionRequest(id: transactionId, isTransfer: true))
+            await loadTransactions(skipCache: true)
+        } catch {
+            showToast(error.localizedDescription, isError: true)
+        }
+    }
+
     // MARK: - Split Transactions
 
     func splitTransaction(transactionId: Int, splits: [SplitInput]) async {

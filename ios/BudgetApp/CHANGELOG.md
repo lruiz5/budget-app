@@ -6,6 +6,22 @@ All notable changes to the Budget App iOS application.
 
 ---
 
+## [Unreleased] - 2026-10-26 - Credit Card Payoff
+
+### Added
+
+- **Credit card payoff card** — `CreditCardPayoffCard` under the budget summary, one per linked credit card. Collapsed: "Left to pay off $X" (green ✓ "Paid off" at $0); expanded: opening balance (when non-zero), Charged ▾ / Paid ▾ with per-transaction lists, refunds, and a footnote with pending charges + "Matches bank balance" check (current month only). Data from new `AccountsService.getCreditSummaries()` → `GET /api/bank/credit-summary`, loaded after the uncategorized fetch so it reflects the lazy sync
+- **Mark as Card Payment** — new section in `CategorizeTransactionSheet` (budget tray + Transactions tab) for payoffs the server's auto-pairing missed; sends `isTransfer: true` (new `UpdateTransactionRequest` field). Only shown for synced transactions once a credit card is linked
+- **`CreditCardSummary` / `CreditCardActivity` models** — summary amounts are JSON numbers, decoded via Double and rounded to cents (direct Decimal decoding leaves float noise)
+- **`Formatters.monthDayUTC`** — "Oct 12" for card activity dates
+
+### Changed
+
+- **Credit card balances shown as owed** — Accounts list + detail flip SimpleFIN's negative card balance to a positive amount with an "owed" caption (`LinkedAccount.isCreditCard` / `displayBalance(_:)`)
+- **Card payments no longer appear in the tray / New tab** — filtered server-side (`isTransfer`), no iOS change needed
+
+---
+
 ## [Unreleased] - 2026-07-16 - SimpleFIN Connect & Widget Rebrand
 
 ### Added

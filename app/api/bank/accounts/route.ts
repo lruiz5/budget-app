@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { linkedAccounts, transactions } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth, isAuthError } from '@/lib/auth';
+import { pairCardPayments } from '@/lib/creditCards';
 
 // GET - List all linked accounts from database
 export async function GET(request: NextRequest) {
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
 
 // New accounts are linked via POST /api/simplefin/claim
 
-// PATCH - Update account settings (sync toggle)
+// PATCH - Update account settings (sync toggle, credit card flag)
 export async function PATCH(request: NextRequest) {
   try {
     const authResult = await requireAuth();
@@ -29,7 +30,7 @@ export async function PATCH(request: NextRequest) {
     const { userId } = authResult;
 
     const body = await request.json();
-    const { id, syncEnabled } = body;
+    const { id, syncEnabled, accountType } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Account ID is required' }, { status: 400 });
@@ -56,11 +57,28 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (accountType !== undefined) {
+      if (accountType !== 'credit' && accountType !== 'depository') {
+        return NextResponse.json({ error: 'accountType must be credit or depository' }, { status: 400 });
+      }
+      updates.accountType = accountType;
+      updates.accountSubtype = accountType === 'credit' ? 'credit_card' : 'account';
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
+    }
+
     const [updated] = await db
       .update(linkedAccounts)
       .set(updates)
       .where(eq(linkedAccounts.id, id))
       .returning();
+
+    // A newly flagged card may already have payoffs waiting to pair
+    if (accountType === 'credit') {
+      await pairCardPayments(userId);
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

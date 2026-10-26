@@ -12,6 +12,13 @@ function extractLastFour(accountName: string): string {
   return match ? match[1] : '';
 }
 
+// SimpleFIN has no account type — guess credit from a balance owed or a
+// card-like name; users can override in Settings
+function isLikelyCreditCard(account: SimpleFINAccount): boolean {
+  return parseFloat(account.balance) < 0 ||
+    /credit|card|visa|mastercard|amex|freedom|sapphire|slate/i.test(account.name);
+}
+
 function institutionName(account: SimpleFINAccount): string {
   return account.org?.name || account.org?.domain || 'SimpleFIN';
 }
@@ -90,8 +97,8 @@ export async function POST(request: NextRequest) {
             institutionName: institutionName(account),
             institutionId: account.org?.domain || account.org?.['sfin-url'] || 'simplefin',
             accountName: account.name,
-            accountType: 'depository',
-            accountSubtype: 'account',
+            accountType: isLikelyCreditCard(account) ? 'credit' : 'depository',
+            accountSubtype: isLikelyCreditCard(account) ? 'credit_card' : 'account',
             lastFour: extractLastFour(account.name),
             status: 'open',
             syncEnabled: true,
